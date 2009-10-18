@@ -2,6 +2,8 @@
 #include "Opcode.h"
 #include "../stdincludes.h"
 
+#include "../../../../arch/mips/CPUDisassembler.h"
+
 using namespace std;
 
 CPUInterpreter::CPUInterpreter(VM* vm) :
@@ -39,8 +41,21 @@ void CPUInterpreter::CheckMIInterrupt(u32 DoValue, u32 MIValue) {
 }
 
 void CPUInterpreter::Run() {
+//printf("PC: %llx\n", (long long)_vm->PC);
+//printf(".");
 	TOpcode op;
 	op.all = _vm->ReadMem32(_vm->Map(_vm->PC));
+
+#if 1
+	CPUDisassembler *disassembler = new CPUDisassembler();
+	printf("%08llx %s\n", (long long)_vm->PC, disassembler->Disassemble(_vm->PC, op, false).c_str());
+
+//	if (bytes == 8) {// delay slot
+//		TOpcode op2;
+//		op2.all = _vm->ReadMem32(_vm->Map(_vm->PC));
+//		snprintf(line+strlen(line), max_line-strlen(line), " [%s]", disassembler->Disassemble(pc+4, op2, false).c_str());
+//	}
+#endif
 
 	ExecuteCommand(op);
 	IncreaseCounter(1);
