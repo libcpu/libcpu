@@ -1,0 +1,98 @@
+2007-10-25 20:10-21:28 create 6502 tables
+           22:52-00:09 disassembler, coloring
+2007-10-26 18:54-19:17 coloring, labels, recompiler
+2007-10-28 17:04-17:44 recompiler
+           18:40-20:45 recompiler, special case BIT/SKP
+           22:16-00:46 JUMP_DISPATCH
+2007-10-29 21:39-23:10 more instructions, fixes
+2007-10-30 20:35-23:00 CHRGET, missing instructions, fixes
+2007-10-31 15:25-17:18 all BASIC calls, fixes
+2007-11-02 14:00-16:52 jump to recompiler, state, fixes
+           20:09-20:35 fixes, optimizations
+           22:11-00:06 fixes -> FP lib OK
+2007-11-03 18:05-19:21 fixes -> now correct; benchmark
+                       (@1MHz: 60327sec; Core Duo: 47.048sec (~1250x))
+           19:28-20:47 futile optimization attempts
+2007-11-04 11:17-13:53 KERNAL LOAD/LOAD"$"/SAVE
+           15:35-15:47 fixes
+           19:08-22:43 cleanup
+2007-11-05 22:57-01:12 cleanup, ROM embedding, ROM optimizing
+2007-11-06 19:46-20:50 futile optimization attempt:
+           22:22-00:02 dedicated JUMP_DISPATCH for every RET
+2007-11-08 00:44-01:36 cleanup
+           20:44-21:50 HLE debug infrastructure, $BDCD impl.
+2008-03-16 01:00-02:00 source/makefile restructuring
+           15:00-17:00 added minimal ARCH=8086 APP=dos
+2008-03-17 19:35-22:35 8086 disassembler
+2008-03-19 03:00-04:00 8086 disassembler completes pkunzjr.com
+           22:34-00:36 table driven 8086 disassembler
+2008-03-20 20:32-23:45 8086 recompiler
+2008-03-21 22:07-22:28 more instructions
+           23:42-00:40 16 bit fix, cleanups
+2008-03-22 03:10-06:17 8086/DOS work...
+2008-03-29 01:00-02:00 cbmbasic UNIX integration
+2008-03-31 00:45-01:30 ...
+2008-07-13 21:26-22:28 68000...
+2008-07-16 22:44-00:30 Apple 1 BASIC
+2008-07-17 11:30-12:13 apple1basic UNIX integration
+2008-07-18 21:36-22:06 apple1basic: don't print "?" if stdin is pipe
+2008-07-19 18:40-23:30 68000 recompiler
+2008-07-20 18:33-21:01 architectural changes
+2008-07-21 22:50-00:14 Amiga/Tripos Hunk loader/linker
+2008-07-23 01:02-02:16 more 68000 decoding
+           20:32-21:30 ...
+2008-07-26 05:15-06:07 6502 optimization attempt
+           15:15-16:08 68000 decoding
+           23:26-00:37 instruction decoding cleanup
+2008-07-27 16:18-17:31 68000 decoding/recompilation
+           18:31-18:57 ...
+           19:43-22:18 endianness fixes, macros
+2008-10-20             James Abbatiello: RET_CASE_TABLE, Win32 fixes
+2008-10-21 22:00-22:20 LDA_STA_CALLOUT for cbmbasic
+           22:29-22:49 fixed endianness for PowerPC
+           22:55-00:24 fixed Solaris/x86
+2008-10-26 22:09-23:03 runtime cleanup
+           23:48-00:37
+2008-10-27 23:30-00:20 Open Source release for cbmbasic
+2008-10-28 19:10-20:05
+           22:40-23:45
+2008-11-22 20:30-21:29 GEOS
+           03:57-05:17 Cocoa
+           06:48-07:15
+2008-11-25 07:12-07:47
+2008-11-27 16:41-17:00
+2008-11-28 06:29-07:29 BitmapUp decoding, button callbacks
+2008-12-02 13:06-13:34 button callbacks
+           14:07-14:20
+           15:00-15:52
+           16:51-17:38
+2008-12-04 05:46-08:02 PDP-11
+           21:30-22:16
+2008-12-06 02:45-04:20
+2009-10-07 21:30-23:14 LLVM backend
+2009-10-08 09:05-11:08
+           18:50-21:58
+           23:13-01:10
+2009-10-09 09:42-10:11
+2009-10-10 00:08-05:00
+           21:59-23:28
+2009-10-11 09:14-09:37
+           14:25-15:57
+           16:50-18:10
+           19:52-22:02
+2009-10-12 18:33-20:28
+           21:28-22:59
+2009-10-13 18:58-22:01 cleanup
+           22:54-01:50
+2009-10-14 20:08-22:29
+2009-10-15 10:32-11:25
+           19:21-01:00 MIPS
+2009-10-16 18:53-20:40
+           21:06-00:00
+2009-10-17 01:20-03:17 cleanup/build system
+           09:23-13:30 MIPS, single stepping
+           15:19-18:21
+           18:41-19:14 single stepping
+           20:59-01:30 benchmarks - 6x slower in fib() :(
+2009-10-18 02:49-05:19 32 bit MIPS, fixes
+           11:04-
