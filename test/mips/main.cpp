@@ -1,4 +1,4 @@
-#define BENCHMARK_FIB
+//#define BENCHMARK_FIB
 
 #ifdef BENCHMARK_FIB
 # define START 0

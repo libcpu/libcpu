@@ -96,4 +96,4 @@
            20:59-01:30 benchmarks - 6x slower in fib() :(
 2009-10-18 02:49-05:19 32 bit MIPS, fixes
            11:04-13:35 MIPS endianness, fixes
-           21:00-
+           21:00-22:32 optimizations (registers as locals on MIPS)

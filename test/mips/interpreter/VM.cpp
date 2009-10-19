@@ -15,9 +15,9 @@ VM::VM(bool hasRamExpansion, u32 eepromSize, string romFilename) {
 	_ram = (u8*) malloc(_ramSize);
 	_rom = RomLoader::LoadRomFile(romFilename, _romSize);
 
+#if 0
 	PC = 0xA4000040;
 	memcpy(&_spmem[0x40], &_rom[0x40], 0x1000 - 0x40);
-	Registers[0] = (s32) (0x00000000); // you didn't know this one, did ya ;)
 	Registers[1] = (s32) (0x00000000);
 	Registers[2] = (s32) (0xD1731BE9);
 	Registers[3] = (s32) (0xD1731BE9);
@@ -56,6 +56,53 @@ VM::VM(bool hasRamExpansion, u32 eepromSize, string romFilename) {
 	Registers[29] = (s32) (0xA4001FF0);
 	Registers[30] = (s32) (0x00000000);
 	Registers[31] = (s32) (0xA4001554);
+#else
+	const char *romFile_c_str = "../../../data/mozilla_sha.bin";
+#define START 0x400670
+#define ENTRY 0x52c
+
+	printf("Loading %s...", romFile_c_str);
+	std::ifstream file(romFile_c_str, std::ios::in);
+
+	// Determine Size...
+	long begin, end;
+	begin = file.tellg();
+	file.seekg(0, std::ios::end);
+	end = file.tellg();
+	file.seekg(0, std::ios::beg);
+	u32 out_RomSize = end - begin;
+
+	// Read whole file
+	file.read((char*) &_ram[START], out_RomSize);
+	file.close();
+	printf("Done\n");
+
+	PC = START + ENTRY;
+
+//	printf("ram: (%p=%p) %x %x %x %x\n", _ram, &_ram[PC], _ram[PC], _ram[PC+1], _ram[PC+2], _ram[PC+3]);
+	for (u8 *p = &_ram[START]; p < &_ram[START+out_RomSize]; p+=4) {
+		u32 *p2 = (u32*)p;
+		u32 value = *p2;
+//		printf("%08x - ", value);
+		value =  (((value & 0xff000000) >> 24) | ((value & 0x00ff0000) >> 8)
+				| ((value & 0x0000ff00) << 8) | ((value & 0x000000ff) << 24));
+//		printf("%08x\n", value);
+		*p2 = value;
+	}
+//	printf("ram: (%p=%p) %x %x %x %x\n", _ram, &_ram[PC], _ram[PC], _ram[PC+1], _ram[PC+2], _ram[PC+3]);
+
+#define STRING "HelloHelloHelloHelloHelloHelloHelloHelloHelloHello\n"
+#define STACK (65536-4)
+	Registers[29] = STACK; // STACK
+//printf("stack: %llx\n", (unsigned long long)R[29]);
+	Registers[31] = -1; // return address
+	Registers[4] = 0x1000;
+	Registers[5] = strlen(STRING);
+	Registers[6] = 0x2000;
+	strcpy((char*)&_ram[Registers[4]], STRING);
+#endif
+
+	Registers[0] = (s32) (0x00000000); // you didn't know this one, did ya ;)
 
 	// COP0
 	Cop0Registers.Status = 0x34000000;

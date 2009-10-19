@@ -107,10 +107,14 @@ public:
 
 	// Virtual Memory
 	inline u32 Map(u32 address) {
+#if 0
 		if ((address & 0xC0000000) == 0x80000000)
 			return address & BitM29;
 
 		return MapTLB(address, false);
+#else
+	return address & BitM29;
+#endif
 	}
 	u32 MapTLB(u32 address, bool write);
 
@@ -135,11 +139,18 @@ public:
 	u8* GetRam();
 	u64 ReadMem64(u32 address);
 	inline u32 ReadMem32(u32 address) {
+#if 0
 		if (address < _ramSize) { // RDRAM
 			return Endian::Read32(_ram, address);
 		}
 
 		return InnerRead32(address);
+#else
+//printf("ReadMem32 from %x\n", address);
+		if (address > 5*1024*1024)
+			return 0;
+		return Endian::Read32(_ram, address);
+#endif
 	}
 	u16 ReadMem16(u32 address);
 	u8 ReadMem8(u32 address);

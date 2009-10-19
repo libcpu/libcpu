@@ -61,6 +61,7 @@ public:
 	}
 
 	inline static u32 Read32(u8* target, u32 address) {
+//printf("reading from %p %x %p = %x\n", target, address, target+address, *(u32*) (target + address));
 		return *(u32*) (target + address);
 	}
 
