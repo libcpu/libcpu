@@ -1,3 +1,14 @@
+#define BENCHMARK_FIB
+
+#ifdef BENCHMARK_FIB
+# define START 0
+# define ENTRY 0
+#else
+# define START 0x400670
+# define ENTRY 0x52c
+#endif
+//#define SINGLESTEP
+
 #include <mach/mach_time.h>
 #define START_NO 40
 
@@ -104,7 +115,6 @@ main(int argc, char **argv) {
 
 	cpu = cpu_new(CPU_ARCH_MIPS);
 
-#define SINGLESTEP
 
 #ifdef SINGLESTEP
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
@@ -138,11 +148,10 @@ main(int argc, char **argv) {
 		printf("Could not open %s!\n", executable);
 		return 2;
 	}
-	cpu->code_start = 0x400670;
+	cpu->code_start = START;
 	cpu->code_end = cpu->code_start + fread(&RAM[cpu->code_start], 1, ramsize-cpu->code_start, f);
 	fclose(f);
-//	cpu->code_entry = 0;//fib
-	cpu->code_entry = cpu->code_start + 0x52c;//sha1_mozilla
+	cpu->code_entry = cpu->code_start + ENTRY;
 
 	cpu_tag(cpu, cpu->code_entry);
 
@@ -178,7 +187,7 @@ main(int argc, char **argv) {
 //printf("stack: %llx\n", (unsigned long long)R[29]);
 	R[31] = -1; // return address
 
-#if 0//fib
+#ifdef BENCHMARK_FIB//fib
 	R[4] = 3; // parameter
 #else
 #define STRING "HelloHelloHelloHelloHelloHelloHelloHelloHelloHello\n"

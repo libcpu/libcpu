@@ -598,9 +598,10 @@ cpu_recompile_function(cpu_t *cpu)
 	BasicBlock *label_entry = BasicBlock::Create("entry",func_jitmain,0);
 	cpu->f.emit_decode_reg(label_entry);
 
-#if 0//HACK: RAM is at 0
-	PointerType* PointerTy_3 = PointerType::get(IntegerType::get(8), 0);
-	ptr_RAM = ConstantPointerNull::get(PointerTy_3);
+#if 0 // bad for debugging, minimal speedup
+	/* make the RAM pointer a constant */
+	PointerType* type_pi8 = PointerType::get(IntegerType::get(8), 0);
+	ptr_RAM = ConstantExpr::getCast(Instruction::IntToPtr, ConstantInt::get(Type::Int64Ty, (uint64_t)(long)RAM), type_pi8);
 #endif
 
 	// create ret basicblock

@@ -14,6 +14,15 @@ extern const BasicBlock *lookup_basicblock(Function* f, addr_t pc);
 
 extern Value* ptr_PC;
 
+#ifdef OPT_LOCAL_REGISTERS
+/*
+ * These are the arguments to the JITted function;
+ * we read them into ptr_r[] on entry and write
+ * them back on exit
+ */
+Value *in_ptr_r[32];
+#endif
+
 bool is_64bit;
 bool is_little_endian;
 
@@ -131,10 +140,31 @@ StructType *arch_mips_get_struct_reg(void) {
 }
 
 void arch_mips_emit_decode_reg(BasicBlock *bb) {
+#ifdef OPT_LOCAL_REGISTERS
+	// decode struct reg and copy the registers into local variables
+	for (int i=0; i<32; i++) {
+		in_ptr_r[i] = get_struct_member_pointer(ptr_reg, i, bb);
+		ptr_r[i] = new AllocaInst(IntegerType::get(is_64bit?64:32), "", bb);
+		LoadInst* v = new LoadInst(in_ptr_r[i], "", false, bb);
+		new StoreInst(v, ptr_r[i], false, bb);
+	}
+#else
 	// decode struct reg
 	for (int i=0; i<32; i++) 
 		ptr_r[i] = get_struct_member_pointer(ptr_reg, i, bb);
+#endif
 	ptr_PC = get_struct_member_pointer(ptr_reg, 32, bb);
+}
+
+void
+arch_mips_spill_reg_state(BasicBlock *bb)
+{
+#ifdef OPT_LOCAL_REGISTERS
+	for (int i=0; i<32; i++) {
+		LoadInst* v = new LoadInst(ptr_r[i], "", false, bb);
+		new StoreInst(v, in_ptr_r[i], false, bb);
+	}
+#endif
 }
 
 addr_t
@@ -144,10 +174,6 @@ arch_mips_get_pc(void *reg)
 		return ((reg_mips64_t*)reg)->pc;
 	else
 		return ((reg_mips32_t*)reg)->pc;
-}
-
-void arch_mips_spill_reg_state(BasicBlock *bb) {
-	return;
 }
 
 static uint32_t
