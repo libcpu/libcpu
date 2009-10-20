@@ -11,19 +11,13 @@ extern Value* ptr_RAM;
 extern PointerType* type_pfunc_callout;
 extern Value *ptr_func_debug;
 
-extern Value *get_struct_member_pointer(Value *s, int index, BasicBlock *bb);
 extern const BasicBlock *lookup_basicblock(Function* f, addr_t pc);
 
 extern Value* ptr_PC;
-
-#ifdef OPT_LOCAL_REGISTERS
-/*
- * These are the arguments to the JITted function;
- * we read them into ptr_r[] on entry and write
- * them back on exit
- */
-Value *in_ptr_r[32];
-#endif
+extern Value* ptr_r8[32];
+extern Value* ptr_r16[32];
+extern Value* ptr_r32[32];
+extern Value* ptr_r64[32];
 
 bool is_64bit;
 bool is_little_endian;
@@ -96,9 +90,6 @@ typedef union {
 } TOpcode;
 #endif
 
-//globals
-Value* ptr_r[32];
-//Value* ptr_PC; //XXX overlap with 6502
 int arch_mips_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb);
 
 void
@@ -114,7 +105,9 @@ arch_mips_init(cpu_t *cpu)
 			reg->r[i] = 0;
 		reg->pc = 0;
 		cpu->reg = reg;
-		cpu->pc_width = 64;
+		cpu->pc_width = 64; //XXX actually it's 32!
+		cpu->count_regs_i32 = 0;
+		cpu->count_regs_i64 = 32;
 	} else {
 		reg_mips32_t *reg;
 		reg = (reg_mips32_t*)malloc(sizeof(reg_mips32_t));
@@ -123,50 +116,14 @@ arch_mips_init(cpu_t *cpu)
 		reg->pc = 0;
 		cpu->reg = reg;
 		cpu->pc_width = 32;
+		cpu->count_regs_i32 = 32;
+		cpu->count_regs_i64 = 0;
 	}
+
+	cpu->count_regs_i8 = 0;
+	cpu->count_regs_i16 = 0;
 
 	printf("%d bit MIPS initialized.\n", is_64bit?64:32);
-}
-
-StructType *arch_mips_get_struct_reg(void) {
-	/* struct reg_mips_t */
-	std::vector<const Type*>type_struct_reg_t_fields;
-
-	// 32 GPRs
-	for (int i = 0; i < 32; i++)
-		type_struct_reg_t_fields.push_back(IntegerType::get(is_64bit? 64:32));
-	// PC
-	type_struct_reg_t_fields.push_back(IntegerType::get(is_64bit? 64:32));
-
-	return StructType::get(type_struct_reg_t_fields, /*isPacked=*/false);
-}
-
-void arch_mips_emit_decode_reg(BasicBlock *bb) {
-#ifdef OPT_LOCAL_REGISTERS
-	// decode struct reg and copy the registers into local variables
-	for (int i=0; i<32; i++) {
-		in_ptr_r[i] = get_struct_member_pointer(ptr_reg, i, bb);
-		ptr_r[i] = new AllocaInst(IntegerType::get(is_64bit?64:32), "", bb);
-		LoadInst* v = new LoadInst(in_ptr_r[i], "", false, bb);
-		new StoreInst(v, ptr_r[i], false, bb);
-	}
-#else
-	// decode struct reg
-	for (int i=0; i<32; i++) 
-		ptr_r[i] = get_struct_member_pointer(ptr_reg, i, bb);
-#endif
-	ptr_PC = get_struct_member_pointer(ptr_reg, 32, bb);
-}
-
-void
-arch_mips_spill_reg_state(BasicBlock *bb)
-{
-#ifdef OPT_LOCAL_REGISTERS
-	for (int i=0; i<32; i++) {
-		LoadInst* v = new LoadInst(ptr_r[i], "", false, bb);
-		new StoreInst(v, in_ptr_r[i], false, bb);
-	}
-#endif
 }
 
 addr_t
@@ -480,7 +437,7 @@ arch_mips_get_reg(uint32_t index, BasicBlock *bb) {
 	if (!index)
 		return ConstantInt::get(IntegerType::get(is_64bit? 64:32), 0);
 	else
-		return new LoadInst(ptr_r[index], "", false, bb);
+		return new LoadInst(is_64bit? ptr_r64[index]:ptr_r32[index], "", false, bb);
 }
 
 // GET RS, register sized version
@@ -521,7 +478,7 @@ arch_mips_get_rt32(uint32_t instr, BasicBlock *bb) {
 void
 arc_mips_put_reg(uint32_t index, Value *v, BasicBlock *bb) {
 	if (index)
-		new StoreInst(v, ptr_r[index], bb);
+		new StoreInst(v, is_64bit? ptr_r64[index]:ptr_r32[index], bb);
 }
 
 // PUT RS, register sized version
@@ -772,7 +729,7 @@ arch_mips_jump(addr_t new_pc, BasicBlock *bb) {
 #define LET_RT_ZEXT(v) arch_mips_put_rt_zext(v, instr, bb)
 #define LET_RD_ZEXT(v) arch_mips_put_rd_zext(v, instr, bb)
 #define LET_PC(v) new StoreInst(v, ptr_PC, bb)
-#define LET_Ri(i, v) new StoreInst(v, ptr_r[i], bb)
+#define LET_Ri(i, v) new StoreInst(v, is_64bit? ptr_r64[i]:ptr_r32[i], bb)
 
 #define LOAD_RT8(v) arch_mips_put_rt32(arch_mips_load8_32u(v, bb), instr, bb)
 #define LOAD_RT16(v) arch_mips_put_rt32(arch_mips_load16_32u(v, bb), instr, bb)
@@ -1061,16 +1018,11 @@ int arch_mips_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, 
 	return arch_mips_tag_instr(RAM, pc, &dummy1, &dummy2);
 }
 
-
-
-#include "arch/mips/libcpu_mips.h"
-
 arch_func_t arch_func_mips = {
 	arch_mips_init,
-	arch_mips_get_struct_reg,
 	arch_mips_get_pc,
-	arch_mips_emit_decode_reg,
-	arch_mips_spill_reg_state,
+	NULL, /* emit_decode_reg */
+	NULL, /* spill_reg_state */
 	arch_mips_tag_instr,
 	arch_mips_disasm_instr,
 	arch_mips_recompile_instr

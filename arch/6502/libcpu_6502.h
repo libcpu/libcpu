@@ -9,7 +9,6 @@
 #define CPU_6502_V_IGNORE   (1<<5)
 
 extern void       *arch_6502_reg_init();
-extern StructType *arch_6502_get_struct_reg(void);
 extern void        arch_6502_emit_decode_reg(BasicBlock *bb);
 extern void        arch_6502_spill_reg_state(BasicBlock *bb);
 extern int         arch_6502_tag_instr(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc);

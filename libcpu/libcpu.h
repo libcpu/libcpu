@@ -31,7 +31,6 @@ typedef int         (*fp_recompile_instr)(uint8_t* RAM, addr_t pc, BasicBlock *b
 
 typedef struct {
 	fp_init init;
-	fp_get_struct_reg get_struct_reg;
 	fp_get_pc get_pc;
 	fp_emit_decode_reg emit_decode_reg;
 	fp_spill_reg_state spill_reg_state;
@@ -52,6 +51,10 @@ typedef struct cpu {
 	cpu_arch_t arch;
 	arch_func_t f;
 	uint32_t pc_width;
+	uint32_t count_regs_i8;
+	uint32_t count_regs_i16;
+	uint32_t count_regs_i32;
+	uint32_t count_regs_i64;
 	const char *name;
 	addr_t code_start;
 	addr_t code_end;

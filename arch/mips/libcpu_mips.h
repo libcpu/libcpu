@@ -7,7 +7,6 @@
 #define CPU_MIPS_IS_LE     (1<<1)
 
 extern void       *arch_mips_reg_init();
-extern StructType *arch_mips_get_struct_reg(void);
 extern void        arch_mips_emit_decode_reg(BasicBlock *bb);
 extern void        arch_mips_spill_reg_state(BasicBlock *bb);
 extern int         arch_mips_tag_instr(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc);

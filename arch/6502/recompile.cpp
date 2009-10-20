@@ -15,17 +15,24 @@ extern const BasicBlock *lookup_basicblock(Function* f, addr_t pc);
 
 // 6502
 extern Value* ptr_PC;
+extern Value* ptr_r8[32];
+extern Value* ptr_r16[32];
+extern Value* ptr_r32[32];
+extern Value* ptr_r64[32];
+
 Value* ptr_C;
 Value* ptr_Z;
 Value* ptr_I;
 Value* ptr_D;
 Value* ptr_V;
 Value* ptr_N;
-Value* ptr_P;
-Value* ptr_S;
-Value* ptr_Y;
-Value* ptr_X;
-Value* ptr_A;
+
+
+#define ptr_A ptr_r8[0]
+#define ptr_X ptr_r8[1]
+#define ptr_Y ptr_r8[2]
+#define ptr_S ptr_r8[3]
+#define ptr_P ptr_r8[4]
 
 
 //////////////////////////////////////////////////////////////////////
@@ -723,6 +730,10 @@ arch_6502_init(cpu_t *cpu)
 	cpu->reg = reg;
 
 	cpu->pc_width = 16;
+	cpu->count_regs_i8 = 5;
+	cpu->count_regs_i16 = 0;
+	cpu->count_regs_i32 = 0;
+	cpu->count_regs_i64 = 0;
 }
 
 void
@@ -736,38 +747,16 @@ arch_6502_emit_decode_reg(BasicBlock *bb)
 	ptr_Z = new AllocaInst(IntegerType::get(1), "Z", bb);
 	ptr_C = new AllocaInst(IntegerType::get(1), "C", bb);
 
-	// decode struct reg 
-	ptr_PC = get_struct_member_pointer(ptr_reg, 0, bb);
-	ptr_A = get_struct_member_pointer(ptr_reg, 1, bb);
-	ptr_X = get_struct_member_pointer(ptr_reg, 2, bb);
-	ptr_Y = get_struct_member_pointer(ptr_reg, 3, bb);
-	ptr_S = get_struct_member_pointer(ptr_reg, 4, bb);
-	ptr_P = get_struct_member_pointer(ptr_reg, 5, bb);
-
 	// decode P
-	Value *flags1 = new LoadInst(ptr_P, "", false, bb);
-	arch_6502_flags_decode(flags1, bb);
+	Value *flags = new LoadInst(ptr_P, "", false, bb);
+	arch_6502_flags_decode(flags, bb);
 }
 
 void
 arch_6502_spill_reg_state(BasicBlock *bb)
 {
-	Value *flags2 = arch_6502_flags_encode(bb);
-	new StoreInst(flags2, ptr_P, false, bb);
-}
-
-StructType *
-arch_6502_get_struct_reg()
-{
-	/* struct reg_6502_t */
-	std::vector<const Type*>type_struct_reg_t_fields;
-	type_struct_reg_t_fields.push_back(IntegerType::get(16));
-	type_struct_reg_t_fields.push_back(IntegerType::get(8));
-	type_struct_reg_t_fields.push_back(IntegerType::get(8));
-	type_struct_reg_t_fields.push_back(IntegerType::get(8));
-	type_struct_reg_t_fields.push_back(IntegerType::get(8));
-	type_struct_reg_t_fields.push_back(IntegerType::get(8));
-	return StructType::get(type_struct_reg_t_fields, /*isPacked=*/false);
+	Value *flags = arch_6502_flags_encode(bb);
+	new StoreInst(flags, ptr_P, false, bb);
 }
 
 addr_t
@@ -778,7 +767,6 @@ arch_6502_get_pc(void *reg)
 
 arch_func_t arch_func_6502 = {
 	arch_6502_init,
-	arch_6502_get_struct_reg,
 	arch_6502_get_pc,
 	arch_6502_emit_decode_reg,
 	arch_6502_spill_reg_state,

@@ -1,3 +1,4 @@
+#define OPT_LOCAL_REGISTERS
 /*
  libcpu
  (C)2007-2009 Michael Steil
@@ -20,6 +21,16 @@ Value* ptr_PC;
 Value* ptr_RAM;
 PointerType* type_pfunc_callout;
 Value *ptr_func_debug;
+
+#define MAX_REGISTERS 32
+Value* ptr_r8[MAX_REGISTERS];
+Value* ptr_r16[MAX_REGISTERS];
+Value* ptr_r32[MAX_REGISTERS];
+Value* ptr_r64[MAX_REGISTERS];
+Value *in_ptr_r8[MAX_REGISTERS];
+Value *in_ptr_r16[MAX_REGISTERS];
+Value *in_ptr_r32[MAX_REGISTERS];
+Value *in_ptr_r64[MAX_REGISTERS];
 
 /* will hold the system's static memory layout for analysis */
 uint8_t *RAM; // XXX global!
@@ -269,17 +280,6 @@ create_call(Value *ptr_fp, BasicBlock *bb) {
 	void_49->setAttributes(void_49_PAL);
 }
 
-Value *
-get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
-	ConstantInt* const_0 = ConstantInt::get(Type::Int32Ty, 0);
-	ConstantInt* const_index = ConstantInt::get(Type::Int32Ty, index);
-
-	std::vector<Value*> ptr_11_indices;
-	ptr_11_indices.push_back(const_0);
-	ptr_11_indices.push_back(const_index);
-	return (Value*) GetElementPtrInst::Create(s, ptr_11_indices.begin(), ptr_11_indices.end(), "", bb);
-}
-
 //////////////////////////////////////////////////////////////////////
 // optimize
 //////////////////////////////////////////////////////////////////////
@@ -525,6 +525,24 @@ printf("%s:%d\n", __func__, __LINE__);
 	return cur_bb;
 }
 
+StructType *
+get_struct_reg(cpu_t *cpu) {
+	std::vector<const Type*>type_struct_reg_t_fields;
+
+	for (uint32_t i = 0; i < cpu->count_regs_i8; i++) /* 8 bit registers */
+		type_struct_reg_t_fields.push_back(IntegerType::get(8));
+	for (uint32_t i = 0; i < cpu->count_regs_i16; i++) /* 8 bit registers */
+		type_struct_reg_t_fields.push_back(IntegerType::get(16));
+	for (uint32_t i = 0; i < cpu->count_regs_i32; i++) /* 8 bit registers */
+		type_struct_reg_t_fields.push_back(IntegerType::get(32));
+	for (uint32_t i = 0; i < cpu->count_regs_i64; i++) /* 8 bit registers */
+		type_struct_reg_t_fields.push_back(IntegerType::get(64));
+
+	type_struct_reg_t_fields.push_back(IntegerType::get(cpu->pc_width)); /* PC */
+
+	return StructType::get(type_struct_reg_t_fields, /*isPacked=*/false);
+}
+
 static Function*
 cpu_create_function(cpu_t *cpu)
 {
@@ -532,7 +550,7 @@ cpu_create_function(cpu_t *cpu)
 
 	// Type Definitions
 	// - struct reg
-	StructType *type_struct_reg_t = cpu->f.get_struct_reg();
+	StructType *type_struct_reg_t = get_struct_reg(cpu);
 	cpu->mod->addTypeName("struct.reg_t", type_struct_reg_t);
 	// - struct reg *
 	PointerType *type_pstruct_reg_t = PointerType::get(type_struct_reg_t, 0);
@@ -579,6 +597,76 @@ cpu_create_function(cpu_t *cpu)
 	return func_jitmain;
 }
 
+Value *
+get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
+	ConstantInt* const_0 = ConstantInt::get(Type::Int32Ty, 0);
+	ConstantInt* const_index = ConstantInt::get(Type::Int32Ty, index);
+
+	std::vector<Value*> ptr_11_indices;
+	ptr_11_indices.push_back(const_0);
+	ptr_11_indices.push_back(const_index);
+	return (Value*) GetElementPtrInst::Create(s, ptr_11_indices.begin(), ptr_11_indices.end(), "", bb);
+}
+
+void
+emit_decode_reg_helper(int count, int width, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb) {
+#ifdef OPT_LOCAL_REGISTERS
+	// decode struct reg and copy the registers into local variables
+	for (int i = 0; i < count; i++) {
+		in_ptr_r[i] = get_struct_member_pointer(ptr_reg, i, bb);
+		ptr_r[i] = new AllocaInst(IntegerType::get(width), "", bb);
+		LoadInst* v = new LoadInst(in_ptr_r[i], "", false, bb);
+		new StoreInst(v, ptr_r[i], false, bb);
+	}
+#else
+	// just decode struct reg
+	for (int i = 0; i < count; i++) 
+		ptr_r[i] = get_struct_member_pointer(ptr_reg, i, bb);
+#endif
+}
+
+void
+emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
+{
+	emit_decode_reg_helper(cpu->count_regs_i8,   8, in_ptr_r8,  ptr_r8,  bb);
+	emit_decode_reg_helper(cpu->count_regs_i16, 16, in_ptr_r16, ptr_r16, bb);
+	emit_decode_reg_helper(cpu->count_regs_i32, 32, in_ptr_r32, ptr_r32, bb);
+	emit_decode_reg_helper(cpu->count_regs_i64, 64, in_ptr_r64, ptr_r64, bb);
+
+	uint32_t pc_index = 
+		cpu->count_regs_i8 +
+		cpu->count_regs_i16+
+		cpu->count_regs_i32+
+		cpu->count_regs_i64;
+	ptr_PC = get_struct_member_pointer(ptr_reg, pc_index, bb);
+
+	if (cpu->f.emit_decode_reg) /* cpu specific part */
+		cpu->f.emit_decode_reg(bb);
+}
+
+void
+spill_reg_state_helper(int count, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb)
+{
+#ifdef OPT_LOCAL_REGISTERS
+	for (int i=0; i<count; i++) {
+		LoadInst* v = new LoadInst(ptr_r[i], "", false, bb);
+		new StoreInst(v, in_ptr_r[i], false, bb);
+	}
+#endif
+}
+
+void
+spill_reg_state(cpu_t *cpu, BasicBlock *bb)
+{
+	if (cpu->f.spill_reg_state) /* cpu specific part */
+		cpu->f.spill_reg_state(bb);
+
+	spill_reg_state_helper(cpu->count_regs_i8,  in_ptr_r8,  ptr_r8,  bb);
+	spill_reg_state_helper(cpu->count_regs_i16, in_ptr_r16, ptr_r16, bb);
+	spill_reg_state_helper(cpu->count_regs_i32, in_ptr_r32, ptr_r32, bb);
+	spill_reg_state_helper(cpu->count_regs_i64, in_ptr_r64, ptr_r64, bb);
+}
+
 static void
 cpu_recompile_function(cpu_t *cpu)
 {
@@ -596,7 +684,7 @@ cpu_recompile_function(cpu_t *cpu)
 
 	// entry basicblock
 	BasicBlock *label_entry = BasicBlock::Create("entry",func_jitmain,0);
-	cpu->f.emit_decode_reg(label_entry);
+	emit_decode_reg(cpu, label_entry);
 
 #if 0 // bad for debugging, minimal speedup
 	/* make the RAM pointer a constant */
@@ -606,7 +694,7 @@ cpu_recompile_function(cpu_t *cpu)
 
 	// create ret basicblock
 	BasicBlock *bb_ret = BasicBlock::Create("ret",func_jitmain,0);  
-	cpu->f.spill_reg_state(bb_ret);
+	spill_reg_state(cpu, bb_ret);
 	ReturnInst::Create(ConstantInt::get(Type::Int32Ty, JIT_RETURN_FUNCNOTFOUND), bb_ret);
 
 	BasicBlock *bb_start;
