@@ -1,4 +1,4 @@
-//#define BENCHMARK_FIB
+#define BENCHMARK_FIB
 
 #ifdef BENCHMARK_FIB
 # define START 0
@@ -10,7 +10,9 @@
 //#define SINGLESTEP
 
 #include <mach/mach_time.h>
-#define START_NO 40
+//#define START_NO 40
+#define START_NO 1000000000
+#define TIMES 100
 
 #include <libcpu.h>
 #include "arch/mips/libcpu_mips.h"
@@ -92,7 +94,7 @@ debug_function(uint8_t *RAM, void *r) {
 //	{ int i; for (i=0x01F0; i<0x0200; i++) printf("%02X ", RAM[i]); printf("\n"); }
 }
 
-
+#if 0
 int fib(int n)
 {
 	if (n==0 || n==1)
@@ -100,6 +102,24 @@ int fib(int n)
 	else
 		return fib(n-1) + fib(n-2);
 }
+#else
+int fib(int n)
+{
+    int f2=0;
+    int f1=1;
+    int fib=0;
+    int i;
+ 
+    if (n==0 || n==1)
+        return n;
+    for(i=2;i<=n;i++){
+        fib=f1+f2; /*sum*/
+        f2=f1;
+        f1=fib;
+    }
+    return fib;
+}
+#endif
 
 //////////////////////////////////////////////////////////////////////
 int
@@ -125,7 +145,8 @@ main(int argc, char **argv) {
 	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);
 #endif
 
-	cpu_set_flags_arch(cpu, CPU_MIPS_IS_32BIT | CPU_MIPS_IS_BE); // 32 bit
+	cpu_set_flags_arch(cpu, CPU_MIPS_IS_32BIT | CPU_MIPS_IS_BE);
+//	cpu_set_flags_arch(cpu, CPU_MIPS_IS_64BIT | CPU_MIPS_IS_BE);
 	cpu_set_ram(RAM);
 	
 	cpu_init(cpu);
@@ -254,14 +275,17 @@ double_break:
 
 	R[4] = START_NO; // parameter
 	breakpoint();
-	cpu_run(cpu, debug_function);
+//	for (int i=0; i<TIMES; i++)
+		cpu_run(cpu, debug_function);
 	int r1 = R[2];
 	uint64_t t2 = mach_absolute_time();
 	printf("done!\n");
 
 	printf("RUN2..."); fflush(stdout);
 	uint64_t t3 = mach_absolute_time();
-	int r2 = fib(START_NO);
+	int r2;
+//	for (int i=0; i<TIMES; i++)
+		r2 = fib(START_NO);
 	uint64_t t4 = mach_absolute_time();
 	printf("done!\n");
 

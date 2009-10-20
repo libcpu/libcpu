@@ -1,3 +1,5 @@
+#define OPT_LOCAL_REGISTERS
+
 #include "libcpu.h"
 #include "CPUDisassembler.h"
 #include "arch/mips/libcpu_mips.h"
@@ -112,7 +114,7 @@ arch_mips_init(cpu_t *cpu)
 			reg->r[i] = 0;
 		reg->pc = 0;
 		cpu->reg = reg;
-		cpu->pc_width = 32;
+		cpu->pc_width = 64;
 	} else {
 		reg_mips32_t *reg;
 		reg = (reg_mips32_t*)malloc(sizeof(reg_mips32_t));
