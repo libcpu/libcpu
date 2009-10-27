@@ -98,4 +98,5 @@
            11:04-13:35 MIPS endianness, fixes
            21:00-22:32 optimizations (registers as locals on MIPS)
 2009-10-19 19:41-20:26 added iterative fib() -> 18% slower
-           22:55
+           22:55-00:29
+2009-10-26 21:39-01:10 generalized MIPS library code

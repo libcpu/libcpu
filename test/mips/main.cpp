@@ -190,10 +190,10 @@ main(int argc, char **argv) {
 
 #define STACK_SIZE 65536
 
-//	char *stack = (char*) malloc(STACK_SIZE);
+	char *stack = (char*) malloc(STACK_SIZE);
 	
-#define STACK (65536-4)
-//#define STACK ((long long)(stack+STACK_SIZE-4))
+//#define STACK (65536-4)
+#define STACK ((long long)(stack+STACK_SIZE-4))
 
 
 #define PC (((reg_mips32_t*)cpu->reg)->pc)
@@ -235,7 +235,7 @@ main(int argc, char **argv) {
 	}
 #else
 	for(;;) {
-		//breakpoint();
+		breakpoint();
 		int ret = cpu_run(cpu, debug_function);
 		printf("ret = %d\n", ret);
 		switch (ret) {
