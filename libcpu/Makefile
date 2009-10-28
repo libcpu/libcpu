@@ -1,4 +1,4 @@
-OBJS=libcpu_main.o
+OBJS=libcpu_main.o cpu_generic.o
 BIGO=libcpu.o
 
 all: libcpu

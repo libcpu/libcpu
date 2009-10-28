@@ -1,3 +1,6 @@
+#ifndef _LIBCPU_H_
+#define _LIBCPU_H_
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -111,3 +114,5 @@ void cpu_set_flags_arch(cpu_t *cpu, uint32_t f);
 void cpu_set_ram(uint8_t *RAM);
 void cpu_flush(cpu_t *cpu);
 void cpu_init(cpu_t *cpu);
+
+#endif

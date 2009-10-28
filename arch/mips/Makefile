@@ -1,4 +1,4 @@
-OBJS=mips.o
+OBJS=mips.o disasm.o recompile.o
 BIGO=arch.o
 
 all: arch-mips
