@@ -16,6 +16,7 @@ typedef unsigned long long uint64_t;
 typedef uint64_t addr_t;
 
 #include <arch/6502/arch_types.h>
+#include <arch/m68k/arch_types.h>
 #include <arch/mips/arch_types.h>
 
 #endif

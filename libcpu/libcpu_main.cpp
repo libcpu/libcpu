@@ -50,6 +50,7 @@ typedef enum {				/* bitfield! */
 };
 
 #include "arch/6502/libcpu_6502.h"
+#include "arch/m68k/libcpu_m68k.h"
 #include "arch/mips/libcpu_mips.h"
 
 //////////////////////////////////////////////////////////////////////
@@ -66,6 +67,9 @@ cpu_new(cpu_arch_t arch)
 	switch (arch) {
 		case CPU_ARCH_6502:
 			cpu->f = arch_func_6502;
+			break;
+		case CPU_ARCH_M68K:
+			cpu->f = arch_func_m68k;
 			break;
 		case CPU_ARCH_MIPS:
 			cpu->f = arch_func_mips;

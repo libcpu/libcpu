@@ -20,8 +20,8 @@ const char *addmode_template[] = {
 	/*[ADDMODE_ZPY]*/	"$%02X,Y"
 };
 
-int
-arch_instr_length(uint8_t* RAM, addr_t pc) {
+static int
+arch_6502_instr_length(uint8_t* RAM, addr_t pc) {
 	return length[instraddmode[RAM[pc]].addmode]+1;
 }
 
@@ -55,6 +55,6 @@ arch_6502_disasm_instr(uint8_t* RAM, addr_t pc, char *line, unsigned int max_lin
 	}
 	
 	snprintf(line, max_line, "%s %s", mnemo[instraddmode[opcode].instr], line2);
-	return arch_instr_length(RAM, pc);
+	return arch_6502_instr_length(RAM, pc);
 }
 
