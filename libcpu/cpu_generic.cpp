@@ -146,3 +146,25 @@ arch_store8(Value *val, Value *addr, BasicBlock *bb) {
 	arch_store32_aligned(val, addr, bb);
 }
 
+
+// branches
+
+extern const BasicBlock *lookup_basicblock(Function *f, addr_t pc);
+void
+arch_branch(bool flag_state, addr_t pc1, addr_t pc2, Value *v, Function *f, BasicBlock *bb) {
+printf("BRANCH(%llx,%llx)\n", pc1, pc2);
+	BasicBlock *target1 = (BasicBlock*)lookup_basicblock(f, pc1);
+	BasicBlock *target2 = (BasicBlock*)lookup_basicblock(f, pc2);
+	if (!target1) {
+		printf("error: unknown branch target $%04llx!\n", (unsigned long long)pc1);
+		exit(1);
+	}
+	if (!target2) {
+		printf("error: unknown branch continue $%04llx!\n", (unsigned long long)pc2);
+		exit(1);
+	}
+	if (flag_state)
+		BranchInst::Create(target1, target2, v, bb);
+	else
+		BranchInst::Create(target2, target1, v, bb);
+}

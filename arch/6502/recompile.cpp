@@ -1,6 +1,7 @@
 #include "libcpu.h"
 #include "types.h"
 #include "isa.h"
+#include "cpu_generic.h"
 #include "arch/6502/libcpu_6502.h"
 
 using namespace llvm;
@@ -226,21 +227,7 @@ arch_6502_trap(addr_t pc, BasicBlock *bb)
 
 static void
 arch_6502_branch(uint8_t* RAM, addr_t pc, Value *flag, bool flag_state, BasicBlock *bb) {
-	Value *v = new LoadInst(flag, "", false, bb);
-	BasicBlock *target1 = (BasicBlock*)lookup_basicblock(func_jitmain, BRANCH_TARGET);
-	BasicBlock *target2 = (BasicBlock*)lookup_basicblock(func_jitmain, pc+2);
-	if (!target1) {
-		printf("error: unknown branch target $%04llx!\n", (unsigned long long)BRANCH_TARGET);
-		exit(1);
-	}
-	if (!target2) {
-		printf("error: unknown branch continue $%04llx!\n", (unsigned long long)pc+2);
-		exit(1);
-	}
-	if (flag_state)
-		BranchInst::Create(target1, target2, v, bb);
-	else
-		BranchInst::Create(target2, target1, v, bb);
+	BRANCH(flag_state, BRANCH_TARGET, pc+2, new LoadInst(flag, "", false, bb));
 }
 
 static void

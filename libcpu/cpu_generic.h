@@ -19,6 +19,7 @@ void arch_store32_aligned(Value *v, Value *a, BasicBlock *bb);
 Value *arch_load8(Value *addr, BasicBlock *bb);
 Value *arch_load16_aligned(Value *addr, BasicBlock *bb);
 void arch_store8(Value *val, Value *addr, BasicBlock *bb);
+void arch_branch(bool flag_state, addr_t pc1, addr_t pc2, Value *flag, Function *f, BasicBlock *bb);
 
 /* host functions */
 uint32_t RAM32BE(uint8_t *RAM, addr_t a);
@@ -87,3 +88,6 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 
 /* host */
 #define RAM32(RAM,a) RAM32BE(RAM,a)
+
+/* branch */
+#define BRANCH(f,pc1,pc2,v) arch_branch(f,pc1,pc2,v,func_jitmain,bb)

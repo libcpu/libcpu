@@ -7,9 +7,6 @@
 
 using namespace llvm;
 extern Function* func_jitmain;
-extern Value *ptr_reg;
-extern PointerType* type_pfunc_callout;
-extern Value *ptr_func_debug;
 
 extern const BasicBlock *lookup_basicblock(Function* f, addr_t pc);
 
@@ -281,19 +278,7 @@ arch_mips_branch(uint8_t* RAM, addr_t pc, Value *v, bool likely, BasicBlock *bb)
 		exit(1);
 	}
 
-	BasicBlock *target1 = (BasicBlock*)lookup_basicblock(func_jitmain, MIPS_BRANCH_TARGET);
-	BasicBlock *target2 = (BasicBlock*)lookup_basicblock(func_jitmain, pc+8);
-
-	if (!target1) {
-		printf("error: unknown branch target $%08llx!\n", (unsigned long long)MIPS_BRANCH_TARGET);
-		exit(1);
-	}
-	if (!target2) {
-		printf("error: unknown branch continue $%08llx!\n", (unsigned long long)pc+8);
-		exit(1);
-	}
-
-	BranchInst::Create(target1, target2, v, bb);
+	BRANCH(true, MIPS_BRANCH_TARGET, pc+8, v);
 }
 
 void
