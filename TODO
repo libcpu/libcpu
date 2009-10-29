@@ -1,3 +1,9 @@
+libcpu - TODO
+
+These are very old notes; they were intented for the old static recompiler
+that emitted C source code. I'll leave some of the notes here for now,
+but remember to understand them in the right context!
+
 /* Optimizations
  * int flags vs. char flags								-> no change
  * global vs. local variables (i386/x86_64)				-> local is 6-8% faster
@@ -18,23 +24,20 @@
  */
 
 /* TODO
- * compare performance 7 int flags vs. 7 flags in a byte -> two sets of macros
  * have a special RTS table for every RTS - with a fallback to the generic one:
    running program must make statistics, which RTS returns to where how often
    and pass it to the recompiler, which adds a special RTS switch table at the
    RTS location, but with "if ... else if..." (based on frequency) instead of switch.
+   XXX the static C recompiler had this, and performance was great. libcpu
+       does not have this yet.
  * at every RTS, add code to lookup the 6502 return address in a table and
    compare it with __builtin_return(0). if the same, use RTS -- save on JSR side
- * declare temp8/temp16 within every instruction { ... }
  * never index RAM directly, instead use a macro that handles the wraparound
  * 6502 code uses optimizations like LDA #0; BEQ l1 -> the next location might
    not be code any more - but we delete it from the binary
- * ...
- * arch-dependent recompiler part should call out to generic code for generation
-   of code like "goto JMP_DISPATCH"
- * convert "RAMSIZE" into getter function to make generic .o files independent
-   of arch and app
- * split library functionality into many files, only include those necessary
+   XXX LLVM will understand that one of the targets is unreachable, so that's
+   fine; but yes, deleting the original code is a problem.
  * cbmbasic: omit "?"on INPUT if input is stdin (line apple1basic)
  * GEOS: recognize i_* calls and skip inline data; enables OPTIMIZE_EXECUTABLE
+ * ...
  */
