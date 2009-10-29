@@ -1,0 +1,35 @@
+
+Implement preloading of dynamic linker address space 0x04000000:
+-> prevent execution of mach_init etc. through fct. pointer by setting pointer to NULL 
+
+Fix disassembly of some 68020+ instructions (according to OS X otool disassembler):
+
+1.		56 C0              addq.? #0x00000003, d0
+	should be:
+		sne     d0
+(fixed)
+
+2.		DE FC 00 0C        adda.w #0xc, a7 
+	should be:
+		addaw   #0xc:w,sp
+		subql   #0x1,d2
+
+3.		2F 00              move.l d0, -(a7)
+	should be:
+		movel   d0,sp@- (post instead of preincrement?)
+
+4.		0C AE 00 00 3F 54 FF FC cmpi.l #0x3f54fffc, 0x0(a6)
+	should be:
+		cmpl    #0x3f54,a6@(0xfffc:w)
+
+5.		4C EE 04 0C FF F4  movem.l 0x40c(a6), d5 a4 a5 
+	should be:
+		moveml  a6@(0xfff4:w),d2/d3/a2
+
+-> check for further problems...
+
+Recognize exit of NeXT/68k program by call to libsys _exit():
+
+		61 FF 04 FF E7 54  bsr (l50024B0);
+		-> stop disassembly here?
+

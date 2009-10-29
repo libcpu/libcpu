@@ -307,6 +307,12 @@ disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, 
 				len = 2;
 				break;
 			}
+			if (opcode==0x4e71) {			/* NOP */
+				DIS snprintf(line, max_line, "nop");
+				REC snprintf(line, max_line, "nop;");
+				len = 2;
+				break;
+			}
 			if (MOD1==7) { /* LEA */
 				decodemodreg(task, RAM, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 				DIS snprintf(line, max_line, "lea %s, a%d", op1, REG1);
@@ -319,6 +325,12 @@ disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, 
 					decodemodreg(task, RAM, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 					DIS snprintf(line, max_line, "clr.%c %s", sizechar[SIZE67], op1);
 					REC snprintf(line, max_line, "move%d (READ_IMM,0, WRITE_%s);", sizenum[SIZE67], op1);
+					len = 2+lengthmodreg(MOD0, REG0, SIZE67);
+					break;
+				case 4:	/* NEG */
+					decodemodreg(task, RAM, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+					DIS snprintf(line, max_line, "neg.%c %s", sizechar[SIZE67], op1);
+					REC snprintf(line, max_line, "neg%d (READ_IMM,0, WRITE_%s);", sizenum[SIZE67], op1);
 					len = 2+lengthmodreg(MOD0, REG0, SIZE67);
 					break;
 				case 10:	/* TST */
@@ -334,9 +346,24 @@ disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, 
 						len = 2+lengthmodreg(MOD0, REG0, 0);
 						REC snprintf(line, max_line, "call (READ_%s,0x%08llx);", op1, pc+len);
 						break;
-					} else
-						DIS snprintf(line, max_line, "??? opcode %04x (%x)", opcode, bits(opcode,12,15));
+					} else if (bits(opcode,0,7) == 0x56) {	/* LINKW */ // 68030?
+						decodemodreg(task, RAM, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+						DIS snprintf(line, max_line, "linkw %s, %04x", op1, decodeimm(RAM, pc, SIZE_W));
+						len = 4+lengthmodreg(MOD0, REG0, 0);
+						REC snprintf(line, max_line, "linkw (READ_%s,0x%08llx);", op1, pc+len);
 						break;
+					} else if (bits(opcode,0,7) == 0x5e) {	/* UNLK */ // 68030?
+						decodemodreg(task, RAM, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+						DIS snprintf(line, max_line, "unlk %s", op1);
+						len = 2+lengthmodreg(MOD0, REG0, 0);
+						REC snprintf(line, max_line, "linkw (READ_%s,0x%08llx);", op1, pc+len);
+						break;
+					} else {
+						// DIS snprintf(line, max_line, "??? opcode %04x (%x)", opcode, bits(opcode,12,15));
+						DIS snprintf(line, max_line, "??? opcode %04x (%x)", opcode, bits(opcode,0,15));
+					}
+					break;
+					
 				case 8:
 				case 12:
 					if (bits(opcode,6,7) == 1 && DIRECTION10 == 0) {	/* PEA */
@@ -366,10 +393,23 @@ disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, 
 			}
 			break;
 		case 5:
-			if (MOD0==1 && bits(opcode,6,7)==3) { /* DBcc */
-				DIS snprintf(line, max_line, "db%s d%d, 0x%08llx", condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
-				REC snprintf(line, max_line, "db%s (d[%d], l%llX);", condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
-				len = 4;
+			if (bits(opcode,6,7)==3) {
+				if (MOD0==1) { /* DBcc */
+					DIS snprintf(line, max_line, "db%s d%d, 0x%08llx", condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
+					REC snprintf(line, max_line, "db%s (d[%d], l%llX);", condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
+					len = 4;
+				}
+				else if (MOD0==7) { /* TRAPcc */
+					DIS snprintf(line, max_line, "trap%s d%d, 0x%08llx", condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
+					REC snprintf(line, max_line, "trap%s (d[%d], l%llX);", condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
+					// TODO: decode OPMODE etc.! (p. 8.16 68kPM), optional word or long word
+					len = 2;
+				}
+				else { /* Scc */
+					DIS snprintf(line, max_line, "s%s d%d", condstr_db[CONDITION], REG0);
+					REC snprintf(line, max_line, "s%s d[%d]);", condstr_db[CONDITION], REG0);
+					len = 2;
+				}
 			} else {	/* ADDQ/SUBQ */
 				decodemodreg(task, RAM, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 				DIS snprintf(line, max_line, "%s.%c #0x%08x, %s", bits(opcode,8,8)? "subq":"addq", sizechar[SIZE67], QDATA9, op1);
@@ -404,7 +444,8 @@ disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, 
 					decodemodreg(task, RAM, pc, SIZEA68, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 					DIS snprintf(line, max_line, "%sa.%c %s, a%d", mnemo, sizechar[SIZEA68], op1, REG1);
 					REC snprintf(line, max_line, "%s%d (READ_%s, READ_a,%d, WRITE_a,%d);", mnemo, sizenum[SIZEA68], op1, REG1, REG1);
-					len = 2+lengthmodreg(MOD0, REG0, SIZEA68);
+					len = 2+lengthmodreg(MOD0, REG0, SIZEA68); // TODO: BUG?
+					fprintf(stderr, ">>> %d\n", lengthmodreg(MOD0, REG0, SIZEA68));
 					break;
 			} else {					/* ADD/SUB/... */
 				decodemodreg(task, RAM, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
