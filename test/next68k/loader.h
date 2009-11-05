@@ -29,7 +29,7 @@ int		LdrLoadDylib(struct dylib_command*, void **, unsigned long*);
 uint32_t 	LdrGetEntrypoint(struct symtab_command*, char*, unsigned long, FILE*);
 
 void		LdrLibGetSymbolsSymtab(struct symtab_command*, unsigned long, unsigned long, FILE*);
-void		LdrLLLibFunctionsAppend(char*, unsigned long);
+void		LdrLLLibFunctionsAppend(const char*, unsigned long);
 void 		LdrLLLibFunctionsClearList(void);
 void 		LdrLLLibFunctionsPrint();
 

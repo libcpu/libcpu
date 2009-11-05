@@ -590,7 +590,7 @@ int LdrLoadDylib (struct dylib_command *dylib_command, void **buf, unsigned long
 		/* We'll go thorugh the load commands and try to handle them */
 		switch(BE32_toHost(current_cmd->cmd)) {
 			case LC_SEGMENT:
-				fprintf(stderr, "LC_SEGMENT: %p %d\n", current_cmd, buflen);
+				fprintf(stderr, "LC_SEGMENT: %p %ld\n", current_cmd, *buflen);
 				if(!LdrLoadSegment((struct segment_command*)current_cmd, buf, buflen, dylibfile, libfp, liboffset))
 					return 0;				
 				break;
@@ -668,8 +668,8 @@ int LdrLoadSegment(struct segment_command *segment_command, void **buf, unsigned
 	segment_command->vmaddr += reloffset;
 
 	debug_printf("segname: %s\n", segment_command->segname);
-	debug_printf("vmaddr: %#lx\n", segment_command->vmaddr);
-	debug_printf("vmsize: %#lx\n", segment_command->vmsize);
+	debug_printf("vmaddr: %#x\n", segment_command->vmaddr);
+	debug_printf("vmsize: %#x\n", segment_command->vmsize);
 
 	/* Check if vmaddr + vmsize exceed the space allocated by spMemInit() */
 #if 0
@@ -828,7 +828,7 @@ int LdrGetMachHeader(struct mach_header *mach_header, unsigned long offset, FILE
 }
 
 /* Append a function symbol to the List */
-void LdrLLLibFunctionsAppend(char *name, unsigned long offset) {
+void LdrLLLibFunctionsAppend(const char *name, unsigned long offset) {
 
 	LdrLLFunctions *newelem = (LdrLLFunctions*) my_malloc(sizeof(LdrLLFunctions));
 	// debug_printf("newelem my_malloced at %#lx\n", newelem);
