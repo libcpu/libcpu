@@ -213,12 +213,14 @@ void LdrFakeDyld(struct segment_command *segment_command, void *buf, struct nlis
 
 				uint32_t *dyld_func_lookup = (uint32_t*)my_malloc(5*sizeof(uint32_t));
 				dyld_func_lookup[0] = BE32_toHost(0x38600000);   // OpCode li r3, 0x0
-				dyld_func_lookup[1] = BE32_toHost(0x3c630000 | (((uint32_t)noopfunc & 0xFFFF0000)>>16));   // OpCode addis r3, r3, hi16(noopfunc)
-				dyld_func_lookup[2] = BE32_toHost(0x60630000 | ((uint32_t)noopfunc & 0x0000FFFF));   // OpCode ori r3, r3, lo16(noopfunc)
+				//XXX potential bit loss for 64 bit?
+				dyld_func_lookup[1] = BE32_toHost(0x3c630000 | (((uintptr_t)noopfunc & 0xFFFF0000)>>16));   // OpCode addis r3, r3, hi16(noopfunc)
+				dyld_func_lookup[2] = BE32_toHost(0x60630000 | ((uintptr_t)noopfunc & 0x0000FFFF));   // OpCode ori r3, r3, lo16(noopfunc)
 				dyld_func_lookup[3] = BE32_toHost(0x90640000);   // OpCode stw r3, 0x0(r4)
 				dyld_func_lookup[4] = BE32_toHost(0x4e800020);   // OpCode blr
 
-				*((uint32_t*)&(((unsigned char*)buf)[current_sect->addr+0x4])) = BE32_toHost((uint32_t)dyld_func_lookup);
+				//XXX potential bit loss for 64 bit?
+				*((uint32_t*)&(((unsigned char*)buf)[current_sect->addr+0x4])) = BE32_toHost((uintptr_t)dyld_func_lookup);
 			}
 			
 			if(strcmp(current_sect->sectname, "__data")==0) {
