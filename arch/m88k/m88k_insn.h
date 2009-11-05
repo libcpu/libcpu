@@ -57,8 +57,6 @@
 #define M88K_BRFMT_OFF_SHIFT   0    // Br/Bsr
 #define M88K_BRFMT_OFF_MASK    0x3ffffff
 
-typedef uint32_t m88k_reg_t;
-
 class m88k_insn {
 	uint32_t m_insn;
 

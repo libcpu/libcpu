@@ -46,7 +46,8 @@ typedef enum {
 	CPU_ARCH_INVALID = 0, //XXX unused
 	CPU_ARCH_6502,
 	CPU_ARCH_M68K,
-	CPU_ARCH_MIPS
+	CPU_ARCH_MIPS,
+	CPU_ARCH_M88K
 } cpu_arch_t;
 
 typedef uint8_t tagging_type_t;

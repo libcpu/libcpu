@@ -9,16 +9,16 @@ Value *m88k_ptr_C;
 void
 arch_m88k_init(cpu_t *cpu)
 {
-	reg_m88k_t *reg;
+	m88k_regfile_t *reg;
 
 	reg_size = 32;
 	is_little_endian = !!(cpu->flags_arch & CPU_M88K_IS_LE);
 	has_special_r0 = true;
 
-	reg = (reg_m88k_t*)malloc(sizeof(reg_m88k_t));
+	reg = (m88k_regfile_t*)malloc(sizeof(m88k_regfile_t));
 	for (int i=0; i<32; i++) {
 		reg->gpr[i] = 0;
-		reg->xfr[i] = 0;
+		reg->xfr[i].i.dbl = 0;
 	}
 	reg->sxip = 0;
 	reg->snip = 0;
@@ -38,7 +38,7 @@ arch_m88k_init(cpu_t *cpu)
 addr_t
 arch_m88k_get_pc(void *reg)
 {
-	return ((reg_m88k_t*)reg)->sxip;
+	return ((m88k_regfile_t*)reg)->sxip;
 }
 
 void

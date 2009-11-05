@@ -4,8 +4,8 @@ UNAME		:=$(shell uname)
 CFLAGS_GLOBAL	=-I$(PWD) -I$(PWD)/libcpu -DARCH=$(ARCH) -DAPP=$(APP)
 ifeq ($(UNAME), Darwin)
 MAKE		= make
-CC		= gcc -arch i386
-CXX		= g++ -arch i386
+CC			= gcc -arch i386
+CXX			= g++ -arch i386
 CFLAGS		= $(CFLAGS_GLOBAL) -Wall -Wdeclaration-after-statement -Werror
 CXXFLAGS	=  $(CFLAGS_GLOBAL) -Wall -Werror `llvm-config --cxxflags`
 endif
@@ -13,6 +13,7 @@ ifeq ($(UNAME), SunOS)
 MAKE		= gmake
 ifeq ($(CC),)
 CC		= cc
+CXX		= c++
 endif
 CFLAGS		= $(CFLAGS_GLOBAL)
 endif
@@ -47,7 +48,8 @@ EXECUTABLE_NEXT68K=test_next68k
 EXECUTABLE_MIPS=test_mips
 EXECUTABLE_M88K=test_m88k
 
-EXECUTABLES=$(EXECUTABLE_6502) $(EXECUTABLE_M68K) $(EXECUTABLE_MIPS) $(EXECUTABLE_NEXT68K)
+EXECUTABLES=$(EXECUTABLE_6502) $(EXECUTABLE_M68K) $(EXECUTABLE_MIPS) \
+	$(EXECUTABLE_NEXT68K) $(EXECUTABLE_M88K)
 
 all:
 	echo $(CFLAGS)
@@ -60,10 +62,12 @@ all:
 	$(MAKE) -C test/6502
 	$(MAKE) -C test/m68k
 	$(MAKE) -C test/next68k
+	$(MAKE) -C test/m88k
 	$(CXX) -o $(EXECUTABLE_6502) $(OBJS_6502) $(OBJS_LIBCPU) `llvm-config --ldflags --libs`
 	$(CXX) -o $(EXECUTABLE_M68K) $(OBJS_M68K) $(OBJS_LIBCPU) `llvm-config --ldflags --libs`
 	$(CXX) -o $(EXECUTABLE_MIPS) $(OBJS_MIPS) $(OBJS_LIBCPU) `llvm-config --ldflags --libs`
 	$(CXX) -o $(EXECUTABLE_NEXT68K) $(OBJS_NEXT68K) $(OBJS_LIBCPU) `llvm-config --ldflags --libs`
+	$(CXX) -o $(EXECUTABLE_M88K) $(OBJS_M88K) $(OBJS_LIBCPU) `llvm-config --ldflags --libs`
 
 clean:
 	$(MAKE) -C arch/6502 clean
@@ -75,4 +79,5 @@ clean:
 	$(MAKE) -C test/6502 clean
 	$(MAKE) -C test/m68k clean
 	$(MAKE) -C test/next68k clean
+	$(MAKE) -C test/m88k clean
 	rm -f $(OBJS) $(EXECUTABLES)

@@ -24,8 +24,6 @@
 //   $w  - width
 //
 
-typedef uint32_t m88k_address_t;
-
 static char const * const m88k_insn_formats[] = {
 	NULL,              // M88K_FMT_NONE
 	"$rd, $r1, $i",    // M88K_IFMT_REG

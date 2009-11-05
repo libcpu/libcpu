@@ -52,6 +52,7 @@ typedef enum {				/* bitfield! */
 #include "arch/6502/libcpu_6502.h"
 #include "arch/m68k/libcpu_m68k.h"
 #include "arch/mips/libcpu_mips.h"
+#include "arch/m88k/libcpu_m88k.h"
 
 //////////////////////////////////////////////////////////////////////
 // cpu_t
@@ -73,6 +74,9 @@ cpu_new(cpu_arch_t arch)
 			break;
 		case CPU_ARCH_MIPS:
 			cpu->f = arch_func_mips;
+			break;
+		case CPU_ARCH_M88K:
+			cpu->f = arch_func_m88k;
 			break;
 		default:
 			printf("illegal arch: %d\n", arch);
