@@ -39,5 +39,6 @@ but remember to understand them in the right context!
    fine; but yes, deleting the original code is a problem.
  * cbmbasic: omit "?"on INPUT if input is stdin (line apple1basic)
  * GEOS: recognize i_* calls and skip inline data; enables OPTIMIZE_EXECUTABLE
+ * fix svnnotify
  * ...
  */
