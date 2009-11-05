@@ -161,7 +161,7 @@ main(int argc, char **argv) {
 	find_rets(RAM, cpu->code_start, cpu->code_end);
 #endif
 
-	printf("*** Executing... %lx\n", cpu->code_entry);
+	printf("*** Executing... %lx\n", (unsigned long)cpu->code_entry);
 
 #define PC (((reg_m68k_t*)cpu->reg)->pc)
 

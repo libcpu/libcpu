@@ -19,6 +19,7 @@ void arch_store32_aligned(Value *v, Value *a, BasicBlock *bb);
 Value *arch_load8(Value *addr, BasicBlock *bb);
 Value *arch_load16_aligned(Value *addr, BasicBlock *bb);
 void arch_store8(Value *val, Value *addr, BasicBlock *bb);
+void arch_store16(Value *val, Value *addr, BasicBlock *bb);
 void arch_branch(bool flag_state, addr_t pc1, addr_t pc2, Value *flag, Function *f, BasicBlock *bb);
 
 /* host functions */
@@ -54,6 +55,11 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 
 #define ADD(a,b) BinaryOperator::Create(Instruction::Add, a, b, "", bb)
 #define SUB(a,b) BinaryOperator::Create(Instruction::Sub, a, b, "", bb)
+#define MUL(a,b) BinaryOperator::Create(Instruction::Mul, a, b, "", bb)
+#define SDIV(a,b) BinaryOperator::Create(Instruction::SDiv, a, b, "", bb)
+#define UDIV(a,b) BinaryOperator::Create(Instruction::UDiv, a, b, "", bb)
+#define SREM(a,b) BinaryOperator::Create(Instruction::SRem, a, b, "", bb)
+#define UREM(a,b) BinaryOperator::Create(Instruction::URem, a, b, "", bb)
 #define AND(a,b) BinaryOperator::Create(Instruction::And, a, b, "", bb)
 #define OR(a,b) BinaryOperator::Create(Instruction::Or, a, b, "", bb)
 #define XOR(a,b) BinaryOperator::Create(Instruction::Xor, a, b, "", bb)
@@ -63,10 +69,13 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define ICMP_EQ(a,b) new ICmpInst(ICmpInst::ICMP_EQ, a, b, "", bb)
 #define ICMP_NE(a,b) new ICmpInst(ICmpInst::ICMP_NE, a, b, "", bb)
 #define ICMP_ULT(a,b) new ICmpInst(ICmpInst::ICMP_ULT, a, b, "", bb)
+#define ICMP_UGT(a,b) new ICmpInst(ICmpInst::ICMP_UGT, a, b, "", bb)
 #define ICMP_SLT(a,b) new ICmpInst(ICmpInst::ICMP_SLT, a, b, "", bb)
 #define ICMP_SGT(a,b) new ICmpInst(ICmpInst::ICMP_SGT, a, b, "", bb)
 #define ICMP_SGE(a,b) new ICmpInst(ICmpInst::ICMP_SGE, a, b, "", bb)
 #define ICMP_SLE(a,b) new ICmpInst(ICmpInst::ICMP_SLE, a, b, "", bb)
+
+#define FREM(a,b) BinaryOperator::Create(Instruction::FRem, a, b, "", bb)
 
 /* interface to the GPRs */
 #define R(i) arch_get_reg(i, 0, bb)
@@ -84,6 +93,7 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define LOAD32(i,v) arch_put_reg(i, arch_load32_aligned(v,bb), 32, true, bb)
 
 #define STORE8(v,a) arch_store8(v, a, bb)
+#define STORE16(v,a) arch_store16(v, a, bb)
 #define STORE32(v,a) arch_store32_aligned(v, a, bb)
 
 /* host */

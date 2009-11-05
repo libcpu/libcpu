@@ -146,6 +146,16 @@ arch_store8(Value *val, Value *addr, BasicBlock *bb) {
 	arch_store32_aligned(val, addr, bb);
 }
 
+void
+arch_store16(Value *val, Value *addr, BasicBlock *bb) {
+	Value *shift = arch_get_shift16(addr, bb);
+	addr = AND(addr, CONST(~3ULL));
+	Value *mask = XOR(SHL(CONST(65535), shift),CONST(-1ULL));
+	Value *old = AND(arch_load32_aligned(addr, bb), mask);
+	val = OR(old, SHL(AND(val, CONST(65535)), shift));
+	arch_store32_aligned(val, addr, bb);
+}
+
 
 // branches
 
