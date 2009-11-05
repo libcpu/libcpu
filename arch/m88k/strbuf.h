@@ -76,7 +76,7 @@ int strbuf_append_format(strbuf_t *strbuf, char const *format, ...)
 	va_list ap;
 
 	va_start (ap, format);
-	rc = strbuf_append_formatv (strbuf, format, ap);
+	rc = strbuf_append_formatv(strbuf, format, ap);
 	va_end (ap);
 
 	return (rc);

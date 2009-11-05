@@ -1,0 +1,5 @@
+PROJECT(test_m88k)
+
+ADD_EXECUTABLE(test_m88k main.cpp)
+TARGET_LINK_LIBRARIES(test_m88k cpu)
+TARGET_LINK_LLVM(test_m88k)

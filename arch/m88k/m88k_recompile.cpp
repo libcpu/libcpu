@@ -203,6 +203,8 @@ arch_m88k_addsub(uint8_t* RAM, addr_t pc, m88k_reg_t dst, Value *src1, Value *sr
 		else
 			SET_CARRY(ICMP_ULT(result, src2));
 	}
+
+	LET32(dst, result);
 }
 
 static void
@@ -283,7 +285,7 @@ arch_m88k_cmp(m88k_reg_t dst, Value *src1, Value *src2,
 		SELECT(ICMP_EQ(src1, src2),
 			CONST32(0xaa4),
 			OR(CONST(8), // NE flag
-			   // ( ( (-X) ^ 6) & 0xf) << Y will do the trick.
+			   // (((-X) ^ 6) & 0xf) << Y will do the trick.
 			   OR(SHL(AND(XOR(NEG(ICMP_UGT(src1, src2)), CONST32(6)),
 					CONST32(0xf)), CONST32(8)),
 				  SHL(AND(XOR(NEG(ICMP_SGT(src1, src2)), CONST32(6)),
