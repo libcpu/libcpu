@@ -13,7 +13,7 @@ extern const BasicBlock *lookup_basicblock(Function* f, addr_t pc);
 
 extern Value* ptr_PC;
 
-extern Value* ptr_C; // Carry
+extern Value* m88k_ptr_C; // Carry
 
 //////////////////////////////////////////////////////////////////////
 // tagging
@@ -129,8 +129,8 @@ arch_m88k_jump(addr_t new_pc, BasicBlock *bb)
 
 //////////////////////////////////////////////////////////////////////
 
-#define GET_CARRY()  (new LoadInst(ptr_C, "", false, bb))
-#define SET_CARRY(v) (new StoreInst(v, ptr_C, bb))
+#define GET_CARRY()  (new LoadInst(m88k_ptr_C, "", false, bb))
+#define SET_CARRY(v) (new StoreInst(v, m88k_ptr_C, bb))
 
 static void
 arch_m88k_addsub(uint8_t* RAM, addr_t pc, m88k_reg_t dst, Value *src1, Value *src2,

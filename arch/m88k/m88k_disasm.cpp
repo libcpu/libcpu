@@ -58,7 +58,7 @@ static char const * const m88k_bcnd_values[] = {
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
 
-static char const * const m88k_insn_mneomnics[] = {
+static char const * const m88k_insn_mnemonics[] = {
 	"<ILLEGAL>",
 
 	"add",
@@ -172,7 +172,7 @@ static int m88k_disassemble (strbuf_t *strbuf, m88k_address_t pc,
 
 	format = m88k_insn_formats[insn.format()];
 
-	if (strbuf_append(strbuf, m88k_insn_mneomnics[insn.opcode()]))
+	if (strbuf_append(strbuf, m88k_insn_mnemonics[insn.opcode()]))
 		return (-1);
 
 	if (insn.has_carry() && insn.carry() != 0) {

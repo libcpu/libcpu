@@ -4,7 +4,7 @@
 #include "cpu_generic.h"
 #include "arch_types.h"
 
-Value *ptr_C;
+Value *m88k_ptr_C;
 
 void
 arch_m88k_init(cpu_t *cpu)
@@ -45,7 +45,7 @@ void
 arch_m88k_emit_decode_reg(BasicBlock *bb)
 {
 	// declare flags
-	ptr_C = new AllocaInst(IntegerType::get(1), "C", bb);
+	m88k_ptr_C = new AllocaInst(IntegerType::get(1), "C", bb);
 
 	// decode PSR
 //	Value *flags = new LoadInst(ptr_PSR, "", false, bb);

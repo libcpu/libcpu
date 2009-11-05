@@ -79,13 +79,13 @@ int strbuf_append_format(strbuf_t *strbuf, char const *format, ...)
 	rc = strbuf_append_formatv (strbuf, format, ap);
 	va_end (ap);
 
-	return rc;
+	return (rc);
 }
 
 static __inline
 size_t strbuf_length(strbuf_t const *strbuf)
 {
-  return strbuf->ptr - strbuf->buf;
+  return (strbuf->ptr - strbuf->buf);
 }
 
 #endif  /* !__strbuf_h */
