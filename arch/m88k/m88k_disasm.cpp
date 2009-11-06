@@ -160,11 +160,12 @@ static char const * const m88k_insn_mnemonics[] = {
 	"fstcr"
 };
 
+/////////////////////////////////////////////////////////////////////////////
 
-static int m88k_disassemble (strbuf_t *strbuf, m88k_address_t pc,
+static int m88k_disassemble(strbuf_t *strbuf, m88k_address_t pc,
 	m88k_insn const &insn)
 {
-	char        reg_char;
+	char		reg_char;
 	char const *tmp;
 	char const *format;
 
@@ -228,7 +229,7 @@ static int m88k_disassemble (strbuf_t *strbuf, m88k_address_t pc,
 					break;
 
 				case 'w':
-					if (strbuf_append_format(strbuf, "%u", insn.width()))
+					if (strbuf_append_format(strbuf, "%u", insn.bit_width()))
 						return (-1);
 					break;
 
@@ -238,17 +239,17 @@ static int m88k_disassemble (strbuf_t *strbuf, m88k_address_t pc,
 					break;
 
 				case 'p':
-					if (insn.format () != M88K_BRFMT_OFF)
-						pc += insn.branch16_offset () << 2;
+					if (insn.format() != M88K_BRFMT_OFF)
+						pc += insn.branch16() << 2;
 					else
-						pc += insn.branch26_offset () << 2;
+						pc += insn.branch26() << 2;
 
-					if (strbuf_append_format(strbuf, "0x%08x", pc))
+					if (strbuf_append_format(strbuf, "0x%08x", pc, insn.branch16() << 2))
 					  return (-1);
 					break;
 
 				case 's':
-					if (strbuf_append_format(strbuf, "%u", insn.offset()))
+					if (strbuf_append_format(strbuf, "%u", insn.bit_offset()))
 						return (-1);
 					break;
 
@@ -286,10 +287,11 @@ static int m88k_disassemble (strbuf_t *strbuf, m88k_address_t pc,
 int
 arch_m88k_disasm_instr(uint8_t* RAM, addr_t pc, char *line, unsigned int max_line)
 {
-	strbuf_t strbuf;
-	int      dummy1;
-	addr_t   dummy2;
-	int      bytes;
+	strbuf_t	strbuf;
+	int			dummy1;
+	addr_t		dummy2;
+	int			bytes;
+	bool		delaying;
 	
 	bytes = arch_m88k_tag_instr(RAM, pc, &dummy1, &dummy2);
 
@@ -297,10 +299,11 @@ arch_m88k_disasm_instr(uint8_t* RAM, addr_t pc, char *line, unsigned int max_lin
 
 	if (m88k_disassemble(&strbuf, pc, INSTR(pc))) {
 		strbuf_terminate(&strbuf);
-		return (strbuf_length(&strbuf));
+		return (bytes);
 	}
 
-	if (m88k_insn(INSTR(pc)).is_delaying ()) {
+	delaying = m88k_insn(INSTR(pc)).is_delaying();
+	if (delaying) {
 		pc += 4;
 
 		strbuf_append(&strbuf, " [");
@@ -309,5 +312,5 @@ arch_m88k_disasm_instr(uint8_t* RAM, addr_t pc, char *line, unsigned int max_lin
 	}
 	strbuf_terminate(&strbuf);
 
-	return (strbuf_length(&strbuf));
+	return (bytes);
 }

@@ -316,7 +316,7 @@ arch_mips_jump(addr_t new_pc, BasicBlock *bb) {
 	BRANCH_TRUE_LIKELY(f);					\
 }
 
-#define LINKr(i) LET(i, CONST((uint64_t)(sint64_t)(sint32_t)pc+8))
+#define LINKr(i) LET32(i, CONST((uint64_t)(sint64_t)(sint32_t)pc+8))
 
 #define LINK LINKr(31)
 
@@ -548,9 +548,9 @@ int arch_mips_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, 
 	case 0x26: /* INCPU_LWR */		BAD;
 	case 0x27: /* INCPU_LWU */		BAD;
 	case 0x28: /* INCPU_SB */		STORE8(R(RT),ADD(R32(RS),IMM32));							break;
-	case 0x29: /* INCPU_SH */		BAD;
+	case 0x29: /* INCPU_SB */		STORE16(R(RT),ADD(R32(RS),IMM32));							break;
 	case 0x2A: /* INCPU_SWL */		BAD;
-	case 0x2B: /* INCPU_SW */		STORE8(R(RT),ADD(R32(RS),IMM32));						break;
+	case 0x2B: /* INCPU_SW */		STORE32(R(RT),ADD(R32(RS),IMM32));						break;
 	case 0x2C: /* INCPU_SDL */	BAD;
 	case 0x2D: /* INCPU_SDR */	BAD;
 	case 0x2E: /* INCPU_SWR */	BAD;

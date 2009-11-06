@@ -75,7 +75,15 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define ICMP_SGE(a,b) new ICmpInst(ICmpInst::ICMP_SGE, a, b, "", bb)
 #define ICMP_SLE(a,b) new ICmpInst(ICmpInst::ICMP_SLE, a, b, "", bb)
 
+/* shortcuts */
+#define COM(x) XOR(x, CONST(-1ULL))
+#define NEG(x) SUB(CONST(0), x)
+
+/* floating point */
 #define FREM(a,b) BinaryOperator::Create(Instruction::FRem, a, b, "", bb)
+
+/* condition */
+#define SELECT(c,a,b) (SelectInst::Create(c, a, b, "", bb))
 
 /* interface to the GPRs */
 #define R(i) arch_get_reg(i, 0, bb)

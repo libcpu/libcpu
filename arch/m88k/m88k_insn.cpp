@@ -643,6 +643,14 @@ m88k_insn::insn_desc const m88k_insn::desc_ext2[8][64] =
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 25 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 26 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 27 [illegal]
+      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 28 [illegal]
+      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 29 [illegal]
+      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2a [illegal]
+      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2b [illegal]
+      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2c [illegal]
+      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2d [illegal]
+      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2e [illegal]
+      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2f [illegal]
       { M88K_TFMT_REG,   M88K_OPC_JMP     }, // 30 jmp    rS2
       { M88K_TFMT_REG,   M88K_OPC_JMP_N   }, // 31 jmp.n  rS2
       { M88K_TFMT_REG,   M88K_OPC_JSR     }, // 32 jsr    rS2

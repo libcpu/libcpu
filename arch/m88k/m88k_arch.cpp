@@ -18,7 +18,9 @@ arch_m88k_init(cpu_t *cpu)
 	reg = (m88k_regfile_t*)malloc(sizeof(m88k_regfile_t));
 	for (int i=0; i<32; i++) {
 		reg->gpr[i] = 0;
+#if the_register_map_has_been_done
 		reg->xfr[i].i.dbl = 0;
+#endif
 	}
 	reg->sxip = 0;
 	reg->snip = 0;
@@ -29,6 +31,7 @@ arch_m88k_init(cpu_t *cpu)
 	cpu->count_regs_i16 = 0;
 	cpu->count_regs_i32 = 32;
 	cpu->count_regs_i64 = 0;
+	//cpu->count_regs_f32 = 0;
 	//cpu->count_regs_f64 = 32;
 	//cpu->count_regs_v64 = 32;
 

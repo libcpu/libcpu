@@ -168,7 +168,7 @@ public:
 			case M88K_OPC_JSR_N:
 				return (true);
 			default:
-				return false;
+				return (false);
 		}
 	}
 
@@ -210,12 +210,12 @@ public: // Triadic
 	}
 
 public: // Bit
-	inline uint32_t width() const
+	inline uint32_t bit_width() const
 	{ 
 		return ((m_insn >> M88K_BFMT_W_SHIFT) & M88K_BFMT_W_MASK);
 	}
 
-	inline int32_t offset() const
+	inline int32_t bit_offset() const
 	{
 		return ((m_insn >> M88K_BFMT_OFF_SHIFT) & M88K_BFMT_OFF_MASK);
 	}
@@ -233,14 +233,18 @@ public: // Cbr
 	}
 
 public: // Branch Offset
-	inline int32_t branch26_offset() const
+	inline int32_t branch26() const
 	{
-		return ((m_insn >> M88K_BRFMT_OFF_SHIFT) & M88K_BRFMT_OFF_MASK);
+		// Sign extend 26bits.
+		return (static_cast <int32_t> (((m_insn >> M88K_BRFMT_OFF_SHIFT) &
+			M88K_BRFMT_OFF_MASK) << 6) >> 6);
 	}
 
-	inline int32_t branch16_offset() const
+	inline int32_t branch16() const
 	{
-		return ((m_insn >> M88K_CBFMT_OFF_SHIFT) & M88K_CBFMT_OFF_MASK);
+		// Sign extend 16bits.
+		return (static_cast <int16_t> ((m_insn >> M88K_CBFMT_OFF_SHIFT) &
+			M88K_CBFMT_OFF_MASK));
 	}
 
 public: // Floating

@@ -149,7 +149,7 @@ typedef enum _m88k_bcnd_t {
 } m88k_bcnd_t;
 
 typedef enum _m88k_insnfmt {
-	M88K_FMT_NONE,
+	M88K_FMT_NONE = 0,
 
 	M88K_IFMT_REG,
 	M88K_IFMT_MEM,
@@ -222,6 +222,7 @@ typedef struct {
 		};
 		uint32_t gpr[32];
 	};
+#if the_register_map_has_been_done
 	union {
 		struct {
 			m88k_fpreg_t x0;
@@ -259,6 +260,7 @@ typedef struct {
 		};
 		m88k_fpreg_t xfr[32];
 	};
+#endif
 	uint32_t sxip; /* Execution IP */
 	uint32_t snip; /* Next IP */
 	uint32_t sfip; /* Fetch IP */

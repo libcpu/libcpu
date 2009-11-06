@@ -10,7 +10,6 @@
 //#define SINGLESTEP
 
 #include <mach/mach_time.h>
-//#define START_NO 40
 #define START_NO 1000000000
 #define TIMES 100
 
@@ -21,7 +20,9 @@
 //////////////////////////////////////////////////////////////////////
 // command line parsing helpers
 //////////////////////////////////////////////////////////////////////
-void tag_extra(cpu_t *cpu, char *entries) {
+
+void tag_extra(cpu_t *cpu, char *entries)
+{
 	addr_t entry;
 	char* old_entries;
 
@@ -41,7 +42,8 @@ void tag_extra(cpu_t *cpu, char *entries) {
 	}
 }
 
-void tag_extra_filename(cpu_t *cpu, char *filename) {
+void tag_extra_filename(cpu_t *cpu, char *filename)
+{
 	FILE *fp;
 	char *buf;
 	size_t nbytes;
@@ -80,7 +82,7 @@ dump_state(uint8_t *RAM, m88k_regfile_t *reg)
 			printf("\n");
 		printf("R%02d=%08x ", i, (unsigned int)reg->gpr[i]);
 	}
-	int base = reg->gpr[2];
+	int base = reg->gpr[31];
 	for (int i=0; i<256 && i+base<65536; i+=4) {
 		if (!(i%16))
 			printf("\nSTACK: ");
@@ -90,7 +92,8 @@ dump_state(uint8_t *RAM, m88k_regfile_t *reg)
 }
 
 static void
-debug_function(uint8_t *RAM, void *r) {
+debug_function(uint8_t *RAM, void *r)
+{
 //	reg_6502_t *reg = (reg_6502_t*)r;
 //	printf("DEBUG: $%04X: A=$%02X X=$%02X Y=$%02X S=$%02X P=$%02X %02X/%02X\n", reg->pc, reg->a, reg->x, reg->y, reg->s, reg->p, RAM[0x33], RAM[0x34]);
 //	{ int i; for (i=0x01F0; i<0x0200; i++) printf("%02X ", RAM[i]); printf("\n"); }
@@ -124,14 +127,27 @@ int fib(int n)
 #endif
 
 //////////////////////////////////////////////////////////////////////
+
 int
-main(int argc, char **argv) {
+main(int argc, char **argv)
+{
 	char *executable;
 	char *entries;
 	cpu_t *cpu;
 	uint8_t *RAM;
-
-	int ramsize = 5*1024*1024;
+	FILE *f;
+	int ramsize;
+	char *stack;
+	int i;
+#ifdef BENCHMARK_FIB
+	int r1, r2;
+	uint64_t t1, t2, t3, t4;
+	unsigned start_no = START_NO;
+#endif
+#ifdef SINGLESTEP
+	int step = 0;
+#endif
+	ramsize = 5*1024*1024;
 	RAM = (uint8_t*)malloc(ramsize);
 
 	cpu = cpu_new(CPU_ARCH_M88K);
@@ -151,20 +167,33 @@ main(int argc, char **argv) {
 	
 	cpu_init(cpu);
 
-/* parameter parsing */
-	if (argc<2) {
+	/* parameter parsing */
+	if (argc < 2) {
+#ifdef BENCHMARK_FIB
+		printf("Usage: %s executable [itercount] [entries]\n", argv[0]);
+#else
 		printf("Usage: %s executable [entries]\n", argv[0]);
+#endif
 		return 0;
 	}
 
 	executable = argv[1];
-	if (argc>=3)
+#ifdef BENCHMARK_FIB
+	if (argc >= 3)
+		start_no = atoi(argv[2]);
+
+	if (argc >= 4)
+		entries = argv[3];
+	else
+		entries = 0;
+#else
+	if (argc >= 3)
 		entries = argv[2];
 	else
 		entries = 0;
+#endif
 
-/* load code */
-	FILE *f;
+	/* load code */
 	if (!(f = fopen(executable, "rb"))) {
 		printf("Could not open %s!\n", executable);
 		return 2;
@@ -187,31 +216,27 @@ main(int argc, char **argv) {
 
 	printf("*** Executing...\n");
 
-
 #define STACK_SIZE 65536
 
-	char *stack = (char*) malloc(STACK_SIZE);
-	
-//#define STACK (65536-4)
-#define STACK ((long long)(stack+STACK_SIZE-4))
+	stack = (char *)(ramsize - STACK_SIZE); // THIS IS *GUEST* ADDRESS!
 
+#define STACK ((long long)(stack+STACK_SIZE-4))
 
 #define PC (((m88k_regfile_t*)cpu->reg)->sxip)
 #define R (((m88k_regfile_t*)cpu->reg)->gpr)
 
 	PC = cpu->code_entry;
 
-	for (int i=0;i<32;i++)
+	for (i = 1; i < 32; i++)
 		R[i] = 0xF0000000 + i;	// DEBUG
 
-	R[29] = STACK; // STACK
-//printf("stack: %llx\n", (unsigned long long)R[29]);
-	R[31] = -1; // return address
+	R[31] = STACK; // STACK
+	R[1] = -1; // return address
 
 #ifdef BENCHMARK_FIB//fib
-	R[4] = 3; // parameter
+	R[2] = start_no; // parameter
 #else
-#define STRING "HelloHelloHelloHelloHelloHelloHelloHelloHelloHello\n"
+define STRING "HelloHelloHelloHelloHelloHelloHelloHelloHelloHello\n"
 	R[4] = 0x1000;
 	R[5] = strlen(STRING);
 	R[6] = 0x2000;
@@ -220,30 +245,31 @@ main(int argc, char **argv) {
 	dump_state(RAM, (m88k_regfile_t*)cpu->reg);
 
 #ifdef SINGLESTEP
-	int step = 0 ;
-	for(;;) {
+	for(step = 0;;) {
 		printf("::STEP:: %d\n", step++);
 
 		cpu_run(cpu, debug_function);
 
 		dump_state(RAM, (m88k_regfile_t*)cpu->reg);
-		
+		printf ("NPC=%08x\n", PC);
+
 		if (PC == -1)
 			break;
 
 		cpu_flush(cpu);
+		printf("*** PRESS <ENTER> TO CONTINUE ***\n");
+		getchar();
 	}
 #else
 	for(;;) {
+		int ret;
 		breakpoint();
-		int ret = cpu_run(cpu, debug_function);
+		ret = cpu_run(cpu, debug_function);
 		printf("ret = %d\n", ret);
 		switch (ret) {
 			case JIT_RETURN_NOERR: /* JIT code wants us to end execution */
 				break;
 			case JIT_RETURN_FUNCNOTFOUND:
-				//printf("LIB: $%04X: A=$%02X X=$%02X Y=$%02X S=$%02X P=$%02X\n", pc, a, x, y, s, p);
-
 				dump_state(RAM, (m88k_regfile_t*)cpu->reg);
 
 				if (PC == -1)
@@ -251,9 +277,8 @@ main(int argc, char **argv) {
 
 				// bad :(
 				printf("%s: error: $%llX not found!\n", __func__, (unsigned long long)PC);
-				int i;
 				printf("PC: ");
-				for (i=0; i<16; i++)
+				for (i = 0; i < 16; i++)
 					printf("%02X ", RAM[PC+i]);
 				printf("\n");
 				exit(1);
@@ -263,30 +288,35 @@ main(int argc, char **argv) {
 	}
 double_break:
 #ifdef BENCHMARK_FIB
+	printf("start_no=%u\n", start_no);
+
 	printf("RUN1..."); fflush(stdout);
-	uint64_t t1 = mach_absolute_time();
 	PC = cpu->code_entry;
 
-	for (int i=0;i<32;i++)
+	for (i = 1; i < 32; i++)
 		R[i] = 0xF0000000 + i;	// DEBUG
 
-	R[29] = STACK; // STACK
-	R[31] = -1; // return address
+	R[31] = STACK; // STACK
+	R[1] = -1; // return address
 
-	R[4] = START_NO; // parameter
+	R[2] = start_no; // parameter
 	breakpoint();
+
+	t1 = mach_absolute_time();
 //	for (int i=0; i<TIMES; i++)
 		cpu_run(cpu, debug_function);
-	int r1 = R[2];
-	uint64_t t2 = mach_absolute_time();
+	r1 = R[2];
+	t2 = mach_absolute_time();
+
 	printf("done!\n");
+	
+	dump_state(RAM, (m88k_regfile_t*)cpu->reg);
 
 	printf("RUN2..."); fflush(stdout);
-	uint64_t t3 = mach_absolute_time();
-	int r2;
+	t3 = mach_absolute_time();
 //	for (int i=0; i<TIMES; i++)
-		r2 = fib(START_NO);
-	uint64_t t4 = mach_absolute_time();
+		r2 = fib(start_no);
+	t4 = mach_absolute_time();
 	printf("done!\n");
 
 	printf("%d -- %d\n", r1, r2);

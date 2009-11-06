@@ -7,12 +7,12 @@ IF (APPLE)
     # since we do not depend upon any strange frameworks (true?).
     # 
     SET (CMAKE_OSX_ARCHITECTURES "i386;ppc;ppc64")
-  ELIF (MACOSX_VERSION MATCHES "10.5")
+  ELSEIF (MACOSX_VERSION MATCHES "10.5")
     #
     # Build for MacOS X 10.5, all 4 architectures.
     # 
     SET (CMAKE_OSX_ARCHITECTURES "i386;x86_64;ppc;ppc64")
-  ELIF (MACOSX_VERSION MATCHES "10.6")
+  ELSEIF (MACOSX_VERSION MATCHES "10.6")
     #
     # For MacOS X 10.6, all Intel architectures.
     #
