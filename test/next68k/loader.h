@@ -18,6 +18,15 @@ typedef struct LdrLLFunctions {
 	struct LdrLLFunctions *next;
 	} LdrLLFunctions;
 
+/* Indicator to signal no entry point found in Mach-O binary 
+ * In the original loader code, the indicator was a return value of 0
+ * Prehistoric NeXT/68k binaries (from NeXTstep 3.0), however, 
+ * actually have a valid entry point 0!
+ * So, this constant, which is unlikely to be a valid entry point,
+ * now indicates failure to find an entry point. Ouch.
+ */
+#define MACHO_NO_ENTRY_POINT ((LdrResult_t *)0xFFFFFFFFUL)
+
 /* Function declarations */
 LdrResult_t*	LdrLoadMachO (char *, char*, char*);
 int		LdrCheckHdrCpuType(cpu_type_t, unsigned long, FILE*);

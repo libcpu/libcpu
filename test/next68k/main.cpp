@@ -146,6 +146,8 @@ main(int argc, char **argv) {
 	cpu->code_end = cpu->code_start + 16*1024*1024;  // fread(&RAM[cpu->code_start], 1, ramsize-cpu->code_start, f);
 
 	if (!cpu->code_entry) {
+		fprintf(stderr, "Entry point is at address 0, seems to be a prehistoric binary!\n");
+	} else if ((LdrResult_t *)(cpu->code_entry) == MACHO_NO_ENTRY_POINT) {
 		fprintf(stderr, "Cannot find Mach-O entry point\n");
 		return 1;
 	}

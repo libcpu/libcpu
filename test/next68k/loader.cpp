@@ -348,10 +348,8 @@ unsigned long LdrGetTextText(struct segment_command *segment_command, void *buf)
 		unsigned int i;
 		struct section *sections = (struct section*)(segment_command+1);
 		for (i=0; i<segment_command->nsects; i++) {
-		
 			/* A list of section structs follows right after the segment_command */
 			struct section *current_sect = &sections[i];
-			
 			if(strcmp(current_sect->sectname, "__text")==0)
 				return current_sect->addr;
 		}
