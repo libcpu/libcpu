@@ -48,7 +48,7 @@ void
 arch_m88k_emit_decode_reg(BasicBlock *bb)
 {
 	// declare flags
-	m88k_ptr_C = new AllocaInst(IntegerType::get(1), "C", bb);
+	m88k_ptr_C = new AllocaInst(getIntegerType(1), "C", bb);
 
 	// decode PSR
 //	Value *flags = new LoadInst(ptr_PSR, "", false, bb);

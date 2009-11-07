@@ -5,4 +5,4 @@ typedef struct {
 	uint8_t s;
 	uint8_t p;
 	uint16_t pc;
-} reg_6502_t;
+} __attribute__((packed)) reg_6502_t;

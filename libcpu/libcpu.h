@@ -17,6 +17,9 @@
 #include "llvm/Target/TargetData.h"
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/LinkAllPasses.h"
+#include "llvm/Config/config.h"
+#include "llvm/Target/TargetSelect.h"
+
 
 #include "types.h"
 
@@ -56,6 +59,7 @@ typedef uint8_t tagging_type_t;
 typedef struct cpu {
 	cpu_arch_t arch;
 	arch_func_t f;
+	uint16_t pc_offset;
 	uint32_t pc_width;
 	uint32_t count_regs_i8;
 	uint32_t count_regs_i16;
@@ -118,4 +122,13 @@ void cpu_set_ram(uint8_t *RAM);
 void cpu_flush(cpu_t *cpu);
 void cpu_init(cpu_t *cpu);
 
+//////////////////////////////////////////////////////////////////////
+// LLVM Helpers
+//////////////////////////////////////////////////////////////////////
+
+#define _CTX() getGlobalContext()
+#define getType(x) (Type::get##x(_CTX()))
+#define getIntegerType(x) (IntegerType::get(_CTX(), x))
+#define getStructType(x, ...) (StructType::get(_CTX(), x,    \
+					       #__VA_ARGS__))
 #endif

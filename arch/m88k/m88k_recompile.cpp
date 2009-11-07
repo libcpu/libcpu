@@ -107,7 +107,7 @@ arch_m88k_get_imm(m88k_insn const &instr, uint32_t bits, unsigned flags,
 	} else if (flags & I_BS)
 		imm |= 0xffff0000;
 
-	return ConstantInt::get(IntegerType::get(bits ? bits : reg_size), imm);
+	return ConstantInt::get(getIntegerType(bits ? bits : reg_size), imm);
 }
 
 #define IMM    arch_m88k_get_imm(instr, 0, I_SEXT, bb)

@@ -50,12 +50,12 @@ Value* ptr_N;
 
 Value *
 arch_6502_get_op8(uint8_t *RAM, uint16_t pc, BasicBlock *bb) {
-	return ConstantInt::get(Type::Int32Ty, OPERAND_8);
+	return ConstantInt::get(getType(Int32Ty), OPERAND_8);
 }
 
 Value *
 arch_6502_get_op16(uint8_t *RAM, uint16_t pc, BasicBlock *bb) {
-	return ConstantInt::get(Type::Int32Ty, OPERAND_16);
+	return ConstantInt::get(getType(Int32Ty), OPERAND_16);
 }
 
 static Value *
@@ -76,17 +76,17 @@ arch_6502_load_ram_8(Value *addr, BasicBlock *bb) {
 
 static Value *
 arch_6502_load_ram_16(int is_32, Value *addr, BasicBlock *bb) {
-	ConstantInt* const_int32_0001 = ConstantInt::get(Type::Int32Ty, 0x0001);
-	ConstantInt* const_int32_0008 = ConstantInt::get(is_32? Type::Int32Ty : Type::Int16Ty, 0x0008);
+	ConstantInt* const_int32_0001 = ConstantInt::get(getType(Int32Ty), 0x0001);
+	ConstantInt* const_int32_0008 = ConstantInt::get(is_32? getType(Int32Ty) : getType(Int16Ty), 0x0008);
 
 	/* get lo */
 	Value *lo = arch_6502_load_ram_8(addr, bb);
-	Value *lo32 = new ZExtInst(lo, IntegerType::get(is_32? 32:16), "", bb);
+	Value *lo32 = new ZExtInst(lo, getIntegerType(is_32? 32:16), "", bb);
 
 	/* get hi */
 	addr = BinaryOperator::Create(Instruction::Add, addr, const_int32_0001, "", bb);
 	Value *hi = arch_6502_load_ram_8(addr, bb);
-	Value *hi32 = new ZExtInst(hi, IntegerType::get(is_32? 32:16), "", bb);
+	Value *hi32 = new ZExtInst(hi, getIntegerType(is_32? 32:16), "", bb);
 
 	/* combine */
 	BinaryOperator* hi32shifted = BinaryOperator::Create(Instruction::Shl, hi32, const_int32_0008, "", bb);
@@ -97,7 +97,7 @@ static Value *
 arch_6502_add_index(Value *ea, Value *index_register, BasicBlock *bb) {
 	/* load index register, extend to 32 bit */
 	Value *index = new LoadInst(index_register, "", false, bb);
-	CastInst* index32 = new ZExtInst(index, IntegerType::get(32), "", bb);
+	CastInst* index32 = new ZExtInst(index, getIntegerType(32), "", bb);
 
 	/* add base and index */
 	return BinaryOperator::Create(Instruction::Add, index32, ea, "", bb);
@@ -136,12 +136,12 @@ arch_6502_get_operand_lvalue(uint8_t* RAM, addr_t pc, BasicBlock* bb) {
 	printf("is_indirect = %x\n", is_indirect);
 	printf("is_8bit = %x\n", is_8bit);
 #endif
-	ConstantInt* const_int32_FFFF = ConstantInt::get(Type::Int32Ty, 0xFFFF);
-	ConstantInt* const_int32_00FF = ConstantInt::get(Type::Int32Ty, 0x00FF);
+	ConstantInt* const_int32_FFFF = ConstantInt::get(getType(Int32Ty), 0xFFFF);
+	ConstantInt* const_int32_00FF = ConstantInt::get(getType(Int32Ty), 0x00FF);
 
 	/* create base constant */
 	uint16_t base = is_8bit? (OPERAND_8):(OPERAND_16);
-	Value *ea = ConstantInt::get(Type::Int32Ty, base);
+	Value *ea = ConstantInt::get(getType(Int32Ty), base);
 
 	if (index_register_before)
 		ea = arch_6502_add_index(ea, index_register_before, bb);
@@ -166,7 +166,7 @@ arch_6502_get_operand_rvalue(uint8_t* RAM, addr_t pc, BasicBlock* bb)
 {
 	switch (instraddmode[OPCODE].addmode) {
 		case ADDMODE_IMM:
-			return ConstantInt::get(Type::Int8Ty, OPERAND_8);
+			return ConstantInt::get(getType(Int8Ty), OPERAND_8);
 		default:
 			Value *lvalue = arch_6502_get_operand_lvalue(RAM, pc, bb);
 			return new LoadInst(lvalue, "", false, bb);
@@ -176,9 +176,9 @@ arch_6502_get_operand_rvalue(uint8_t* RAM, addr_t pc, BasicBlock* bb)
 static void
 arch_6502_set_nz(Value *data, BasicBlock *bb)
 {
-	ConstantInt* const_int8_00 = ConstantInt::get(Type::Int8Ty, 0x00);
-	ICmpInst* z = new ICmpInst(ICmpInst::ICMP_EQ, data, const_int8_00, "", bb);
-	ICmpInst* n = new ICmpInst(ICmpInst::ICMP_SLT, data, const_int8_00, "", bb);
+	ConstantInt* const_int8_00 = ConstantInt::get(getType(Int8Ty), 0x00);
+	ICmpInst* z = new ICmpInst(*bb, ICmpInst::ICMP_EQ, data, const_int8_00);
+	ICmpInst* n = new ICmpInst(*bb, ICmpInst::ICMP_SLT, data, const_int8_00);
 	new StoreInst(z, ptr_Z, bb);
 	new StoreInst(n, ptr_N, bb);
 }
@@ -220,9 +220,9 @@ arch_6502_log(uint8_t* RAM, addr_t pc, Instruction::BinaryOps o, BasicBlock *bb)
 static void
 arch_6502_trap(addr_t pc, BasicBlock *bb)
 {
-	ConstantInt* v_pc = ConstantInt::get(Type::Int16Ty, pc);
+	ConstantInt* v_pc = ConstantInt::get(getType(Int16Ty), pc);
 	new StoreInst(v_pc, ptr_PC, bb);
-	ReturnInst::Create(ConstantInt::get(Type::Int32Ty, -1), bb);//XXX needs #define
+	ReturnInst::Create(_CTX(), ConstantInt::get(getType(Int32Ty), (uint32_t)-1), bb);//XXX needs #define
 }
 
 static void
@@ -242,9 +242,9 @@ arch_6502_rmw(uint8_t *RAM, uint16_t pc, Instruction::BinaryOps o, Value *c, Bas
 static void
 arch_6502_shiftrotate(uint8_t *RAM, uint16_t pc, bool left, bool rotate, BasicBlock *bb)
 {
-	ConstantInt* const_int8_0000 = ConstantInt::get(Type::Int8Ty, 0x0000);
-	ConstantInt* const_int8_0001 = ConstantInt::get(Type::Int8Ty, 0x0001);
-	ConstantInt* const_int8_0007 = ConstantInt::get(Type::Int8Ty, 0x0007);
+	ConstantInt* const_int8_0000 = ConstantInt::get(getType(Int8Ty), 0x0000);
+	ConstantInt* const_int8_0001 = ConstantInt::get(getType(Int8Ty), 0x0001);
+	ConstantInt* const_int8_0007 = ConstantInt::get(getType(Int8Ty), 0x0007);
 
 	/* load operand */
 	Value *lvalue = arch_6502_get_operand_lvalue(RAM, pc, bb);
@@ -256,7 +256,7 @@ arch_6502_shiftrotate(uint8_t *RAM, uint16_t pc, bool left, bool rotate, BasicBl
 	if (rotate) {	/* shift in carry */
 		/* zext carry to i8 */
 		Value *c = new LoadInst(ptr_C, "", false, bb);
-		c = new ZExtInst(c, IntegerType::get(8), "", bb);
+		c = new ZExtInst(c, getIntegerType(8), "", bb);
 		if (!left)
 			c = BinaryOperator::Create(Instruction::Shl, c, const_int8_0007, "", bb);
 		v2 = BinaryOperator::Create(Instruction::Or, v2, c, "", bb);
@@ -268,9 +268,9 @@ arch_6502_shiftrotate(uint8_t *RAM, uint16_t pc, bool left, bool rotate, BasicBl
 
 	Value *c;
 	if (left)	/* old MSB to carry */
-		c = new ICmpInst(ICmpInst::ICMP_SLT, v1, const_int8_0000, "", bb);
+		c = new ICmpInst(*bb, ICmpInst::ICMP_SLT, v1, const_int8_0000);
 	else		/* old LSB to carry */
-		c = new TruncInst(v1, IntegerType::get(1), "", bb);
+		c = new TruncInst(v1, getIntegerType(1), "", bb);
 	new StoreInst(c, ptr_C, bb);
 }
 
@@ -282,9 +282,9 @@ arch_6502_shiftrotate(uint8_t *RAM, uint16_t pc, bool left, bool rotate, BasicBl
  */
 static void
 arch_6502_addsub(uint8_t *RAM, uint16_t pc, Value *reg, Value *reg2, int is_sub, int with_carry, BasicBlock *bb) {
-	ConstantInt* const_int16_0001 = ConstantInt::get(Type::Int16Ty, 0x0001);
-	ConstantInt* const_int16_0008 = ConstantInt::get(Type::Int16Ty, 0x0008);
-	ConstantInt* const_int8_00FF = ConstantInt::get(Type::Int8Ty, 0x00FF);
+	ConstantInt* const_int16_0001 = ConstantInt::get(getType(Int16Ty), 0x0001);
+	ConstantInt* const_int16_0008 = ConstantInt::get(getType(Int16Ty), 0x0008);
+	ConstantInt* const_int8_00FF = ConstantInt::get(getType(Int8Ty), 0x00FF);
 
 	Value *old_c = NULL; //XXX GCC
 
@@ -297,8 +297,8 @@ arch_6502_addsub(uint8_t *RAM, uint16_t pc, Value *reg, Value *reg2, int is_sub,
 		v2 = BinaryOperator::Create(Instruction::Xor, v2, const_int8_00FF, "", bb);
 
 	/* convert to 16 bits */
-	v1 = new ZExtInst(v1, IntegerType::get(16), "", bb);
-	v2 = new ZExtInst(v2, IntegerType::get(16), "", bb);
+	v1 = new ZExtInst(v1, getIntegerType(16), "", bb);
+	v2 = new ZExtInst(v2, getIntegerType(16), "", bb);
 
 	/* add them together */
 	v1 = BinaryOperator::Create(Instruction::Add, v1, v2, "", bb);
@@ -306,7 +306,7 @@ arch_6502_addsub(uint8_t *RAM, uint16_t pc, Value *reg, Value *reg2, int is_sub,
 	/* add C or 1 */
 	if (with_carry) {
 		old_c = new LoadInst(ptr_C, "", false, bb);
-		old_c = new ZExtInst(old_c, IntegerType::get(16), "", bb);
+		old_c = new ZExtInst(old_c, getIntegerType(16), "", bb);
 		v1 = BinaryOperator::Create(Instruction::Add, v1, old_c, "", bb);
 	} else {
 		v1 = BinaryOperator::Create(Instruction::Add, v1, const_int16_0001, "", bb);
@@ -314,11 +314,11 @@ arch_6502_addsub(uint8_t *RAM, uint16_t pc, Value *reg, Value *reg2, int is_sub,
 
 	/* get C */
 	Value *c = BinaryOperator::Create(Instruction::LShr, v1, const_int16_0008, "", bb);
-	c = new TruncInst(c, IntegerType::get(1), "", bb);
+	c = new TruncInst(c, getIntegerType(1), "", bb);
 	new StoreInst(c, ptr_C, bb);
 
 	/* get result */
-	v1 = new TruncInst(v1, IntegerType::get(8), "", bb);
+	v1 = new TruncInst(v1, getIntegerType(8), "", bb);
 	if (reg2)
 		new StoreInst(v1, reg2, bb);
 
@@ -328,12 +328,12 @@ arch_6502_addsub(uint8_t *RAM, uint16_t pc, Value *reg, Value *reg2, int is_sub,
 
 static void
 arch_6502_push(Value *v, BasicBlock *bb) {
-	ConstantInt* const_int32_0100 = ConstantInt::get(Type::Int32Ty, 0x0100);
-	ConstantInt* const_int8_0001 = ConstantInt::get(Type::Int8Ty, 0x0001);
+	ConstantInt* const_int32_0100 = ConstantInt::get(getType(Int32Ty), 0x0100);
+	ConstantInt* const_int8_0001 = ConstantInt::get(getType(Int8Ty), 0x0001);
 
 	/* get pointer to TOS */
 	Value *s = new LoadInst(ptr_S, "", false, bb);
-	Value *s_ptr = new ZExtInst(s, IntegerType::get(32), "", bb);
+	Value *s_ptr = new ZExtInst(s, getIntegerType(32), "", bb);
 	s_ptr = BinaryOperator::Create(Instruction::Or, s_ptr, const_int32_0100, "", bb);
 	s_ptr = GetElementPtrInst::Create(ptr_RAM, s_ptr, "", bb);
 
@@ -347,8 +347,8 @@ arch_6502_push(Value *v, BasicBlock *bb) {
 
 static Value *
 arch_6502_pull(BasicBlock *bb) {
-	ConstantInt* const_int32_0100 = ConstantInt::get(Type::Int32Ty, 0x0100);
-	ConstantInt* const_int8_0001 = ConstantInt::get(Type::Int8Ty, 0x0001);
+	ConstantInt* const_int32_0100 = ConstantInt::get(getType(Int32Ty), 0x0100);
+	ConstantInt* const_int8_0001 = ConstantInt::get(getType(Int8Ty), 0x0001);
 
 	/* update S */
 	Value *s = new LoadInst(ptr_S, "", false, bb);
@@ -356,7 +356,7 @@ arch_6502_pull(BasicBlock *bb) {
 	new StoreInst(s, ptr_S, false, bb);
 
 	/* get pointer to TOS */
-	Value *s_ptr = new ZExtInst(s, IntegerType::get(32), "", bb);
+	Value *s_ptr = new ZExtInst(s, getIntegerType(32), "", bb);
 	s_ptr = BinaryOperator::Create(Instruction::Or, s_ptr, const_int32_0100, "", bb);
 	s_ptr = GetElementPtrInst::Create(ptr_RAM, s_ptr, "", bb);
 
@@ -369,30 +369,30 @@ arch_6502_pull(BasicBlock *bb) {
 //	%409 = load i8* %S
 static void
 arch_6502_push_c16(uint16_t v, BasicBlock *bb) {
-	arch_6502_push(ConstantInt::get(Type::Int8Ty, v >> 8), bb);
-	arch_6502_push(ConstantInt::get(Type::Int8Ty, v & 0xFF), bb);
+	arch_6502_push(ConstantInt::get(getType(Int8Ty), v >> 8), bb);
+	arch_6502_push(ConstantInt::get(getType(Int8Ty), v & 0xFF), bb);
 }
 
 static Value *
 arch_6502_flags_encode(BasicBlock *bb)
 {
-	ConstantInt* const_int8_0007 = ConstantInt::get(Type::Int8Ty, 0x0007);
-	ConstantInt* const_int8_0006 = ConstantInt::get(Type::Int8Ty, 0x0006);
-	ConstantInt* const_int8_0003 = ConstantInt::get(Type::Int8Ty, 0x0003);
-	ConstantInt* const_int8_0002 = ConstantInt::get(Type::Int8Ty, 0x0002);
-	ConstantInt* const_int8_0001 = ConstantInt::get(Type::Int8Ty, 0x0001);
+	ConstantInt* const_int8_0007 = ConstantInt::get(getType(Int8Ty), 0x0007);
+	ConstantInt* const_int8_0006 = ConstantInt::get(getType(Int8Ty), 0x0006);
+	ConstantInt* const_int8_0003 = ConstantInt::get(getType(Int8Ty), 0x0003);
+	ConstantInt* const_int8_0002 = ConstantInt::get(getType(Int8Ty), 0x0002);
+	ConstantInt* const_int8_0001 = ConstantInt::get(getType(Int8Ty), 0x0001);
 	Value *n = new LoadInst(ptr_N, "", false, bb);
 	Value *v = new LoadInst(ptr_V, "", false, bb);
 	Value *d = new LoadInst(ptr_D, "", false, bb);
 	Value *i = new LoadInst(ptr_I, "", false, bb);
 	Value *z = new LoadInst(ptr_Z, "", false, bb);
 	Value *c = new LoadInst(ptr_C, "", false, bb);
-	n = new ZExtInst(n, IntegerType::get(8), "", bb);
-	v = new ZExtInst(v, IntegerType::get(8), "", bb);
-	d = new ZExtInst(d, IntegerType::get(8), "", bb);
-	i = new ZExtInst(i, IntegerType::get(8), "", bb);
-	z = new ZExtInst(z, IntegerType::get(8), "", bb);
-	c = new ZExtInst(c, IntegerType::get(8), "", bb);
+	n = new ZExtInst(n, getIntegerType(8), "", bb);
+	v = new ZExtInst(v, getIntegerType(8), "", bb);
+	d = new ZExtInst(d, getIntegerType(8), "", bb);
+	i = new ZExtInst(i, getIntegerType(8), "", bb);
+	z = new ZExtInst(z, getIntegerType(8), "", bb);
+	c = new ZExtInst(c, getIntegerType(8), "", bb);
 	n = BinaryOperator::Create(Instruction::Shl, n, const_int8_0007, "", bb);
 	v = BinaryOperator::Create(Instruction::Shl, v, const_int8_0006, "", bb);
 	d = BinaryOperator::Create(Instruction::Shl, d, const_int8_0003, "", bb);
@@ -409,22 +409,22 @@ arch_6502_flags_encode(BasicBlock *bb)
 static void
 arch_6502_flags_decode(Value *flags, BasicBlock *bb)
 {
-	ConstantInt* const_int8_0007 = ConstantInt::get(Type::Int8Ty, 0x0007);
-	ConstantInt* const_int8_0006 = ConstantInt::get(Type::Int8Ty, 0x0006);
-	ConstantInt* const_int8_0003 = ConstantInt::get(Type::Int8Ty, 0x0003);
-	ConstantInt* const_int8_0002 = ConstantInt::get(Type::Int8Ty, 0x0002);
-	ConstantInt* const_int8_0001 = ConstantInt::get(Type::Int8Ty, 0x0001);
+	ConstantInt* const_int8_0007 = ConstantInt::get(getType(Int8Ty), 0x0007);
+	ConstantInt* const_int8_0006 = ConstantInt::get(getType(Int8Ty), 0x0006);
+	ConstantInt* const_int8_0003 = ConstantInt::get(getType(Int8Ty), 0x0003);
+	ConstantInt* const_int8_0002 = ConstantInt::get(getType(Int8Ty), 0x0002);
+	ConstantInt* const_int8_0001 = ConstantInt::get(getType(Int8Ty), 0x0001);
 	Value *n = BinaryOperator::Create(Instruction::LShr, flags, const_int8_0007, "", bb);
 	Value *v = BinaryOperator::Create(Instruction::LShr, flags, const_int8_0006, "", bb);
 	Value *d = BinaryOperator::Create(Instruction::LShr, flags, const_int8_0003, "", bb);
 	Value *i = BinaryOperator::Create(Instruction::LShr, flags, const_int8_0002, "", bb);
 	Value *z = BinaryOperator::Create(Instruction::LShr, flags, const_int8_0001, "", bb);
-	n = new TruncInst(n, IntegerType::get(1), "", bb);
-	v = new TruncInst(v, IntegerType::get(1), "", bb);
-	d = new TruncInst(d, IntegerType::get(1), "", bb);
-	i = new TruncInst(i, IntegerType::get(1), "", bb);
-	z = new TruncInst(z, IntegerType::get(1), "", bb);
-	Value *c = new TruncInst(flags, IntegerType::get(1), "", bb);
+	n = new TruncInst(n, getIntegerType(1), "", bb);
+	v = new TruncInst(v, getIntegerType(1), "", bb);
+	d = new TruncInst(d, getIntegerType(1), "", bb);
+	i = new TruncInst(i, getIntegerType(1), "", bb);
+	z = new TruncInst(z, getIntegerType(1), "", bb);
+	Value *c = new TruncInst(flags, getIntegerType(1), "", bb);
 	new StoreInst(n, ptr_N, bb);
 	new StoreInst(v, ptr_V, bb);
 	new StoreInst(d, ptr_D, bb);
@@ -437,9 +437,9 @@ int
 arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb) {
 	uint8_t opcode = RAM[pc];
 
-	ConstantInt* const_false = ConstantInt::get(Type::Int1Ty, 0);
-	ConstantInt* const_true = ConstantInt::get(Type::Int1Ty, 1);
-	ConstantInt* const_int8_0001 = ConstantInt::get(Type::Int8Ty, 0x0001);
+	ConstantInt* const_false = ConstantInt::get(getType(Int1Ty), 0);
+	ConstantInt* const_true = ConstantInt::get(getType(Int1Ty), 1);
+	ConstantInt* const_int8_0001 = ConstantInt::get(getType(Int8Ty), 0x0001);
 
 //printf("%s:%d PC=$%04X\n", __func__, __LINE__, pc);
 
@@ -566,7 +566,7 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 			}
 		case INSTR_JMP:
 			if (instraddmode[opcode].addmode == ADDMODE_IND) {
-				Value *ea = ConstantInt::get(Type::Int32Ty, OPERAND_16);
+				Value *ea = ConstantInt::get(getType(Int32Ty), OPERAND_16);
 				Value *v = arch_6502_load_ram_16(false, ea, bb);
 				new StoreInst(v, ptr_PC, bb);
 				BranchInst::Create(bb_dispatch, bb);
@@ -576,7 +576,7 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 					BranchInst::Create(target, bb);
 				} else {
 					//printf("warning: unknown jmp at $%04X to $%04X!\n", pc, OPERAND_16);
-					ConstantInt* c = ConstantInt::get(Type::Int16Ty, OPERAND_16);
+					ConstantInt* c = ConstantInt::get(getType(Int16Ty), OPERAND_16);
 					new StoreInst(c, ptr_PC, bb);
 					BranchInst::Create(bb_dispatch, bb);
 				}
@@ -588,7 +588,7 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(func_jitmain, OPERAND_16);
 			if (!target) {
 				//printf("warning: unknown jsr at $%04X to $%04X!\n", pc, OPERAND_16);
-				ConstantInt* c = ConstantInt::get(Type::Int16Ty, OPERAND_16);
+				ConstantInt* c = ConstantInt::get(getType(Int16Ty), OPERAND_16);
 				new StoreInst(c, ptr_PC, bb);
 				BranchInst::Create(bb_dispatch, bb);
 			} else {
@@ -641,12 +641,12 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 			break;
 		case INSTR_RTS:
 			{
-			ConstantInt* const_int16_0008 = ConstantInt::get(Type::Int16Ty, 0x0008);
-			ConstantInt* const_int16_0001 = ConstantInt::get(Type::Int16Ty, 0x0001);
+			ConstantInt* const_int16_0008 = ConstantInt::get(getType(Int16Ty), 0x0008);
+			ConstantInt* const_int16_0001 = ConstantInt::get(getType(Int16Ty), 0x0001);
 			Value *lo = arch_6502_pull(bb);
 			Value *hi = arch_6502_pull(bb);
-			lo = new ZExtInst(lo, IntegerType::get(16), "", bb);
-			hi = new ZExtInst(hi, IntegerType::get(16), "", bb);
+			lo = new ZExtInst(lo, getIntegerType(16), "", bb);
+			hi = new ZExtInst(hi, getIntegerType(16), "", bb);
 			hi = BinaryOperator::Create(Instruction::Shl, hi, const_int16_0008, "", bb);
 			lo = BinaryOperator::Create(Instruction::Add, lo, hi, "", bb);
 			lo = BinaryOperator::Create(Instruction::Add, lo, const_int16_0001, "", bb);
@@ -721,18 +721,20 @@ arch_6502_init(cpu_t *cpu)
 	cpu->count_regs_i16 = 0;
 	cpu->count_regs_i32 = 0;
 	cpu->count_regs_i64 = 0;
+
+	assert(offsetof(reg_6502_t, pc) == 5);
 }
 
 void
 arch_6502_emit_decode_reg(BasicBlock *bb)
 {
 	// declare flags
-	ptr_N = new AllocaInst(IntegerType::get(1), "N", bb);
-	ptr_V = new AllocaInst(IntegerType::get(1), "V", bb);
-	ptr_D = new AllocaInst(IntegerType::get(1), "D", bb);
-	ptr_I = new AllocaInst(IntegerType::get(1), "I", bb);
-	ptr_Z = new AllocaInst(IntegerType::get(1), "Z", bb);
-	ptr_C = new AllocaInst(IntegerType::get(1), "C", bb);
+	ptr_N = new AllocaInst(getIntegerType(1), "N", bb);
+	ptr_V = new AllocaInst(getIntegerType(1), "V", bb);
+	ptr_D = new AllocaInst(getIntegerType(1), "D", bb);
+	ptr_I = new AllocaInst(getIntegerType(1), "I", bb);
+	ptr_Z = new AllocaInst(getIntegerType(1), "Z", bb);
+	ptr_C = new AllocaInst(getIntegerType(1), "C", bb);
 
 	// decode P
 	Value *flags = new LoadInst(ptr_P, "", false, bb);
