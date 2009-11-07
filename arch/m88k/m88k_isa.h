@@ -264,6 +264,7 @@ typedef struct {
 	uint32_t sxip; /* Execution IP */
 	uint32_t snip; /* Next IP */
 	uint32_t sfip; /* Fetch IP */
+	uint32_t psr;
 } m88k_regfile_t;
 
 #endif  /* !__m88k_isa_h */

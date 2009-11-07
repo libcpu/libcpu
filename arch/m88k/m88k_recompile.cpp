@@ -412,7 +412,7 @@ int
 arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
 	BasicBlock *bb)
 {
-#define BAD printf("%s:%d\n", __func__, __LINE__); exit(1);
+#define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0)
 #define LOG printf("%s:%d\n", __func__, __LINE__);
 	m88k_insn instr = INSTR(pc);
 	m88k_opcode_t opc = instr.opcode();
@@ -565,6 +565,8 @@ arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_LD:
 			if (fmt == M88K_IFMT_MEM)
 				LOAD32(instr.rd(), ADD(R32(instr.rs1()), IMM));
+			else if (fmt == M88K_IFMT_XMEM)
+				BAD;
 			else
 				LOAD32(instr.rd(), ADD(R32(instr.rs1()), SHL(R32(instr.rs2()),
 					CONST32(2))));
@@ -595,6 +597,8 @@ arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_LD_HU:
 			if (fmt == M88K_IFMT_MEM)
 				LOAD16(instr.rd(), ADD(R32(instr.rs1()), IMM));
+			else if (fmt == M88K_IFMT_XMEM)
+				BAD;
 			else
 				LOAD16(instr.rd(), ADD(R32(instr.rs1()), SHL(R32(instr.rs2()),
 					CONST32(1))));
@@ -605,7 +609,9 @@ arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
 				LOAD32(instr.rd() & ~1, ADD(R32(instr.rs1()), IMM));
 				LOAD32(instr.rd() | 1, ADD(ADD(R32(instr.rs1()), IMM),
 					CONST32(4)));
-			} else {
+			} else if (fmt == M88K_IFMT_XMEM)
+				BAD;
+			else {
 				LOAD32(instr.rd() & ~1, ADD(R32(instr.rs1()),
 					SHL(R32(instr.rs2()), CONST32(3))));
 				LOAD32(instr.rd() | 1, ADD(R32(instr.rs1()),
@@ -620,6 +626,8 @@ arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_ST:
 			if (fmt == M88K_IFMT_MEM)
 				STORE32(R(instr.rd()), ADD(R32(instr.rs1()), IMM));
+			else if (fmt == M88K_IFMT_XMEM)
+				BAD;
 			else
 				STORE32(R(instr.rd()), ADD(R32(instr.rs1()),
 					SHL(R32(instr.rs2()), CONST32(2))));
@@ -645,7 +653,9 @@ arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
 				STORE32(R(instr.rd() & ~1), ADD(R32(instr.rs1()), IMM));
 				STORE32(R(instr.rd() | 1), ADD(ADD(R32(instr.rs1()), IMM),
 					CONST32(4)));
-			} else {
+			} else if (fmt == M88K_IFMT_XMEM)
+				BAD;
+			else {
 				STORE32(R(instr.rd() & ~1), ADD(R32(instr.rs1()),
 					SHL(R32(instr.rs2()), CONST32(3))));
 				STORE32(R(instr.rd() | 1), ADD(R32(instr.rs1()),
