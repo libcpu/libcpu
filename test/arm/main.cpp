@@ -75,7 +75,7 @@ main(int argc, char **argv) {
 
 	cpu = cpu_new(CPU_ARCH_ARM);
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
-	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
+	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR);
 //	cpu_set_flags_arch(cpu, 
 //		CPU_6502_BRK_TRAP |
 //		CPU_6502_XXX_TRAP |

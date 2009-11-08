@@ -42,6 +42,7 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define CONST(v) CONSTs(reg_size,v)
 
 #define TRUNC(s,v) new TruncInst(v, getIntegerType(s), "", bb)
+#define TRUNC1(v) TRUNC(1,v)
 #define TRUNC8(v) TRUNC(8,v)
 #define TRUNC16(v) TRUNC(16,v)
 #define TRUNC32(v) TRUNC(32,v)

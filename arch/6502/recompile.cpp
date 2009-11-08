@@ -279,6 +279,9 @@ arch_6502_shiftrotate(uint8_t *RAM, uint16_t pc, bool left, bool rotate, BasicBl
  * - for ADC, we add A + B + C
  * - for SBC, we add A + ~B + C
  * - for CMP, we add A + ~B + 1
+ * XXX TODO: consider changing code to avoid 16 bit arithmetic:
+ *     while this works ok for 8 bit, it doesn't scale. M88K and ARM
+ *     do it differently already.
  */
 static void
 arch_6502_addsub(uint8_t *RAM, uint16_t pc, Value *reg, Value *reg2, int is_sub, int with_carry, BasicBlock *bb) {

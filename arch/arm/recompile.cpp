@@ -26,6 +26,11 @@ static Value* ptr_I;
 //////////////////////////////////////////////////////////////////////
 
 int arch_arm_tag_instr(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc) {
+	uint32_t instr = *(uint32_t*)&RAM[pc];
+
+	if (instr == 0xE1A0F00E) /* MOV r15, r0, r14 */
+		return FLOW_TYPE_RET;
+
 	*flow_type = FLOW_TYPE_CONTINUE;
 	return 4;
 }
@@ -64,17 +69,16 @@ static inline unsigned shift4(unsigned opcode)
 #endif
 }
 
-static inline void setsub(uint32_t op1, uint32_t op2, uint32_t res)
+static inline void setsub(Value *op1, Value *op2, BasicBlock *bb)
 {
-	BAD;
-#if 0
-        unsigned long temp=0;
-        if (!res)                           temp=ZFLAG;
-        else if (checkneg(res))             temp=NFLAG;
-        if (res<=op1)                       temp|=CFLAG;
-        if ((op1^op2)&(op1^res)&0x80000000) temp|=VFLAG;
-        *pcpsr=((*pcpsr)&0xFFFFFFF)|(temp);
-#endif
+	Value *v = BinaryOperator::Create(Instruction::Sub, op1, op2, "", bb);
+	Value* z = new ICmpInst(*bb, ICmpInst::ICMP_EQ, v, CONST(0));
+	Value* n = new ICmpInst(*bb, ICmpInst::ICMP_SLT, v, CONST(0));
+	new StoreInst(z, ptr_Z, bb);
+	new StoreInst(n, ptr_N, bb);
+	new StoreInst(ICMP_SLE(v, op1), ptr_C, false, bb);
+	new StoreInst(TRUNC1(LSHR(AND(XOR(op1, op2),XOR(op1,v)),CONST(31))), ptr_V, false, bb);
+	return;
 }
 
 static uint32_t rotate2(uint32_t instr)
@@ -92,6 +96,10 @@ static uint32_t rotate2(uint32_t instr)
 int arch_arm_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb) {
 	uint32_t instr = *(uint32_t*)&RAM[pc];
 
+	/* hack to finish basic block */
+	if (instr == 0xE1A0F00E) { /* MOV r15, r0, r14 */
+		BranchInst::Create(bb_dispatch, bb);
+	}
 
 	int cond = instr >> 28;
 	int op1 = (instr>>20)&0xFF;
@@ -103,10 +111,10 @@ int arch_arm_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, B
 	switch ((instr>>20)&0xFF) {
 		case 0x1A: /* MOV */
 			if (RD==15) {
-				BAD;
+				LOG;//BAD;
 				//armregs[15]=(armregs[15]&~r15mask)|((shift2(opcode)+4)&r15mask);
 			} else {
-				BAD;
+				LOG;//BAD;
 				//armregs[RD]=shift2(opcode);
 			}
 			break;
@@ -114,15 +122,11 @@ int arch_arm_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, B
 			if (RD==15) {
 				BAD;
 			} else {
-				uint32_t templ, templ2;
-				templ=rotate2(instr);
-				printf("rotate2=%x\n", templ);
-//				templ2=GETADDR(RN);
-//				setsub(templ2,templ,templ2-templ);
+				setsub(R(RN),CONST(rotate2(instr)), bb);
 			}
 			break;
 		default:
-			BAD;	
+			LOG;//BAD;	
 	}
 
 //	BAD;
