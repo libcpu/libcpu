@@ -139,57 +139,25 @@ int arch_arm_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, B
 static Value *
 arch_arm_flags_encode(BasicBlock *bb)
 {
-	ConstantInt* const_int8_n_shift = ConstantInt::get(getType(Int32Ty), N_SHIFT);
-	ConstantInt* const_int8_z_shift = ConstantInt::get(getType(Int32Ty), Z_SHIFT);
-	ConstantInt* const_int8_c_shift = ConstantInt::get(getType(Int32Ty), C_SHIFT);
-	ConstantInt* const_int8_v_shift = ConstantInt::get(getType(Int32Ty), V_SHIFT);
-	ConstantInt* const_int8_i_shift = ConstantInt::get(getType(Int32Ty), I_SHIFT);
-	Value *n = new LoadInst(ptr_N, "", false, bb);
-	Value *z = new LoadInst(ptr_Z, "", false, bb);
-	Value *c = new LoadInst(ptr_C, "", false, bb);
-	Value *v = new LoadInst(ptr_V, "", false, bb);
-	Value *i = new LoadInst(ptr_I, "", false, bb);
-	n = new ZExtInst(n, getIntegerType(32), "", bb);
-	z = new ZExtInst(z, getIntegerType(32), "", bb);
-	c = new ZExtInst(c, getIntegerType(32), "", bb);
-	v = new ZExtInst(v, getIntegerType(32), "", bb);
-	i = new ZExtInst(i, getIntegerType(32), "", bb);
-	n = BinaryOperator::Create(Instruction::Shl, n, const_int8_n_shift, "", bb);
-	z = BinaryOperator::Create(Instruction::Shl, z, const_int8_z_shift, "", bb);
-	c = BinaryOperator::Create(Instruction::Shl, i, const_int8_c_shift, "", bb);
-	v = BinaryOperator::Create(Instruction::Shl, v, const_int8_v_shift, "", bb);
-	i = BinaryOperator::Create(Instruction::Shl, i, const_int8_i_shift, "", bb);
-	Value *flags = BinaryOperator::Create(Instruction::Or, n, z, "", bb);
-	flags = BinaryOperator::Create(Instruction::Or, flags, c, "", bb);
-	flags = BinaryOperator::Create(Instruction::Or, flags, v, "", bb);
-	flags = BinaryOperator::Create(Instruction::Or, flags, i, "", bb);
+	Value *flags = ConstantInt::get(getIntegerType(32), 0);
+
+	flags = arch_encode_bit(flags, ptr_N, N_SHIFT, 32, bb);
+	flags = arch_encode_bit(flags, ptr_Z, Z_SHIFT, 32, bb);
+	flags = arch_encode_bit(flags, ptr_C, C_SHIFT, 32, bb);
+	flags = arch_encode_bit(flags, ptr_V, V_SHIFT, 32, bb);
+	flags = arch_encode_bit(flags, ptr_I, I_SHIFT, 32, bb);
+
 	return flags;
 }
 
 static void
 arch_arm_flags_decode(Value *flags, BasicBlock *bb)
 {
-
-	ConstantInt* const_int8_n_shift = ConstantInt::get(getType(Int32Ty), N_SHIFT);
-	ConstantInt* const_int8_z_shift = ConstantInt::get(getType(Int32Ty), Z_SHIFT);
-	ConstantInt* const_int8_c_shift = ConstantInt::get(getType(Int32Ty), C_SHIFT);
-	ConstantInt* const_int8_v_shift = ConstantInt::get(getType(Int32Ty), V_SHIFT);
-	ConstantInt* const_int8_i_shift = ConstantInt::get(getType(Int32Ty), I_SHIFT);
-	Value *n = BinaryOperator::Create(Instruction::LShr, flags, const_int8_n_shift, "", bb);
-	Value *z = BinaryOperator::Create(Instruction::LShr, flags, const_int8_z_shift, "", bb);
-	Value *c = BinaryOperator::Create(Instruction::LShr, flags, const_int8_c_shift, "", bb);
-	Value *v = BinaryOperator::Create(Instruction::LShr, flags, const_int8_v_shift, "", bb);
-	Value *i = BinaryOperator::Create(Instruction::LShr, flags, const_int8_i_shift, "", bb);
-	n = new TruncInst(n, getIntegerType(1), "", bb);
-	z = new TruncInst(z, getIntegerType(1), "", bb);
-	c = new TruncInst(c, getIntegerType(1), "", bb);
-	v = new TruncInst(v, getIntegerType(1), "", bb);
-	i = new TruncInst(i, getIntegerType(1), "", bb);
-	new StoreInst(n, ptr_N, bb);
-	new StoreInst(z, ptr_Z, bb);
-	new StoreInst(c, ptr_C, bb);
-	new StoreInst(v, ptr_V, bb);
-	new StoreInst(i, ptr_I, bb);
+	arch_decode_bit(flags, ptr_N, N_SHIFT, 32, bb);
+	arch_decode_bit(flags, ptr_Z, Z_SHIFT, 32, bb);
+	arch_decode_bit(flags, ptr_C, C_SHIFT, 32, bb);
+	arch_decode_bit(flags, ptr_V, V_SHIFT, 32, bb);
+	arch_decode_bit(flags, ptr_I, I_SHIFT, 32, bb);
 }
 
 void
@@ -202,7 +170,7 @@ arch_arm_emit_decode_reg(BasicBlock *bb)
 	ptr_V = new AllocaInst(getIntegerType(1), "V", bb);
 	ptr_I = new AllocaInst(getIntegerType(1), "I", bb);
 
-	// decode P
+	// decode CPSR
 	Value *flags = new LoadInst(ptr_CPSR, "", false, bb);
 	arch_arm_flags_decode(flags, bb);
 }

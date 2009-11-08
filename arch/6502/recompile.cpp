@@ -373,64 +373,37 @@ arch_6502_push_c16(uint16_t v, BasicBlock *bb) {
 	arch_6502_push(ConstantInt::get(getType(Int8Ty), v & 0xFF), bb);
 }
 
+#define N_SHIFT 7
+#define V_SHIFT 6
+#define D_SHIFT 3
+#define I_SHIFT 2
+#define Z_SHIFT 1
+#define C_SHIFT 0
+
 static Value *
 arch_6502_flags_encode(BasicBlock *bb)
 {
-	ConstantInt* const_int8_0007 = ConstantInt::get(getType(Int8Ty), 0x0007);
-	ConstantInt* const_int8_0006 = ConstantInt::get(getType(Int8Ty), 0x0006);
-	ConstantInt* const_int8_0003 = ConstantInt::get(getType(Int8Ty), 0x0003);
-	ConstantInt* const_int8_0002 = ConstantInt::get(getType(Int8Ty), 0x0002);
-	ConstantInt* const_int8_0001 = ConstantInt::get(getType(Int8Ty), 0x0001);
-	Value *n = new LoadInst(ptr_N, "", false, bb);
-	Value *v = new LoadInst(ptr_V, "", false, bb);
-	Value *d = new LoadInst(ptr_D, "", false, bb);
-	Value *i = new LoadInst(ptr_I, "", false, bb);
-	Value *z = new LoadInst(ptr_Z, "", false, bb);
-	Value *c = new LoadInst(ptr_C, "", false, bb);
-	n = new ZExtInst(n, getIntegerType(8), "", bb);
-	v = new ZExtInst(v, getIntegerType(8), "", bb);
-	d = new ZExtInst(d, getIntegerType(8), "", bb);
-	i = new ZExtInst(i, getIntegerType(8), "", bb);
-	z = new ZExtInst(z, getIntegerType(8), "", bb);
-	c = new ZExtInst(c, getIntegerType(8), "", bb);
-	n = BinaryOperator::Create(Instruction::Shl, n, const_int8_0007, "", bb);
-	v = BinaryOperator::Create(Instruction::Shl, v, const_int8_0006, "", bb);
-	d = BinaryOperator::Create(Instruction::Shl, d, const_int8_0003, "", bb);
-	i = BinaryOperator::Create(Instruction::Shl, i, const_int8_0002, "", bb);
-	z = BinaryOperator::Create(Instruction::Shl, z, const_int8_0001, "", bb);
-	Value *flags = BinaryOperator::Create(Instruction::Or, n, v, "", bb);
-	flags = BinaryOperator::Create(Instruction::Or, flags, d, "", bb);
-	flags = BinaryOperator::Create(Instruction::Or, flags, i, "", bb);
-	flags = BinaryOperator::Create(Instruction::Or, flags, z, "", bb);
-	flags = BinaryOperator::Create(Instruction::Or, flags, c, "", bb);
+	Value *flags = ConstantInt::get(getIntegerType(8), 0);
+
+	flags = arch_encode_bit(flags, ptr_N, N_SHIFT, 8, bb);
+	flags = arch_encode_bit(flags, ptr_V, V_SHIFT, 8, bb);
+	flags = arch_encode_bit(flags, ptr_D, D_SHIFT, 8, bb);
+	flags = arch_encode_bit(flags, ptr_I, I_SHIFT, 8, bb);
+	flags = arch_encode_bit(flags, ptr_Z, Z_SHIFT, 8, bb);
+	flags = arch_encode_bit(flags, ptr_C, C_SHIFT, 8, bb);
+
 	return flags;
 }
 
 static void
 arch_6502_flags_decode(Value *flags, BasicBlock *bb)
 {
-	ConstantInt* const_int8_0007 = ConstantInt::get(getType(Int8Ty), 0x0007);
-	ConstantInt* const_int8_0006 = ConstantInt::get(getType(Int8Ty), 0x0006);
-	ConstantInt* const_int8_0003 = ConstantInt::get(getType(Int8Ty), 0x0003);
-	ConstantInt* const_int8_0002 = ConstantInt::get(getType(Int8Ty), 0x0002);
-	ConstantInt* const_int8_0001 = ConstantInt::get(getType(Int8Ty), 0x0001);
-	Value *n = BinaryOperator::Create(Instruction::LShr, flags, const_int8_0007, "", bb);
-	Value *v = BinaryOperator::Create(Instruction::LShr, flags, const_int8_0006, "", bb);
-	Value *d = BinaryOperator::Create(Instruction::LShr, flags, const_int8_0003, "", bb);
-	Value *i = BinaryOperator::Create(Instruction::LShr, flags, const_int8_0002, "", bb);
-	Value *z = BinaryOperator::Create(Instruction::LShr, flags, const_int8_0001, "", bb);
-	n = new TruncInst(n, getIntegerType(1), "", bb);
-	v = new TruncInst(v, getIntegerType(1), "", bb);
-	d = new TruncInst(d, getIntegerType(1), "", bb);
-	i = new TruncInst(i, getIntegerType(1), "", bb);
-	z = new TruncInst(z, getIntegerType(1), "", bb);
-	Value *c = new TruncInst(flags, getIntegerType(1), "", bb);
-	new StoreInst(n, ptr_N, bb);
-	new StoreInst(v, ptr_V, bb);
-	new StoreInst(d, ptr_D, bb);
-	new StoreInst(i, ptr_I, bb);
-	new StoreInst(z, ptr_Z, bb);
-	new StoreInst(c, ptr_C, bb);
+	arch_decode_bit(flags, ptr_N, N_SHIFT, 8, bb);
+	arch_decode_bit(flags, ptr_V, V_SHIFT, 8, bb);
+	arch_decode_bit(flags, ptr_D, D_SHIFT, 8, bb);
+	arch_decode_bit(flags, ptr_I, I_SHIFT, 8, bb);
+	arch_decode_bit(flags, ptr_Z, Z_SHIFT, 8, bb);
+	arch_decode_bit(flags, ptr_C, C_SHIFT, 8, bb);
 }
 
 int

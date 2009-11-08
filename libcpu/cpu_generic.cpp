@@ -178,3 +178,22 @@ printf("BRANCH(%llx,%llx)\n", pc1, pc2);
 	else
 		BranchInst::Create(target2, target1, v, bb);
 }
+
+// decoding and encoding of bits in a bitfield (e.g. flags)
+
+Value *
+arch_encode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
+{
+	Value *n = new LoadInst(bit, "", false, bb);
+	bit = new ZExtInst(n, getIntegerType(width), "", bb);
+	bit = BinaryOperator::Create(Instruction::Shl, bit, ConstantInt::get(getIntegerType(width), shift), "", bb);
+	return BinaryOperator::Create(Instruction::Or, flags, bit, "", bb);
+}
+
+void
+arch_decode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
+{
+	Value *n = BinaryOperator::Create(Instruction::LShr, flags, ConstantInt::get(getIntegerType(width), shift), "", bb);
+	n = new TruncInst(n, getIntegerType(1), "", bb);
+	new StoreInst(n, bit, bb);
+}
