@@ -11,14 +11,14 @@ arch_arm_init(cpu_t *cpu)
 
 	reg_arm_t *reg;
 	reg = (reg_arm_t*)malloc(sizeof(reg_arm_t));
-	for (int i=0; i<16; i++) /* this includes pc */
+	for (int i=0; i<17; i++) /* this includes pc */
 		reg->r[i] = 0;
 	cpu->reg = reg;
 	cpu->pc_width = 32;
 
 	cpu->count_regs_i8 = 0;
 	cpu->count_regs_i16 = 0;
-	cpu->count_regs_i32 = 16;
+	cpu->count_regs_i32 = 17;
 	cpu->count_regs_i64 = 0;
 }
 
@@ -31,8 +31,8 @@ arch_arm_get_pc(void *reg)
 arch_func_t arch_func_arm = {
 	arch_arm_init,
 	arch_arm_get_pc,
-	NULL, /* emit_decode_reg */
-	NULL, /* spill_reg_state */
+	arch_arm_emit_decode_reg,
+	arch_arm_spill_reg_state,
 	arch_arm_tag_instr,
 	arch_arm_disasm_instr,
 	arch_arm_recompile_instr
