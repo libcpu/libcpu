@@ -1,0 +1,12 @@
+PROJECT(sc2int)
+
+INCLUDE(CMake/FindFLEX.cmake)
+INCLUDE(CMake/FindBISON.cmake)
+
+BISON_TARGET(Parser ${PROJECT_SOURCE_DIR}/parser.y ${PROJECT_BINARY_DIR}/sc2int_parser.c)
+FLEX_TARGET(Lexer ${PROJECT_SOURCE_DIR}/lexer.l ${PROJECT_BINARY_DIR}/sc2int_lexer.c)
+
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
+
+ADD_EXECUTABLE(sc2int lists.c sc2int.c stuff.c ${PROJECT_BINARY_DIR}/sc2int_parser.c ${PROJECT_BINARY_DIR}/sc2int_lexer.c)
+TARGET_LINK_LIBRARIES(sc2int xec-compat)

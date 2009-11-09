@@ -21,7 +21,6 @@ else (LLVM_INCLUDE_DIR)
       NAMES llvm-config
       PATHS
       /opt/local/bin
-      /opt/llvm/2.5/bin
       /opt/llvm/2.6/bin
       /opt/llvm/bin
   )
@@ -30,7 +29,6 @@ else (LLVM_INCLUDE_DIR)
       NAMES llvm-gcc llvmgcc
       PATHS
       /opt/local/bin
-      /opt/llvm/2.5/bin
       /opt/llvm/2.6/bin
       /opt/llvm/bin
   )
@@ -39,7 +37,6 @@ else (LLVM_INCLUDE_DIR)
       NAMES llvm-g++ llvmg++
       PATHS
       /opt/local/bin
-      /opt/llvm/2.5/bin
       /opt/llvm/2.6/bin
       /opt/llvm/bin
   )

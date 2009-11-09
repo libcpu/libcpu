@@ -182,9 +182,9 @@ arch_m88k_addsub(uint8_t* RAM, addr_t pc, m88k_reg_t dst, Value *src1, Value *sr
 
 	if (carry & M88K_CARRY_OUT) {
 		if (sub)
-			SET_CARRY(ICMP_UGT(result, src2));
+			SET_CARRY(ICMP_UGT(result, src1));
 		else
-			SET_CARRY(ICMP_ULT(result, src2));
+			SET_CARRY(ICMP_ULT(result, src1));
 	}
 
 	LET32(dst, result);
@@ -252,7 +252,7 @@ arch_m88k_ff(bool bit, m88k_reg_t rd, Value *src,
 /*
  * Motorola 88000 optimized cmp:
  *
- * if (a == b)
+ * if (s1 == s2)
  *     dst = 0xaa4;
  * else {
  *     dst = 0x8;
