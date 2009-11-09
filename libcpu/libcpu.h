@@ -33,7 +33,7 @@ typedef void        (*fp_emit_decode_reg)(BasicBlock *bb);
 typedef void        (*fp_spill_reg_state)(BasicBlock *bb);
 typedef int         (*fp_tag_instr)(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc);
 typedef int         (*fp_disasm_instr)(uint8_t* RAM, addr_t pc, char *line, unsigned int max_line);
-typedef int         (*fp_recompile_instr)(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb);
+typedef int         (*fp_recompile_instr)(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next);
 
 typedef struct {
 	fp_init init;

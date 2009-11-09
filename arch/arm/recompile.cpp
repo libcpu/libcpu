@@ -6,8 +6,6 @@
 using namespace llvm;
 extern Function* func_jitmain;
 
-extern const BasicBlock *lookup_basicblock(Function* f, addr_t pc);
-
 extern Value* ptr_PC;
 
 static Value* ptr_N;
@@ -29,9 +27,12 @@ int arch_arm_tag_instr(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc) 
 	uint32_t instr = *(uint32_t*)&RAM[pc];
 
 	if (instr == 0xE1A0F00E) /* MOV r15, r0, r14 */
-		return FLOW_TYPE_RET;
+		*flow_type = FLOW_TYPE_RET;
+//	else if (instr >> 24 < 0x0E)
+//		*flow_type = FLOW_TYPE_BRANCH;
+	else 
+		*flow_type = FLOW_TYPE_CONTINUE;
 
-	*flow_type = FLOW_TYPE_CONTINUE;
 	return 4;
 }
 
@@ -93,7 +94,7 @@ static uint32_t rotate2(uint32_t instr)
 
 #define shift2(o) ((o&0xFF0)?shift4(o):armregs[RM])
 
-int arch_arm_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb) {
+int arch_arm_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
 	uint32_t instr = *(uint32_t*)&RAM[pc];
 
 	/* hack to finish basic block */

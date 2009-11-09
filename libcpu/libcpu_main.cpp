@@ -259,7 +259,7 @@ cpu_tag(cpu_t *cpu, addr_t pc) {
 //////////////////////////////////////////////////////////////////////
 #define LABEL_PREFIX 'L'
 
-const BasicBlock *
+static const BasicBlock *
 lookup_basicblock(Function* f, addr_t pc) {
 	Function::const_iterator it;
 	for (it = f->getBasicBlockList().begin(); it != f->getBasicBlockList().end(); it++) {
@@ -449,11 +449,25 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 		pc = strtol(cstr+1, (char **)NULL, 16);
 printf("basicblock: %04llx\n", (unsigned long long)pc);
 		addr_t last_pc;
+		addr_t new_pc2;
+		int flow_type;
+		BasicBlock *bb_target, *bb_next;
 		do {
 			disasm_instr(cpu, pc);
 
-			bytes = cpu->f.recompile_instr(RAM, pc, bb_dispatch, cur_bb);
-//printf("bytes: %d\n", bytes);
+			bytes = cpu->f.tag_instr(RAM, pc, &flow_type, &new_pc2);
+
+			// get branch/call/jump target BB
+			if (flow_type == FLOW_TYPE_BRANCH || flow_type == FLOW_TYPE_CALL || flow_type == FLOW_TYPE_JUMP) {
+				bb_target = (BasicBlock*)lookup_basicblock(func_jitmain, new_pc2);
+			}
+
+			// get not-taken BB for branch
+			if (flow_type == FLOW_TYPE_BRANCH) {
+				bb_next = (BasicBlock*)lookup_basicblock(func_jitmain, pc+bytes);
+			}
+
+			cpu->f.recompile_instr(RAM, pc, bb_dispatch, cur_bb, bb_target, NULL, bb_next);
 
 			last_pc = pc;
 			pc += bytes;
@@ -461,9 +475,6 @@ printf("basicblock: %04llx\n", (unsigned long long)pc);
 			 (get_tagging_type(cpu, pc) & TYPE_CODE) &&
 			 !(get_tagging_type(cpu, pc) & (TYPE_CODE_TARGET|TYPE_ENTRY|TYPE_AFTER_CALL|TYPE_AFTER_BRANCH)));
 		// link with next basic block if there isn't a control flow instr. already
-		addr_t dummy2;
-		int flow_type;
-		cpu->f.tag_instr(RAM, last_pc, &flow_type, &dummy2);
 		if (flow_type == FLOW_TYPE_CONTINUE) {
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(func_jitmain, pc);
 			if (!target) {
@@ -492,11 +503,12 @@ emit_store_pc_return(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc, BasicBloc
 	BranchInst::Create(bb_ret, bb_branch);
 }
 
-void
+BasicBlock *
 create_singlestep_return_basicblock(cpu_t *cpu, addr_t new_pc, BasicBlock *bb_ret)
 {
 	BasicBlock *bb_branch = create_basicblock(new_pc, cpu->func_jitmain);
 	emit_store_pc_return(cpu, bb_branch, new_pc, bb_ret);
+	return bb_branch;
 }
 
 static BasicBlock *
@@ -507,7 +519,8 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret)
 	int flow_type;
 	addr_t pc = cpu->f.get_pc(cpu->reg);
 
-	BasicBlock *cur_bb = BasicBlock::Create(_CTX(), "instruction", func_jitmain, 0);
+	BasicBlock *cur_bb, *bb_target, *bb_next;
+	cur_bb = BasicBlock::Create(_CTX(), "instruction", func_jitmain, 0);
 
 	disasm_instr(cpu, pc);
 
@@ -517,12 +530,12 @@ printf("%s:%d\n", __func__, __LINE__);
 	/* Create two "return" BBs for the branch targets */
 	if (flow_type == FLOW_TYPE_BRANCH) {
 printf("%s:%d\n", __func__, __LINE__);
-		create_singlestep_return_basicblock(cpu, new_pc1, bb_ret);
-		create_singlestep_return_basicblock(cpu, pc+bytes, bb_ret);
+		bb_next = create_singlestep_return_basicblock(cpu, pc+bytes, bb_ret);
+		bb_target = create_singlestep_return_basicblock(cpu, new_pc1, bb_ret);
 	}
 	/* Create one "return" BB for the jump target */
 	if (flow_type == FLOW_TYPE_JUMP || flow_type == FLOW_TYPE_CALL)
-		create_singlestep_return_basicblock(cpu, new_pc1, bb_ret);
+		bb_target = create_singlestep_return_basicblock(cpu, new_pc1, bb_ret);
 #if 0
 	/* If it's a call, "store PC" (will return anyway) */
 	if (flow_type == FLOW_TYPE_CALL){
@@ -530,7 +543,7 @@ printf("%s:%d\n", __func__, __LINE__);
 		emit_store_pc(cpu, cur_bb, new_pc1);
 }
 #endif
-	bytes = cpu->f.recompile_instr(RAM, pc, bb_ret, cur_bb);
+	bytes = cpu->f.recompile_instr(RAM, pc, bb_ret, cur_bb, NULL, NULL, bb_next);
 
 	/* If it's not a branch, append "store PC & return" to basic block */
 	if (flow_type == FLOW_TYPE_CONTINUE ) {

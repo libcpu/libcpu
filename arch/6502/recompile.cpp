@@ -12,7 +12,6 @@ extern PointerType* type_pfunc_callout;
 extern Value *ptr_func_debug;
 
 extern Value *get_struct_member_pointer(Value *s, int index, BasicBlock *bb);
-extern const BasicBlock *lookup_basicblock(Function* f, addr_t pc);
 
 // 6502
 extern Value* ptr_PC;
@@ -226,8 +225,8 @@ arch_6502_trap(addr_t pc, BasicBlock *bb)
 }
 
 static void
-arch_6502_branch(uint8_t* RAM, addr_t pc, Value *flag, bool flag_state, BasicBlock *bb) {
-	BRANCH(flag_state, BRANCH_TARGET, pc+2, new LoadInst(flag, "", false, bb));
+arch_6502_branch(uint8_t* RAM, addr_t pc, Value *flag, bool flag_state, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_next) {
+	BRANCH(flag_state, bb_target, bb_next, new LoadInst(flag, "", false, bb));
 }
 
 static void
@@ -410,7 +409,7 @@ arch_6502_flags_decode(Value *flags, BasicBlock *bb)
 }
 
 int
-arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb) {
+arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
 	uint8_t opcode = RAM[pc];
 
 	ConstantInt* const_false = ConstantInt::get(getType(Int1Ty), 0);
@@ -445,13 +444,13 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 			arch_6502_shiftrotate(RAM, pc, true, false, bb);
 			break;
 		case INSTR_BCC:
-			arch_6502_branch(RAM, pc, ptr_C, false, bb);
+			arch_6502_branch(RAM, pc, ptr_C, false, bb, bb_target, bb_next);
 			break;
 		case INSTR_BCS:
-			arch_6502_branch(RAM, pc, ptr_C, true, bb);
+			arch_6502_branch(RAM, pc, ptr_C, true, bb, bb_target, bb_next);
 			break;
 		case INSTR_BEQ:
-			arch_6502_branch(RAM, pc, ptr_Z, true, bb);
+			arch_6502_branch(RAM, pc, ptr_Z, true, bb, bb_target, bb_next);
 			break;
 		case INSTR_BIT:
 			{
@@ -460,23 +459,23 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 			break;
 			}
 		case INSTR_BMI:
-			arch_6502_branch(RAM, pc, ptr_N, true, bb);
+			arch_6502_branch(RAM, pc, ptr_N, true, bb, bb_target, bb_next);
 			break;
 		case INSTR_BNE:
-			arch_6502_branch(RAM, pc, ptr_Z, false, bb);
+			arch_6502_branch(RAM, pc, ptr_Z, false, bb, bb_target, bb_next);
 			break;
 		case INSTR_BPL:
-			arch_6502_branch(RAM, pc, ptr_N, false, bb);
+			arch_6502_branch(RAM, pc, ptr_N, false, bb, bb_target, bb_next);
 			break;
 		case INSTR_BRK:
 			printf("warning: encountered BRK!\n");
 			arch_6502_trap(pc, bb);
 			break;
 		case INSTR_BVC:
-			arch_6502_branch(RAM, pc, ptr_V, false, bb);
+			arch_6502_branch(RAM, pc, ptr_V, false, bb, bb_target, bb_next);
 			break;
 		case INSTR_BVS:
-			arch_6502_branch(RAM, pc, ptr_V, true, bb);
+			arch_6502_branch(RAM, pc, ptr_V, true, bb, bb_target, bb_next);
 			break;
 		case INSTR_CLC:
 			new StoreInst(const_false, ptr_C, false, bb);
@@ -547,9 +546,8 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 				new StoreInst(v, ptr_PC, bb);
 				BranchInst::Create(bb_dispatch, bb);
 			} else {
-				BasicBlock *target = (BasicBlock*)lookup_basicblock(func_jitmain, OPERAND_16);
-				if (target) {
-					BranchInst::Create(target, bb);
+				if (bb_target) {
+					BranchInst::Create(bb_target, bb);
 				} else {
 					//printf("warning: unknown jmp at $%04X to $%04X!\n", pc, OPERAND_16);
 					ConstantInt* c = ConstantInt::get(getType(Int16Ty), OPERAND_16);
@@ -561,14 +559,13 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 		case INSTR_JSR:
 			{
 			arch_6502_push_c16(pc+2, bb);
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(func_jitmain, OPERAND_16);
-			if (!target) {
+			if (!bb_target) {
 				//printf("warning: unknown jsr at $%04X to $%04X!\n", pc, OPERAND_16);
 				ConstantInt* c = ConstantInt::get(getType(Int16Ty), OPERAND_16);
 				new StoreInst(c, ptr_PC, bb);
 				BranchInst::Create(bb_dispatch, bb);
 			} else {
-				BranchInst::Create(target, bb);
+				BranchInst::Create(bb_target, bb);
 			}
 			break;
 			}

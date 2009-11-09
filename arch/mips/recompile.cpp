@@ -8,8 +8,6 @@
 using namespace llvm;
 extern Function* func_jitmain;
 
-extern const BasicBlock *lookup_basicblock(Function* f, addr_t pc);
-
 extern Value* ptr_PC;
 
 //////////////////////////////////////////////////////////////////////
@@ -270,7 +268,7 @@ arch_mips_get_sa(uint32_t instr, uint32_t bits, BasicBlock *bb) {
 //////////////////////////////////////////////////////////////////////
 
 void
-arch_mips_branch(uint8_t* RAM, addr_t pc, Value *v, bool likely, BasicBlock *bb) {
+arch_mips_branch(uint8_t* RAM, addr_t pc, Value *v, bool likely, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_next) {
 	uint32_t instr = INSTR(pc);
 
 	if (likely) {
@@ -278,19 +276,8 @@ arch_mips_branch(uint8_t* RAM, addr_t pc, Value *v, bool likely, BasicBlock *bb)
 		exit(1);
 	}
 
-	BRANCH(true, MIPS_BRANCH_TARGET, pc+8, v);
+	BRANCH(true, bb_target, bb_next, v);
 }
-
-void
-arch_mips_jump(addr_t new_pc, BasicBlock *bb) {
-	BasicBlock *target = (BasicBlock*)lookup_basicblock(func_jitmain, new_pc);
-	if (!target) {
-		printf("error: unknown jump target $%08llx!\n", (unsigned long long)new_pc);
-		exit(1);
-	}
-	BranchInst::Create(target, bb);
-}
-
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
@@ -298,12 +285,11 @@ arch_mips_jump(addr_t new_pc, BasicBlock *bb) {
 #define LET_PC(v) new StoreInst(v, ptr_PC, bb)
 
 
-#define DELAY_SLOT arch_mips_recompile_instr(RAM, pc+4, bb_dispatch, bb)
+#define DELAY_SLOT arch_mips_recompile_instr(RAM, pc+4, bb_dispatch, bb, bb_target, bb_cond, bb_next)
 #define JMP_BB(b) BranchInst::Create(b, bb)
-#define JMP_ADDR(a) arch_mips_jump(a, bb)
 
-#define BRANCH_TRUE(tag)  arch_mips_branch(RAM, pc, tag, false, bb);
-#define BRANCH_TRUE_LIKELY(tag)  arch_mips_branch(RAM, pc, tag, true, bb);
+#define BRANCH_TRUE(tag)  arch_mips_branch(RAM, pc, tag, false, bb, bb_target, bb_next);
+#define BRANCH_TRUE_LIKELY(tag)  arch_mips_branch(RAM, pc, tag, true, bb, bb_target, bb_next);
 
 #define BRANCH_DELAY_TRUE(test) {	\
 	Value *f = test;				\
@@ -323,7 +309,7 @@ arch_mips_jump(addr_t new_pc, BasicBlock *bb) {
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
-int arch_mips_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb) {
+int arch_mips_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
 #define BAD printf("%s:%d\n", __func__, __LINE__); exit(1);
 #define LOG printf("%s:%d\n", __func__, __LINE__);
 
@@ -426,23 +412,21 @@ int arch_mips_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, 
 		}
 	case 0x02: /* INCPU_J */
 		{
-		addr_t new_pc = (pc & 0xF0000000) | (GetTarget << 2);
 		DELAY_SLOT;
-		JMP_ADDR(new_pc);
+		JUMP;
 		break;
 		}
 	case 0x03: /* INCPU_JAL */
 		{
-		addr_t new_pc = (pc & 0xF0000000) | (GetTarget << 2);
 		LINK;
 		DELAY_SLOT;
-		JMP_ADDR(new_pc);
+		JUMP;
 		break;
 		}
 	case 0x04: /* INCPU_BEQ */		
 		if (!RS && !RT) { // special case: B
 			DELAY_SLOT;
-			JMP_ADDR(MIPS_BRANCH_TARGET);
+			JUMP;
 		} else {
 			BRANCH_DELAY_TRUE(ICMP_EQ(R(RS), R(RT)));
 		}

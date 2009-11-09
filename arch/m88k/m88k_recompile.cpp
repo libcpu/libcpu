@@ -9,8 +9,6 @@
 using namespace llvm;
 extern Function* func_jitmain;
 
-extern const BasicBlock *lookup_basicblock(Function* f, addr_t pc);
-
 extern Value* ptr_PC;
 
 extern Value* m88k_ptr_C; // Carry
@@ -120,26 +118,12 @@ arch_m88k_get_imm(m88k_insn const &instr, uint32_t bits, unsigned flags,
 #define IMM32  arch_m88k_get_imm(instr, 32, I_SEXT, bb)
 
 //////////////////////////////////////////////////////////////////////
-
-void
-arch_m88k_jump(addr_t new_pc, BasicBlock *bb)
-{
-	BasicBlock *target = (BasicBlock*)lookup_basicblock(func_jitmain, new_pc);
-	if (!target) {
-		printf("error: unknown jump target $%08llx!\n", (unsigned long long)new_pc);
-		exit(1);
-	}
-	BranchInst::Create(target, bb);
-}
-
-//////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
 #define LET_PC(v)		new StoreInst(v, ptr_PC, bb)
 
-#define DELAY_SLOT 		arch_m88k_recompile_instr(RAM, pc+4, bb_dispatch, bb)
+#define DELAY_SLOT 		arch_m88k_recompile_instr(RAM, pc+4, bb_dispatch, bb, bb_target, bb_cond, bb_next)
 #define JMP_BB(b) 		BranchInst::Create(b, bb)
-#define JMP_ADDR(a) 	arch_m88k_jump(a, bb)
 
 #define LINKr(i, d)		LET(i, CONST((uint64_t)(sint64_t)(sint32_t)pc+(4<<(d))))
 
@@ -154,10 +138,9 @@ arch_m88k_jump(addr_t new_pc, BasicBlock *bb)
 
 void
 arch_m88k_branch(uint8_t* RAM, addr_t pc, Value *cond, bool delay,
-	bool if_cond, BasicBlock *bb)
+	bool if_cond, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_next)
 {
-	BRANCH(if_cond, pc + (m88k_insn(INSTR(pc)).branch16() << 2),
-		pc + (delay ? 8 : 4), cond);
+	BRANCH(if_cond, bb_target, bb_next, cond);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -165,13 +148,13 @@ arch_m88k_branch(uint8_t* RAM, addr_t pc, Value *cond, bool delay,
 #define BRANCH_BIT(set, reg, bit, delay) do {							\
 	Value *v = ICMP_EQ(AND(R32(reg), CONST32(1 << (bit))), CONST(0));	\
 	if (delay) DELAY_SLOT;												\
-	arch_m88k_branch(RAM, pc, v, delay, !set, bb);						\
+	arch_m88k_branch(RAM, pc, v, delay, !set, bb, bb_target, bb_next);	\
 } while (0)
 
 #define BRANCH_COND(cond, delay) do {									\
 	Value *v = (cond);													\
 	if (delay) DELAY_SLOT;												\
-	arch_m88k_branch(RAM, pc, v, delay, true, bb);						\
+	arch_m88k_branch(RAM, pc, v, delay, true, bb, bb_target, bb_next);	\
 } while (0)
 
 static void
@@ -331,7 +314,8 @@ arch_m88k_xmem(bool byte, m88k_reg_t rd, Value *src1, Value *src2,
 
 static void
 arch_m88k_branch_cond(uint8_t *RAM, addr_t pc, Value *src1, m88k_bcnd_t cond,
-	bool delay, BasicBlock *bb_dispatch, BasicBlock *bb)
+	bool delay, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target,
+	BasicBlock *bb_cond, BasicBlock *bb_next)
 {
 	m88k_insn instr = INSTR(pc);
 
@@ -349,7 +333,7 @@ arch_m88k_branch_cond(uint8_t *RAM, addr_t pc, Value *src1, m88k_bcnd_t cond,
 
 		case M88K_BCND_ALWAYS:
 			if (delay) DELAY_SLOT;
-			JMP_ADDR(pc + (instr.branch16() << 2));
+			JUMP;
 			break;
 
 		case M88K_BCND_GT0: // rs1 > 0
@@ -410,7 +394,8 @@ arch_m88k_branch_cond(uint8_t *RAM, addr_t pc, Value *src1, m88k_bcnd_t cond,
 
 int
 arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
-	BasicBlock *bb)
+	BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond,
+	BasicBlock *bb_next)
 {
 #define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0)
 #define LOG printf("%s:%d\n", __func__, __LINE__);
@@ -699,14 +684,14 @@ arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_BSR:
 			LINK(0);
 		case M88K_OPC_BR:
-			JMP_ADDR(pc + (instr.branch26() << 2));
+			JUMP;
 			break;
 
 		case M88K_OPC_BSR_N:
 			LINK(1);
 		case M88K_OPC_BR_N:
 			DELAY_SLOT;
-			JMP_ADDR(pc + (instr.branch26() << 2));
+			JUMP;
 			break;
  
 			// jump pc + disp IF !(rS & (1 << bit))
@@ -724,7 +709,7 @@ arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_BCND_N:
 			arch_m88k_branch_cond(RAM, pc, R32(instr.rs1()),
 				static_cast <m88k_bcnd_t> (instr.mb()),
-				instr.is_delaying(), bb_dispatch, bb);
+				instr.is_delaying(), bb_dispatch, bb, bb_target, bb_cond, bb_next);
 			break;
 
 		case M88K_OPC_TB0:
