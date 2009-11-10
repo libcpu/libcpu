@@ -18,7 +18,7 @@ extern Value* m88k_ptr_C; // Carry
 
 #include "tag_generic.h"
 
-int arch_m88k_tag_instr(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc)
+int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 {
 	m88k_insn instr = INSTR(pc);
 
@@ -121,7 +121,7 @@ arch_m88k_get_imm(m88k_insn const &instr, uint32_t bits, unsigned flags,
 
 #define LET_PC(v)		new StoreInst(v, ptr_PC, bb)
 
-#define DELAY_SLOT 		arch_m88k_recompile_instr(RAM, pc+4, bb_dispatch, bb, bb_target, bb_cond, bb_next)
+#define DELAY_SLOT 		arch_m88k_recompile_instr(cpu, pc+4, bb_dispatch, bb, bb_target, bb_cond, bb_next)
 #define JMP_BB(b) 		BranchInst::Create(b, bb)
 
 #define LINKr(i, d)		LET(i, CONST((uint64_t)(sint64_t)(sint32_t)pc+(4<<(d))))
@@ -136,7 +136,7 @@ arch_m88k_get_imm(m88k_insn const &instr, uint32_t bits, unsigned flags,
 //////////////////////////////////////////////////////////////////////
 
 void
-arch_m88k_branch(uint8_t* RAM, addr_t pc, Value *cond, bool delay,
+arch_m88k_branch(cpu_t *cpu, addr_t pc, Value *cond, bool delay,
 	bool if_cond, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_next)
 {
 	BRANCH(if_cond, bb_target, bb_next, cond);
@@ -147,17 +147,17 @@ arch_m88k_branch(uint8_t* RAM, addr_t pc, Value *cond, bool delay,
 #define BRANCH_BIT(set, reg, bit, delay) do {							\
 	Value *v = ICMP_EQ(AND(R32(reg), CONST32(1 << (bit))), CONST(0));	\
 	if (delay) DELAY_SLOT;												\
-	arch_m88k_branch(RAM, pc, v, delay, !set, bb, bb_target, bb_next);	\
+	arch_m88k_branch(cpu, pc, v, delay, !set, bb, bb_target, bb_next);	\
 } while (0)
 
 #define BRANCH_COND(cond, delay) do {									\
 	Value *v = (cond);													\
 	if (delay) DELAY_SLOT;												\
-	arch_m88k_branch(RAM, pc, v, delay, true, bb, bb_target, bb_next);	\
+	arch_m88k_branch(cpu, pc, v, delay, true, bb, bb_target, bb_next);	\
 } while (0)
 
 static void
-arch_m88k_addsub(uint8_t* RAM, addr_t pc, m88k_reg_t dst, Value *src1, Value *src2,
+arch_m88k_addsub(cpu_t *cpu, addr_t pc, m88k_reg_t dst, Value *src1, Value *src2,
 	bool sub, unsigned carry, bool overflow_trap, BasicBlock *bb_dispatch,
 	BasicBlock *bb)
 {
@@ -312,7 +312,7 @@ arch_m88k_xmem(bool byte, m88k_reg_t rd, Value *src1, Value *src2,
 }
 
 static void
-arch_m88k_branch_cond(uint8_t *RAM, addr_t pc, Value *src1, m88k_bcnd_t cond,
+arch_m88k_branch_cond(cpu_t *cpu, addr_t pc, Value *src1, m88k_bcnd_t cond,
 	bool delay, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target,
 	BasicBlock *bb_cond, BasicBlock *bb_next)
 {
@@ -392,7 +392,7 @@ arch_m88k_branch_cond(uint8_t *RAM, addr_t pc, Value *src1, m88k_bcnd_t cond,
 }
 
 int
-arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
+arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 	BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond,
 	BasicBlock *bb_next)
 {
@@ -410,11 +410,11 @@ arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_ADD:
 		case M88K_OPC_ADDU:
 			if (fmt == M88K_IFMT_REG)
-				arch_m88k_addsub(RAM, pc, instr.rd(), R32(instr.rs1()),
+				arch_m88k_addsub(cpu, pc, instr.rd(), R32(instr.rs1()),
 					UIMM, false, instr.carry(), (opc == M88K_OPC_ADD),
 					bb_dispatch, bb);
 			else
-				arch_m88k_addsub(RAM, pc, instr.rd(), R32(instr.rs1()),
+				arch_m88k_addsub(cpu, pc, instr.rd(), R32(instr.rs1()),
 					R32(instr.rs2()), false, instr.carry(),
 					(opc == M88K_OPC_ADD), bb_dispatch, bb);
 			break;
@@ -422,11 +422,11 @@ arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_SUB:
 		case M88K_OPC_SUBU:
 			if (fmt == M88K_IFMT_REG)
-				arch_m88k_addsub(RAM, pc, instr.rd(), R32(instr.rs1()),
+				arch_m88k_addsub(cpu, pc, instr.rd(), R32(instr.rs1()),
 					UIMM, true, instr.carry(), (opc == M88K_OPC_SUB),
 					bb_dispatch, bb);
 			else
-				arch_m88k_addsub(RAM, pc, instr.rd(), R32(instr.rs1()),
+				arch_m88k_addsub(cpu, pc, instr.rd(), R32(instr.rs1()),
 					R32(instr.rs2()), true, instr.carry(),
 					(opc == M88K_OPC_SUB), bb_dispatch, bb);
 			break;
@@ -706,7 +706,7 @@ arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
 			// jump pc + disp IF rS <cc> 0
 		case M88K_OPC_BCND:
 		case M88K_OPC_BCND_N:
-			arch_m88k_branch_cond(RAM, pc, R32(instr.rs1()),
+			arch_m88k_branch_cond(cpu, pc, R32(instr.rs1()),
 				static_cast <m88k_bcnd_t> (instr.mb()),
 				instr.is_delaying(), bb_dispatch, bb, bb_target, bb_cond, bb_next);
 			break;
@@ -724,5 +724,5 @@ arch_m88k_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch,
 
 	int dummy1;
 	addr_t dummy2;
-	return arch_m88k_tag_instr(RAM, pc, &dummy1, &dummy2);
+	return arch_m88k_tag_instr(cpu, pc, &dummy1, &dummy2);
 }

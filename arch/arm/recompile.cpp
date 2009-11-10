@@ -22,8 +22,8 @@ static Value* ptr_I;
 // tagging
 //////////////////////////////////////////////////////////////////////
 
-int arch_arm_tag_instr(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc) {
-	uint32_t instr = *(uint32_t*)&RAM[pc];
+int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
+	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
 
 	if (instr == 0xE1A0F00E) /* MOV r15, r0, r14 */
 		*flow_type = FLOW_TYPE_RET;
@@ -93,8 +93,8 @@ static uint32_t rotate2(uint32_t instr)
 
 #define shift2(o) ((o&0xFF0)?shift4(o):armregs[RM])
 
-int arch_arm_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
-	uint32_t instr = *(uint32_t*)&RAM[pc];
+int arch_arm_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
+	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
 
 	/* hack to finish basic block */
 	if (instr == 0xE1A0F00E) { /* MOV r15, r0, r14 */

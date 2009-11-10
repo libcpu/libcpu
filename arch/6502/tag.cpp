@@ -3,10 +3,11 @@
 #include "types.h"
 #include "isa.h"
 #include "tag_generic.h"
+#include "libcpu.h"
 
 int
-arch_6502_tag_instr(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc) {
-	uint8_t opcode = RAM[pc];
+arch_6502_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
+	uint8_t opcode = cpu->RAM[pc];
 
 	switch (instraddmode[opcode].instr) {
 		case INSTR_BRK:
@@ -21,7 +22,7 @@ arch_6502_tag_instr(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case INSTR_JMP:
 			switch (instraddmode[opcode].addmode) {
 				case ADDMODE_ABS:
-					*new_pc = RAM[pc+1] | RAM[pc+2]<<8;
+					*new_pc = cpu->RAM[pc+1] | cpu->RAM[pc+2]<<8;
 					*flow_type = FLOW_TYPE_JUMP;
 					break;
 				case ADDMODE_IND:
@@ -37,7 +38,7 @@ arch_6502_tag_instr(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc) {
 			}
 			break;
 		case INSTR_JSR:
-			*new_pc = RAM[pc+1] | RAM[pc+2]<<8;
+			*new_pc = cpu->RAM[pc+1] | cpu->RAM[pc+2]<<8;
 			*flow_type = FLOW_TYPE_CALL;
 			break;
 		case INSTR_BCC:
@@ -48,7 +49,7 @@ arch_6502_tag_instr(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case INSTR_BPL:
 		case INSTR_BVC:
 		case INSTR_BVS:
-			*new_pc = pc+2 + (int8_t)RAM[pc+1];
+			*new_pc = pc+2 + (int8_t)cpu->RAM[pc+1];
 			*flow_type = FLOW_TYPE_BRANCH;
 			break;
 		default:

@@ -31,7 +31,7 @@ Value *in_ptr_r8[MAX_REGISTERS];
 Value *in_ptr_r16[MAX_REGISTERS];
 Value *in_ptr_r32[MAX_REGISTERS];
 Value *in_ptr_r64[MAX_REGISTERS];
-uint8_t *RAM; /* will hold the system's static memory layout for analysis */
+//uint8_t *RAM; /* will hold the system's static memory layout for analysis */
 
 typedef enum {				/* bitfield! */
 	TYPE_UNKNOWN     = 0,	/* unused or data */
@@ -105,9 +105,9 @@ cpu_new(cpu_arch_t arch)
 }
 
 void
-cpu_set_ram(uint8_t *r)
+cpu_set_ram(cpu_t*cpu, uint8_t *r)
 {
-	RAM = r; //XXX global!
+	cpu->RAM = r;
 }
 
 void
@@ -135,12 +135,12 @@ void disasm_instr(cpu_t *cpu, addr_t pc) {
 	char disassembly_line[MAX_DISASSEMBLY_LINE];
 	int bytes, i;
 
-	bytes = cpu->f.disasm_instr(RAM, pc, disassembly_line, sizeof(disassembly_line));
+	bytes = cpu->f.disasm_instr(cpu, pc, disassembly_line, sizeof(disassembly_line));
 
 #ifdef DUMP_OCTAL16
 	printf(".,%06o ", pc);
 	for (i=0; i<bytes; i+=2) {
-		printf("%06o ", RAM[pc+i] | RAM[pc+i+1]<<8);
+		printf("%06o ", cpu->RAM[pc+i] | cpu->RAM[pc+i+1]<<8);
 	}
 	for (i=0; i<=18-7*(bytes/2); i++) { /* TODO make this arch neutral */
 		printf(" ");
@@ -148,7 +148,7 @@ void disasm_instr(cpu_t *cpu, addr_t pc) {
 #else
 	printf(".,%04llx ", (unsigned long long)pc);
 	for (i=0; i<bytes; i++) {
-		printf("%02X ", RAM[pc+i]);
+		printf("%02X ", cpu->RAM[pc+i]);
 	}
 	for (i=0; i<=18-3*bytes; i++) { /* TODO make this arch neutral */
 		printf(" ");
@@ -204,7 +204,7 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level) {
 
 		or_tagging_type(cpu, pc, TYPE_CODE);
 
-		bytes = cpu->f.tag_instr(RAM, pc, &flow_type, &new_pc);
+		bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc);
 		
 		switch (flow_type) {
 			case FLOW_TYPE_ERR:
@@ -453,7 +453,7 @@ printf("basicblock: %04llx\n", (unsigned long long)pc);
 		do {
 			disasm_instr(cpu, pc);
 
-			bytes = cpu->f.tag_instr(RAM, pc, &flow_type, &new_pc2);
+			bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc2);
 
 			// get branch/call/jump target BB
 			if (flow_type == FLOW_TYPE_BRANCH || flow_type == FLOW_TYPE_CALL || flow_type == FLOW_TYPE_JUMP) {
@@ -465,7 +465,7 @@ printf("basicblock: %04llx\n", (unsigned long long)pc);
 				bb_next = (BasicBlock*)lookup_basicblock(func_jitmain, pc+bytes);
 			}
 
-			cpu->f.recompile_instr(RAM, pc, bb_dispatch, cur_bb, bb_target, NULL, bb_next);
+			cpu->f.recompile_instr(cpu, pc, bb_dispatch, cur_bb, bb_target, NULL, bb_next);
 
 			last_pc = pc;
 			pc += bytes;
@@ -523,7 +523,7 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret)
 	disasm_instr(cpu, pc);
 
 printf("%s:%d\n", __func__, __LINE__);
-	bytes = cpu->f.tag_instr(RAM, pc, &flow_type, &new_pc1);
+	bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc1);
 
 	/* Create two "return" BBs for the branch targets */
 	if (flow_type == FLOW_TYPE_BRANCH) {
@@ -541,7 +541,7 @@ printf("%s:%d\n", __func__, __LINE__);
 		emit_store_pc(cpu, cur_bb, new_pc1);
 }
 #endif
-	bytes = cpu->f.recompile_instr(RAM, pc, bb_ret, cur_bb, NULL, NULL, bb_next);
+	bytes = cpu->f.recompile_instr(cpu, pc, bb_ret, cur_bb, NULL, NULL, bb_next);
 
 	/* If it's not a branch, append "store PC & return" to basic block */
 	if (flow_type == FLOW_TYPE_CONTINUE ) {
@@ -714,7 +714,7 @@ cpu_recompile_function(cpu_t *cpu)
 #if 0 // bad for debugging, minimal speedup
 	/* make the RAM pointer a constant */
 	PointerType* type_pi8 = PointerType::get(IntegerType::get(8), 0);
-	ptr_RAM = ConstantExpr::getCast(Instruction::IntToPtr, ConstantInt::get(Type::Int64Ty, (uint64_t)(long)RAM), type_pi8);
+	ptr_RAM = ConstantExpr::getCast(Instruction::IntToPtr, ConstantInt::get(Type::Int64Ty, (uint64_t)(long)cpu->RAM), type_pi8);
 #endif
 
 	// create ret basicblock
@@ -772,7 +772,7 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 	typedef int (*fp_t)(uint8_t *RAM, void *reg, debug_function_t fp);
 	fp_t FP = (fp_t)cpu->fp;
 
-	return FP(RAM, cpu->reg, debug_function);
+	return FP(cpu->RAM, cpu->reg, debug_function);
 }
 
 void

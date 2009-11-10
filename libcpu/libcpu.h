@@ -31,9 +31,9 @@ typedef StructType *(*fp_get_struct_reg)(void);
 typedef addr_t      (*fp_get_pc)(void *);
 typedef void        (*fp_emit_decode_reg)(BasicBlock *bb);
 typedef void        (*fp_spill_reg_state)(BasicBlock *bb);
-typedef int         (*fp_tag_instr)(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc);
-typedef int         (*fp_disasm_instr)(uint8_t* RAM, addr_t pc, char *line, unsigned int max_line);
-typedef int         (*fp_recompile_instr)(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next);
+typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, int *flow_type, addr_t *new_pc);
+typedef int         (*fp_disasm_instr)(struct cpu *cpu, addr_t pc, char *line, unsigned int max_line);
+typedef int         (*fp_recompile_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next);
 
 typedef struct {
 	fp_init init;
@@ -79,6 +79,7 @@ typedef struct cpu {
 	ExecutionEngine *exec_engine;
 	void *fp;
 	void *reg;
+	uint8_t *RAM;
 } cpu_t;
 
 enum {
@@ -118,7 +119,7 @@ void cpu_set_flags_debug(cpu_t *cpu, uint32_t f);
 void cpu_tag(cpu_t *cpu, addr_t pc);
 int cpu_run(cpu_t *cpu, debug_function_t debug_function);
 void cpu_set_flags_arch(cpu_t *cpu, uint32_t f);
-void cpu_set_ram(uint8_t *RAM);
+void cpu_set_ram(cpu_t *cpu, uint8_t *RAM);
 void cpu_flush(cpu_t *cpu);
 void cpu_init(cpu_t *cpu);
 

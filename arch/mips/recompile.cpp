@@ -36,7 +36,7 @@ extern Value* ptr_PC;
 //////////////////////////////////////////////////////////////////////
 
 #include "tag_generic.h"
-int arch_mips_tag_instr(uint8_t* RAM, addr_t pc, int *flow_type, addr_t *new_pc) {
+int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 	uint32_t instr = INSTR(pc);
 
 	switch(instr >> 26) {
@@ -267,8 +267,7 @@ arch_mips_get_sa(uint32_t instr, uint32_t bits, BasicBlock *bb) {
 //////////////////////////////////////////////////////////////////////
 
 void
-arch_mips_branch(uint8_t* RAM, addr_t pc, Value *v, bool likely, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_next) {
-	uint32_t instr = INSTR(pc);
+arch_mips_branch(Value *v, bool likely, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_next) {
 
 	if (likely) {
 		printf("error: \"likely\" is broken!\n");
@@ -284,11 +283,11 @@ arch_mips_branch(uint8_t* RAM, addr_t pc, Value *v, bool likely, BasicBlock *bb,
 #define LET_PC(v) new StoreInst(v, ptr_PC, bb)
 
 
-#define DELAY_SLOT arch_mips_recompile_instr(RAM, pc+4, bb_dispatch, bb, bb_target, bb_cond, bb_next)
+#define DELAY_SLOT arch_mips_recompile_instr(cpu, pc+4, bb_dispatch, bb, bb_target, bb_cond, bb_next)
 #define JMP_BB(b) BranchInst::Create(b, bb)
 
-#define BRANCH_TRUE(tag)  arch_mips_branch(RAM, pc, tag, false, bb, bb_target, bb_next);
-#define BRANCH_TRUE_LIKELY(tag)  arch_mips_branch(RAM, pc, tag, true, bb, bb_target, bb_next);
+#define BRANCH_TRUE(tag)  arch_mips_branch(tag, false, bb, bb_target, bb_next);
+#define BRANCH_TRUE_LIKELY(tag)  arch_mips_branch(tag, true, bb, bb_target, bb_next);
 
 #define BRANCH_DELAY_TRUE(test) {	\
 	Value *f = test;				\
@@ -308,7 +307,7 @@ arch_mips_branch(uint8_t* RAM, addr_t pc, Value *v, bool likely, BasicBlock *bb,
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
-int arch_mips_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
+int arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
 #define BAD printf("%s:%d\n", __func__, __LINE__); exit(1);
 #define LOG printf("%s:%d\n", __func__, __LINE__);
 
@@ -554,7 +553,7 @@ int arch_mips_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, 
 
 	int dummy1;
 	addr_t dummy2;
-	return arch_mips_tag_instr(RAM, pc, &dummy1, &dummy2);
+	return arch_mips_tag_instr(cpu, pc, &dummy1, &dummy2);
 }
 
 

@@ -121,7 +121,7 @@ main(int argc, char **argv) {
 	cpu = cpu_new(CPU_ARCH_M68K);
 	// cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
-	cpu_set_ram(RAM);
+	cpu_set_ram(cpu, RAM);
 
 	cpu_init(cpu);
 

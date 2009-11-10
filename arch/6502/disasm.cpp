@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "types.h"
+#include "libcpu.h"
 #include "isa.h"
 
 const char *addmode_template[] = {
@@ -31,22 +32,22 @@ arch_6502_instr_length(uint8_t* RAM, addr_t pc) {
  * number of bytes consumed.
  */
 int
-arch_6502_disasm_instr(uint8_t* RAM, addr_t pc, char *line, unsigned int max_line) {
-	uint8_t opcode = RAM[pc];
+arch_6502_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line) {
+	uint8_t opcode = cpu->RAM[pc];
 	char line2[8];
 
 	if (instraddmode[opcode].addmode == ADDMODE_BRA) {
-			snprintf(line2, sizeof(line2), "$%02llX", pc+2 + (int8_t)RAM[pc+1]);
+			snprintf(line2, sizeof(line2), "$%02llX", pc+2 + (int8_t)cpu->RAM[pc+1]);
 	} else {
 		switch (length[instraddmode[opcode].addmode]) {
 			case 0:
 				snprintf(line2, sizeof(line2), addmode_template[instraddmode[opcode].addmode], 0);
 				break;
 			case 1:
-				snprintf(line2, sizeof(line2), addmode_template[instraddmode[opcode].addmode], RAM[pc+1]);
+				snprintf(line2, sizeof(line2), addmode_template[instraddmode[opcode].addmode], cpu->RAM[pc+1]);
 				break;
 			case 2:
-				snprintf(line2, sizeof(line2), addmode_template[instraddmode[opcode].addmode], RAM[pc+1] | RAM[pc+2]<<8);
+				snprintf(line2, sizeof(line2), addmode_template[instraddmode[opcode].addmode], cpu->RAM[pc+1] | cpu->RAM[pc+2]<<8);
 				break;
 			default:
 				printf("Table error at %s:%d\n", __FILE__, __LINE__);
@@ -55,6 +56,6 @@ arch_6502_disasm_instr(uint8_t* RAM, addr_t pc, char *line, unsigned int max_lin
 	}
 	
 	snprintf(line, max_line, "%s %s", mnemo[instraddmode[opcode].instr], line2);
-	return arch_6502_instr_length(RAM, pc);
+	return arch_6502_instr_length(cpu->RAM, pc);
 }
 

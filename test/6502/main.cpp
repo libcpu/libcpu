@@ -90,7 +90,7 @@ main(int argc, char **argv) {
 		CPU_6502_BRK_TRAP |
 		CPU_6502_XXX_TRAP |
 		CPU_6502_V_IGNORE);
-	cpu_set_ram(RAM);
+	cpu_set_ram(cpu, RAM);
 
 	cpu_init(cpu);
 

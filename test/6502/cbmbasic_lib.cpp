@@ -15,7 +15,7 @@
 #define __inline
 #endif
 
-extern unsigned char *RAM;
+unsigned char *RAM = 0;
 unsigned short PC;
 unsigned char A, X, Y, S;
 unsigned int N, V, D, I, Z, C;

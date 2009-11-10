@@ -23,17 +23,17 @@ Value* ptr_N;
 #define ptr_S ptr_r8[3]
 #define ptr_P ptr_r8[4]
 
-#define OPCODE RAM[pc]
-#define OPERAND_8 RAM[(pc+1)&0xFFFF]
-#define OPERAND_16 ((RAM[pc+1]&0xFFFF) | (RAM[pc+2]&0xFFFF)<<8)
+#define OPCODE cpu->RAM[pc]
+#define OPERAND_8 cpu->RAM[(pc+1)&0xFFFF]
+#define OPERAND_16 ((cpu->RAM[pc+1]&0xFFFF) | (cpu->RAM[pc+2]&0xFFFF)<<8)
 
 Value *
-arch_6502_get_op8(uint8_t *RAM, uint16_t pc, BasicBlock *bb) {
+arch_6502_get_op8(cpu_t *cpu, uint16_t pc, BasicBlock *bb) {
 	return ConstantInt::get(getType(Int32Ty), OPERAND_8);
 }
 
 Value *
-arch_6502_get_op16(uint8_t *RAM, uint16_t pc, BasicBlock *bb) {
+arch_6502_get_op16(cpu_t *cpu, uint16_t pc, BasicBlock *bb) {
 	return ConstantInt::get(getType(Int32Ty), OPERAND_16);
 }
 
@@ -83,7 +83,7 @@ arch_6502_add_index(Value *ea, Value *index_register, BasicBlock *bb) {
 }
 
 static Value *
-arch_6502_get_operand_lvalue(uint8_t* RAM, addr_t pc, BasicBlock* bb) {
+arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 	int am = instraddmode[OPCODE].addmode;
 	Value *index_register_before;
 	Value *index_register_after;
@@ -141,13 +141,13 @@ arch_6502_get_operand_lvalue(uint8_t* RAM, addr_t pc, BasicBlock* bb) {
 }
 
 static Value *
-arch_6502_get_operand_rvalue(uint8_t* RAM, addr_t pc, BasicBlock* bb)
+arch_6502_get_operand_rvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb)
 {
 	switch (instraddmode[OPCODE].addmode) {
 		case ADDMODE_IMM:
 			return ConstantInt::get(getType(Int8Ty), OPERAND_8);
 		default:
-			Value *lvalue = arch_6502_get_operand_lvalue(RAM, pc, bb);
+			Value *lvalue = arch_6502_get_operand_lvalue(cpu, pc, bb);
 			return new LoadInst(lvalue, "", false, bb);
 	}
 }
@@ -171,25 +171,25 @@ arch_6502_copy_reg(Value *src, Value *dst, BasicBlock *bb)
 }
 
 static void
-arch_6502_store_reg(uint8_t* RAM, addr_t pc, Value *src, BasicBlock *bb)
+arch_6502_store_reg(cpu_t *cpu, addr_t pc, Value *src, BasicBlock *bb)
 {
-	Value *lvalue = arch_6502_get_operand_lvalue(RAM, pc, bb);
+	Value *lvalue = arch_6502_get_operand_lvalue(cpu, pc, bb);
 	Value *v = new LoadInst(src, "", false, bb);
 	new StoreInst(v, lvalue, bb);
 }
 
 static void
-arch_6502_load_reg(uint8_t* RAM, addr_t pc, Value *dst, BasicBlock *bb)
+arch_6502_load_reg(cpu_t *cpu, addr_t pc, Value *dst, BasicBlock *bb)
 {
-	Value *rvalue = arch_6502_get_operand_rvalue(RAM, pc, bb);
+	Value *rvalue = arch_6502_get_operand_rvalue(cpu, pc, bb);
 	new StoreInst(rvalue, dst, bb);
 	arch_6502_set_nz(rvalue, bb);
 }
 
 static void
-arch_6502_log(uint8_t* RAM, addr_t pc, Instruction::BinaryOps o, BasicBlock *bb)
+arch_6502_log(cpu_t *cpu, addr_t pc, Instruction::BinaryOps o, BasicBlock *bb)
 {
-	Value *v1 = arch_6502_get_operand_rvalue(RAM, pc, bb);
+	Value *v1 = arch_6502_get_operand_rvalue(cpu, pc, bb);
 	Value *v2 = new LoadInst(ptr_A, "", false, bb);
 	v1 = BinaryOperator::Create(o, v1, v2, "", bb);
 	new StoreInst(v1, ptr_A, bb);
@@ -205,13 +205,13 @@ arch_6502_trap(addr_t pc, BasicBlock *bb)
 }
 
 static void
-arch_6502_branch(uint8_t* RAM, addr_t pc, Value *flag, bool flag_state, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_next) {
+arch_6502_branch(cpu_t *cpu, addr_t pc, Value *flag, bool flag_state, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_next) {
 	BRANCH(flag_state, bb_target, bb_next, new LoadInst(flag, "", false, bb));
 }
 
 static void
-arch_6502_rmw(uint8_t *RAM, uint16_t pc, Instruction::BinaryOps o, Value *c, BasicBlock *bb) {
-	Value *lvalue = arch_6502_get_operand_lvalue(RAM, pc, bb);
+arch_6502_rmw(cpu_t *cpu, uint16_t pc, Instruction::BinaryOps o, Value *c, BasicBlock *bb) {
+	Value *lvalue = arch_6502_get_operand_lvalue(cpu, pc, bb);
 	Value *v = new LoadInst(lvalue, "", false, bb);
 	v = BinaryOperator::Create(o, v, c, "", bb);
 	new StoreInst(v, lvalue, bb);
@@ -219,14 +219,14 @@ arch_6502_rmw(uint8_t *RAM, uint16_t pc, Instruction::BinaryOps o, Value *c, Bas
 }
 
 static void
-arch_6502_shiftrotate(uint8_t *RAM, uint16_t pc, bool left, bool rotate, BasicBlock *bb)
+arch_6502_shiftrotate(cpu_t *cpu, uint16_t pc, bool left, bool rotate, BasicBlock *bb)
 {
 	ConstantInt* const_int8_0000 = ConstantInt::get(getType(Int8Ty), 0x0000);
 	ConstantInt* const_int8_0001 = ConstantInt::get(getType(Int8Ty), 0x0001);
 	ConstantInt* const_int8_0007 = ConstantInt::get(getType(Int8Ty), 0x0007);
 
 	/* load operand */
-	Value *lvalue = arch_6502_get_operand_lvalue(RAM, pc, bb);
+	Value *lvalue = arch_6502_get_operand_lvalue(cpu, pc, bb);
 	Value *v1 = new LoadInst(lvalue, "", false, bb);
 
 	/* shift */
@@ -263,7 +263,7 @@ arch_6502_shiftrotate(uint8_t *RAM, uint16_t pc, bool left, bool rotate, BasicBl
  *     do it differently already.
  */
 static void
-arch_6502_addsub(uint8_t *RAM, uint16_t pc, Value *reg, Value *reg2, int is_sub, int with_carry, BasicBlock *bb) {
+arch_6502_addsub(cpu_t *cpu, uint16_t pc, Value *reg, Value *reg2, int is_sub, int with_carry, BasicBlock *bb) {
 	ConstantInt* const_int16_0001 = ConstantInt::get(getType(Int16Ty), 0x0001);
 	ConstantInt* const_int16_0008 = ConstantInt::get(getType(Int16Ty), 0x0008);
 	ConstantInt* const_int8_00FF = ConstantInt::get(getType(Int8Ty), 0x00FF);
@@ -272,7 +272,7 @@ arch_6502_addsub(uint8_t *RAM, uint16_t pc, Value *reg, Value *reg2, int is_sub,
 
 	/* load operand, A and C */
 	Value *v1 = new LoadInst(reg, "", false, bb);
-	Value *v2 = arch_6502_get_operand_rvalue(RAM, pc, bb);
+	Value *v2 = arch_6502_get_operand_rvalue(cpu, pc, bb);
 
 	/* NOT operand (if subtraction) */
 	if (is_sub)
@@ -389,8 +389,8 @@ arch_6502_flags_decode(Value *flags, BasicBlock *bb)
 }
 
 int
-arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
-	uint8_t opcode = RAM[pc];
+arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
+	uint8_t opcode = cpu->RAM[pc];
 
 	ConstantInt* const_false = ConstantInt::get(getType(Int1Ty), 0);
 	ConstantInt* const_true = ConstantInt::get(getType(Int1Ty), 1);
@@ -415,47 +415,47 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 //	printf("\naddmode = %i\n", instraddmode[opcode].addmode);
 	switch (instraddmode[opcode].instr) {
 		case INSTR_ADC:
-			arch_6502_addsub(RAM, pc, ptr_A, ptr_A, false, true, bb);
+			arch_6502_addsub(cpu, pc, ptr_A, ptr_A, false, true, bb);
 			break;
 		case INSTR_AND:
-			arch_6502_log(RAM, pc, Instruction::And, bb);
+			arch_6502_log(cpu, pc, Instruction::And, bb);
 			break;
 		case INSTR_ASL:
-			arch_6502_shiftrotate(RAM, pc, true, false, bb);
+			arch_6502_shiftrotate(cpu, pc, true, false, bb);
 			break;
 		case INSTR_BCC:
-			arch_6502_branch(RAM, pc, ptr_C, false, bb, bb_target, bb_next);
+			arch_6502_branch(cpu, pc, ptr_C, false, bb, bb_target, bb_next);
 			break;
 		case INSTR_BCS:
-			arch_6502_branch(RAM, pc, ptr_C, true, bb, bb_target, bb_next);
+			arch_6502_branch(cpu, pc, ptr_C, true, bb, bb_target, bb_next);
 			break;
 		case INSTR_BEQ:
-			arch_6502_branch(RAM, pc, ptr_Z, true, bb, bb_target, bb_next);
+			arch_6502_branch(cpu, pc, ptr_Z, true, bb, bb_target, bb_next);
 			break;
 		case INSTR_BIT:
 			{
-			Value *v1 = arch_6502_get_operand_rvalue(RAM, pc, bb);
+			Value *v1 = arch_6502_get_operand_rvalue(cpu, pc, bb);
 			arch_6502_set_nz(v1, bb);
 			break;
 			}
 		case INSTR_BMI:
-			arch_6502_branch(RAM, pc, ptr_N, true, bb, bb_target, bb_next);
+			arch_6502_branch(cpu, pc, ptr_N, true, bb, bb_target, bb_next);
 			break;
 		case INSTR_BNE:
-			arch_6502_branch(RAM, pc, ptr_Z, false, bb, bb_target, bb_next);
+			arch_6502_branch(cpu, pc, ptr_Z, false, bb, bb_target, bb_next);
 			break;
 		case INSTR_BPL:
-			arch_6502_branch(RAM, pc, ptr_N, false, bb, bb_target, bb_next);
+			arch_6502_branch(cpu, pc, ptr_N, false, bb, bb_target, bb_next);
 			break;
 		case INSTR_BRK:
 			printf("warning: encountered BRK!\n");
 			arch_6502_trap(pc, bb);
 			break;
 		case INSTR_BVC:
-			arch_6502_branch(RAM, pc, ptr_V, false, bb, bb_target, bb_next);
+			arch_6502_branch(cpu, pc, ptr_V, false, bb, bb_target, bb_next);
 			break;
 		case INSTR_BVS:
-			arch_6502_branch(RAM, pc, ptr_V, true, bb, bb_target, bb_next);
+			arch_6502_branch(cpu, pc, ptr_V, true, bb, bb_target, bb_next);
 			break;
 		case INSTR_CLC:
 			new StoreInst(const_false, ptr_C, false, bb);
@@ -470,16 +470,16 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 			new StoreInst(const_false, ptr_V, false, bb);
 			break;
 		case INSTR_CMP:
-			arch_6502_addsub(RAM, pc, ptr_A, NULL, true, false, bb);
+			arch_6502_addsub(cpu, pc, ptr_A, NULL, true, false, bb);
 			break;
 		case INSTR_CPX:
-			arch_6502_addsub(RAM, pc, ptr_X, NULL, true, false, bb);
+			arch_6502_addsub(cpu, pc, ptr_X, NULL, true, false, bb);
 			break;
 		case INSTR_CPY:
-			arch_6502_addsub(RAM, pc, ptr_Y, NULL, true, false, bb);
+			arch_6502_addsub(cpu, pc, ptr_Y, NULL, true, false, bb);
 			break;
 		case INSTR_DEC:
-			arch_6502_rmw(RAM, pc, Instruction::Sub, const_int8_0001, bb);
+			arch_6502_rmw(cpu, pc, Instruction::Sub, const_int8_0001, bb);
 			break;
 		case INSTR_DEX:
 			{
@@ -498,10 +498,10 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 			break;
 			}
 		case INSTR_EOR:
-			arch_6502_log(RAM, pc, Instruction::Xor, bb);
+			arch_6502_log(cpu, pc, Instruction::Xor, bb);
 			break;
 		case INSTR_INC:
-			arch_6502_rmw(RAM, pc, Instruction::Add, const_int8_0001, bb);
+			arch_6502_rmw(cpu, pc, Instruction::Add, const_int8_0001, bb);
 			break;
 		case INSTR_INX:
 			{
@@ -550,21 +550,21 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 			break;
 			}
 		case INSTR_LDA:
-			arch_6502_load_reg(RAM, pc, ptr_A, bb);
+			arch_6502_load_reg(cpu, pc, ptr_A, bb);
 			break;
 		case INSTR_LDX:
-			arch_6502_load_reg(RAM, pc, ptr_X, bb);
+			arch_6502_load_reg(cpu, pc, ptr_X, bb);
 			break;
 		case INSTR_LDY:
-			arch_6502_load_reg(RAM, pc, ptr_Y, bb);
+			arch_6502_load_reg(cpu, pc, ptr_Y, bb);
 			break;
 		case INSTR_LSR:
-			arch_6502_shiftrotate(RAM, pc, false, false, bb);
+			arch_6502_shiftrotate(cpu, pc, false, false, bb);
 			break;
 		case INSTR_NOP:
 			break;
 		case INSTR_ORA:
-			arch_6502_log(RAM, pc, Instruction::Or, bb);
+			arch_6502_log(cpu, pc, Instruction::Or, bb);
 			break;
 		case INSTR_PHA:
 			arch_6502_push(new LoadInst(ptr_A, "", false, bb), bb);
@@ -583,10 +583,10 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 			arch_6502_flags_decode(arch_6502_pull(bb), bb);
 			break;
 		case INSTR_ROL:
-			arch_6502_shiftrotate(RAM, pc, true, true, bb);
+			arch_6502_shiftrotate(cpu, pc, true, true, bb);
 			break;
 		case INSTR_ROR:
-			arch_6502_shiftrotate(RAM, pc, false, true, bb);
+			arch_6502_shiftrotate(cpu, pc, false, true, bb);
 			break;
 		case INSTR_RTI:
 			printf("error: encountered RTI!\n");
@@ -608,7 +608,7 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 			break;
 			}
 		case INSTR_SBC:
-			arch_6502_addsub(RAM, pc, ptr_A, ptr_A, true, true, bb);
+			arch_6502_addsub(cpu, pc, ptr_A, ptr_A, true, true, bb);
 			break;
 		case INSTR_SEC:
 			new StoreInst(const_true, ptr_C, false, bb);
@@ -620,13 +620,13 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 			new StoreInst(const_true, ptr_I, false, bb);
 			break;
 		case INSTR_STA:
-			arch_6502_store_reg(RAM, pc, ptr_A, bb);
+			arch_6502_store_reg(cpu, pc, ptr_A, bb);
 			break;
 		case INSTR_STX:
-			arch_6502_store_reg(RAM, pc, ptr_X, bb);
+			arch_6502_store_reg(cpu, pc, ptr_X, bb);
 			break;
 		case INSTR_STY:
-			arch_6502_store_reg(RAM, pc, ptr_Y, bb);
+			arch_6502_store_reg(cpu, pc, ptr_Y, bb);
 			break;
 		case INSTR_TAX:
 			arch_6502_copy_reg(ptr_A, ptr_X, bb);

@@ -1,7 +1,8 @@
 #include "types.h"
+#include "libcpu.h"
 
-#define RAM16(a) (int16_t)(RAM[a] << 8 | RAM[a+1])
-#define RAM32(a) (int32_t)(RAM[a] << 24 | RAM[a+1] << 16 | RAM[a+2] << 8 | RAM[a+3])
+#define RAM16(a) (int16_t)(cpu->RAM[a] << 8 | cpu->RAM[a+1])
+#define RAM32(a) (int32_t)(cpu->RAM[a] << 24 | cpu->RAM[a+1] << 16 | cpu->RAM[a+2] << 8 | cpu->RAM[a+3])
 
 #define SGN8(a) ((a>0x7F)? '-' : '+')
 #define ABS8(a) ((a>0x7F)? 0x100-a : a)
@@ -15,7 +16,7 @@
 	}
 
 
-int32_t arch_disasm_get_disp(uint8_t *RAM, addr_t pc, uint16_t opcode);
+int32_t arch_disasm_get_disp(cpu_t *cpu, addr_t pc, uint16_t opcode);
 
 extern const char sizechar[];
 

@@ -163,7 +163,7 @@ main(int argc, char **argv)
 #endif
 
 	cpu_set_flags_arch(cpu, CPU_M88K_IS_32BIT | CPU_M88K_IS_BE);
-	cpu_set_ram(RAM);
+	cpu_set_ram(cpu, RAM);
 	
 	cpu_init(cpu);
 

@@ -285,7 +285,7 @@ static int m88k_disassemble(strbuf_t *strbuf, m88k_address_t pc,
 }
 
 int
-arch_m88k_disasm_instr(uint8_t* RAM, addr_t pc, char *line, unsigned int max_line)
+arch_m88k_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 {
 	strbuf_t	strbuf;
 	int			dummy1;
@@ -293,7 +293,7 @@ arch_m88k_disasm_instr(uint8_t* RAM, addr_t pc, char *line, unsigned int max_lin
 	int			bytes;
 	bool		delaying;
 	
-	bytes = arch_m88k_tag_instr(RAM, pc, &dummy1, &dummy2);
+	bytes = arch_m88k_tag_instr(cpu, pc, &dummy1, &dummy2);
 
 	strbuf_init(line, max_line, &strbuf);
 

@@ -110,7 +110,7 @@ lengthmodreg(int mod, int reg, int size) {
 }
 
 static int
-lengthdisp(uint8_t *RAM, addr_t pc, uint16_t opcode) {
+lengthdisp(cpu_t *cpu, addr_t pc, uint16_t opcode) {
 	int32_t disp = (int8_t)bits(opcode,0,7);
 	switch (disp) {
 		case 0:
@@ -122,7 +122,7 @@ lengthdisp(uint8_t *RAM, addr_t pc, uint16_t opcode) {
 }
 
 static uint32_t
-decodeimm(uint8_t *RAM, addr_t pc, int size) {
+decodeimm(cpu_t *cpu, addr_t pc, int size) {
 //printf("imm!\n");
 	switch (size) {
 		case SIZE_B:
@@ -143,7 +143,7 @@ enum {
 };
 
 static void
-decodemodreg(int task, uint8_t* RAM, addr_t pc, int size, int mod, int reg, char *op1, unsigned int maxop, const char **attr, int *rm) {
+decodemodreg(int task, cpu_t *cpu, addr_t pc, int size, int mod, int reg, char *op1, unsigned int maxop, const char **attr, int *rm) {
 //printf("1mod=%d,reg=%d\n", mod, reg);
 	int flag;
 	*attr = "";
@@ -207,8 +207,8 @@ decodemodreg(int task, uint8_t* RAM, addr_t pc, int size, int mod, int reg, char
 				return;
 			}
 			if (reg == 4) {
-				DIS snprintf(op1, maxop, "#0x%x", decodeimm(RAM, pc, size));
-				REC snprintf(op1, maxop, "IMM,0x%02x", decodeimm(RAM, pc, size));
+				DIS snprintf(op1, maxop, "#0x%x", decodeimm(cpu, pc, size));
+				REC snprintf(op1, maxop, "IMM,0x%02x", decodeimm(cpu, pc, size));
 				REC *rm=IS_MEM;
 				REC *attr = "imm";
 				return;
@@ -221,7 +221,7 @@ decodemodreg(int task, uint8_t* RAM, addr_t pc, int size, int mod, int reg, char
 }
 
 int32_t
-arch_disasm_get_disp(uint8_t *RAM, addr_t pc, uint16_t opcode) {
+arch_disasm_get_disp(cpu_t *cpu, addr_t pc, uint16_t opcode) {
 	int32_t disp = (int8_t)bits(opcode,0,7);
 	switch (disp) {
 		case 0:
@@ -252,7 +252,7 @@ decodereglist(uint16_t mask, char *op1, unsigned int maxop) {
 }
 
 static inline int
-disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, addr_t start, int optimized_dispatch) {
+disreclen(int task, cpu_t *cpu, addr_t pc, char *line, unsigned int max_line, addr_t start, int optimized_dispatch) {
 	uint16_t opcode = RAM16(pc);
 	int dr;
 	int32_t disp;
@@ -284,15 +284,15 @@ disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, 
 				case 12: mnemo = "cmp"; break;
 				default: mnemo = "???"; break;
 			}
-			decodemodreg(task, RAM, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
-			DIS snprintf(line, max_line, "%si.%c #0x%x, %s", mnemo, sizechar[SIZE67], decodeimm(RAM, pc+lengthmodreg(MOD0, REG0, SIZE67), SIZE67), op1);
+			decodemodreg(task, cpu, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+			DIS snprintf(line, max_line, "%si.%c #0x%x, %s", mnemo, sizechar[SIZE67], decodeimm(cpu, pc+lengthmodreg(MOD0, REG0, SIZE67), SIZE67), op1);
 			len = 2+lengthmodreg(MOD0, REG0, SIZE67)+sizetoimmbytes(SIZE67);
 			break;
 		case 1:
 		case 2:
 		case 3:	/* MOV */
-			decodemodreg(task, RAM, pc+lengthmodreg(MOD0,REG0,SIZE1213), SIZE1213, MOD1, REG1, op2, sizeof(op2), &attr, &rm2);
-			decodemodreg(task, RAM, pc, SIZE1213, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+			decodemodreg(task, cpu, pc+lengthmodreg(MOD0,REG0,SIZE1213), SIZE1213, MOD1, REG1, op2, sizeof(op2), &attr, &rm2);
+			decodemodreg(task, cpu, pc, SIZE1213, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 			DIS snprintf(line, max_line, "move.%c %s, %s", sizechar[SIZE1213], op1, op2);
 			REC {
 //				if (rm2==IS_REG)
@@ -314,7 +314,7 @@ disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, 
 				break;
 			}
 			if (MOD1==7) { /* LEA */
-				decodemodreg(task, RAM, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+				decodemodreg(task, cpu, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 				DIS snprintf(line, max_line, "lea %s, a%d", op1, REG1);
 				REC snprintf(line, max_line, "lea (EA_%s, WRITE_a,%d);", op1, REG1);
 				len = 2+lengthmodreg(MOD0, REG0, SIZE_L);
@@ -322,38 +322,38 @@ disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, 
 			}
 			switch (bits(opcode,8,11)) {
 				case 2:	/* CLR */
-					decodemodreg(task, RAM, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+					decodemodreg(task, cpu, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 					DIS snprintf(line, max_line, "clr.%c %s", sizechar[SIZE67], op1);
 					REC snprintf(line, max_line, "move%d (READ_IMM,0, WRITE_%s);", sizenum[SIZE67], op1);
 					len = 2+lengthmodreg(MOD0, REG0, SIZE67);
 					break;
 				case 4:	/* NEG */
-					decodemodreg(task, RAM, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+					decodemodreg(task, cpu, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 					DIS snprintf(line, max_line, "neg.%c %s", sizechar[SIZE67], op1);
 					REC snprintf(line, max_line, "neg%d (READ_IMM,0, WRITE_%s);", sizenum[SIZE67], op1);
 					len = 2+lengthmodreg(MOD0, REG0, SIZE67);
 					break;
 				case 10:	/* TST */
-					decodemodreg(task, RAM, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+					decodemodreg(task, cpu, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 					DIS snprintf(line, max_line, "tst.%c %s", sizechar[SIZE67], op1);
 					REC snprintf(line, max_line, "tst%d(READ_%s);", sizenum[SIZE67], op1);
 					len = 2+lengthmodreg(MOD0, REG0, SIZE67);
 					break;
 				case 14:
 					 if (bits(opcode,6,7) == 2) {	/* JSR */
-						decodemodreg(task, RAM, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+						decodemodreg(task, cpu, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 						DIS snprintf(line, max_line, "jsr %s", op1);
 						len = 2+lengthmodreg(MOD0, REG0, 0);
 						REC snprintf(line, max_line, "call (READ_%s,0x%08llx);", op1, pc+len);
 						break;
 					} else if (bits(opcode,0,7) == 0x56) {	/* LINKW */ // 68030?
-						decodemodreg(task, RAM, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
-						DIS snprintf(line, max_line, "linkw %s, %04x", op1, decodeimm(RAM, pc, SIZE_W));
+						decodemodreg(task, cpu, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+						DIS snprintf(line, max_line, "linkw %s, %04x", op1, decodeimm(cpu, pc, SIZE_W));
 						len = 4+lengthmodreg(MOD0, REG0, 0);
 						REC snprintf(line, max_line, "linkw (READ_%s,0x%08llx);", op1, pc+len);
 						break;
 					} else if (bits(opcode,0,7) == 0x5e) {	/* UNLK */ // 68030?
-						decodemodreg(task, RAM, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+						decodemodreg(task, cpu, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 						DIS snprintf(line, max_line, "unlk %s", op1);
 						len = 2+lengthmodreg(MOD0, REG0, 0);
 						REC snprintf(line, max_line, "linkw (READ_%s,0x%08llx);", op1, pc+len);
@@ -367,14 +367,14 @@ disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, 
 				case 8:
 				case 12:
 					if (bits(opcode,6,7) == 1 && DIRECTION10 == 0) {	/* PEA */
-						decodemodreg(task, RAM, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+						decodemodreg(task, cpu, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 						DIS snprintf(line, max_line, "pea.%c %s", sizechar[SIZE_L], op1);
 						REC snprintf(line, max_line, "pea%d(READ_%s);", sizenum[SIZE_L], op1);
 						len = 2+lengthmodreg(MOD0, REG0, SIZE67);
 						break;
 					} else if (bits(opcode,7,7)==1) { /* MOVEM */
 						dr = DIRECTION10;
-						decodemodreg(task, RAM, pc, SIZE6, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+						decodemodreg(task, cpu, pc, SIZE6, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 						decodereglist(RAM16(pc+2), op2, sizeof(op2));
 						if (!dr) {
 							DIS snprintf(line, max_line, "movem.%c %s, %s", sizechar[SIZE6], op2, op1);
@@ -411,17 +411,17 @@ disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, 
 					len = 2;
 				}
 			} else {	/* ADDQ/SUBQ */
-				decodemodreg(task, RAM, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+				decodemodreg(task, cpu, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 				DIS snprintf(line, max_line, "%s.%c #0x%08x, %s", bits(opcode,8,8)? "subq":"addq", sizechar[SIZE67], QDATA9, op1);
 				REC snprintf(line, max_line, "%s%d (0x%x, READ_%s, WRITE_%s);", bits(opcode,8,8)? "subq":"addq", sizenum[SIZE67], QDATA9, op1, op1);
 				len = 2+lengthmodreg(MOD0, REG0, SIZE67);
 			}
 			break;
 		case 6:	/* Bcc */
-			disp = arch_disasm_get_disp(RAM, pc, opcode);
+			disp = arch_disasm_get_disp(cpu, pc, opcode);
 			DIS snprintf(line, max_line, "b%s 0x%08llx", condstr[CONDITION], pc+2+disp);
 			DIS snprintf(line, max_line, "b%s (l%llX);", condstr[CONDITION], pc+2+disp);
-			len = lengthdisp(RAM, pc, opcode);
+			len = lengthdisp(cpu, pc, opcode);
 			break;
 		case 7:
 			if (bits(opcode,8,8)==0) { /* MOVQ */
@@ -441,14 +441,14 @@ disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, 
 				default: mnemo = "???"; break;
 			}
 			if (bits(opcode,6,7)==3) {	/* ADDA/SUBA/... */
-					decodemodreg(task, RAM, pc, SIZEA68, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+					decodemodreg(task, cpu, pc, SIZEA68, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 					DIS snprintf(line, max_line, "%sa.%c %s, a%d", mnemo, sizechar[SIZEA68], op1, REG1);
 					REC snprintf(line, max_line, "%s%d (READ_%s, READ_a,%d, WRITE_a,%d);", mnemo, sizenum[SIZEA68], op1, REG1, REG1);
 					len = 2+lengthmodreg(MOD0, REG0, SIZEA68); // TODO: BUG?
 					fprintf(stderr, ">>> %d\n", lengthmodreg(MOD0, REG0, SIZEA68));
 					break;
 			} else {					/* ADD/SUB/... */
-				decodemodreg(task, RAM, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
+				decodemodreg(task, cpu, pc, SIZE67, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 				if (!DIRECTION8) {
 					DIS snprintf(line, max_line, "%s%d (%s, d%d)", mnemo, sizenum[SIZE67], op1, REG1);
 					REC snprintf(line, max_line, "%s%d (READ_%s, READ_d,%d, WRITE_d,%d);", mnemo, sizenum[SIZE67], op1, REG1, REG1);
@@ -489,25 +489,20 @@ disreclen(int task, uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, 
  * number of bytes consumed.
  */
 int
-arch_m68k_disasm_instr(uint8_t* RAM, addr_t pc, char *line, unsigned int max_line) {
-	return disreclen(TASK_DIS, RAM, pc, line, max_line, 0, 0);
+arch_m68k_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line) {
+	return disreclen(TASK_DIS, cpu, pc, line, max_line, 0, 0);
 }
 
 int
-arch_m68k_recompile_instr(unsigned char*, unsigned long long, llvm::BasicBlock*, llvm::BasicBlock*, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next)
+arch_m68k_recompile_instr(cpu_t *, unsigned long long, llvm::BasicBlock*, llvm::BasicBlock*, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next)
 {
 	printf("unimplemented!\n");
 	exit(1);
 }
 
 int
-arch_recompile_instr(uint8_t* RAM, addr_t pc, char *line, unsigned int max_line, addr_t start, addr_t end, int optimized_dispatch) {
-	return disreclen(TASK_REC, RAM, pc, line, max_line, start, optimized_dispatch);
-}
-
-int
-arch_m68k_instr_length(uint8_t* RAM, addr_t pc) {
-	return disreclen(TASK_LEN, RAM, pc, 0, 0, 0, 0);
+arch_m68k_instr_length(cpu_t *cpu, addr_t pc) {
+	return disreclen(TASK_LEN, cpu, pc, 0, 0, 0, 0);
 }
 
 
