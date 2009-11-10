@@ -4,7 +4,6 @@
 #include "tag_generic.h"
 
 using namespace llvm;
-extern Function* func_jitmain;
 
 extern Value* ptr_PC;
 

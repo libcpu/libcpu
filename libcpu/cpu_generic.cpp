@@ -1,5 +1,6 @@
 #include "cpu_generic.h"
 
+//XXX put into cpu_t
 uint32_t reg_size;
 bool is_little_endian;
 bool has_special_r0;
@@ -160,7 +161,7 @@ arch_store16(Value *val, Value *addr, BasicBlock *bb) {
 // branches
 
 void
-arch_branch(bool flag_state, BasicBlock *target1, BasicBlock *target2, Value *v, Function *f, BasicBlock *bb) {
+arch_branch(bool flag_state, BasicBlock *target1, BasicBlock *target2, Value *v, BasicBlock *bb) {
 	if (flag_state)
 		BranchInst::Create(target1, target2, v, bb);
 	else

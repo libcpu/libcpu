@@ -7,7 +7,6 @@
 #include "m88k_insn.h"
 
 using namespace llvm;
-extern Function* func_jitmain;
 
 extern Value* ptr_PC;
 

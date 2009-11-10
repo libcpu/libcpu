@@ -5,21 +5,11 @@
 #include "arch/6502/libcpu_6502.h"
 
 using namespace llvm;
-extern Function* func_jitmain;
-extern Value *ptr_reg;
+
+//XXX put into cpu_t
 extern Value* ptr_RAM;
-extern PointerType* type_pfunc_callout;
-extern Value *ptr_func_debug;
-
-extern Value *get_struct_member_pointer(Value *s, int index, BasicBlock *bb);
-
-// 6502
 extern Value* ptr_PC;
 extern Value* ptr_r8[32];
-extern Value* ptr_r16[32];
-extern Value* ptr_r32[32];
-extern Value* ptr_r64[32];
-
 Value* ptr_C;
 Value* ptr_Z;
 Value* ptr_I;
@@ -27,25 +17,15 @@ Value* ptr_D;
 Value* ptr_V;
 Value* ptr_N;
 
-
 #define ptr_A ptr_r8[0]
 #define ptr_X ptr_r8[1]
 #define ptr_Y ptr_r8[2]
 #define ptr_S ptr_r8[3]
 #define ptr_P ptr_r8[4]
 
-
-//////////////////////////////////////////////////////////////////////
-// 6502
-//////////////////////////////////////////////////////////////////////
-
-/* optimizations - these lead to inaccurate 6502 emulation */
-//#define IGNORE_INDY_WRAPAROUND 1
-
 #define OPCODE RAM[pc]
 #define OPERAND_8 RAM[(pc+1)&0xFFFF]
 #define OPERAND_16 ((RAM[pc+1]&0xFFFF) | (RAM[pc+2]&0xFFFF)<<8)
-#define BRANCH_TARGET ((pc+2+(int8_t)RAM[(pc+1)&0xFFFF])&0xFFFF)
 
 Value *
 arch_6502_get_op8(uint8_t *RAM, uint16_t pc, BasicBlock *bb) {
@@ -418,7 +398,7 @@ arch_6502_recompile_instr(uint8_t* RAM, addr_t pc, BasicBlock *bb_dispatch, Basi
 
 //printf("%s:%d PC=$%04X\n", __func__, __LINE__, pc);
 
-#if 0
+#if 0 //XXX this must move into generic code
 	// add a call to debug_function()
 	ConstantInt* v_pc = ConstantInt::get(Type::Int16Ty, pc);
 	new StoreInst(v_pc, ptr_PC, bb);

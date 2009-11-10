@@ -6,7 +6,6 @@
 #include "mips_internal.h"
 
 using namespace llvm;
-extern Function* func_jitmain;
 
 extern Value* ptr_PC;
 

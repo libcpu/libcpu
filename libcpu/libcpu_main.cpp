@@ -15,13 +15,13 @@
 #include "arch.h"
 
 using namespace llvm;
+//XXX put into cpu_t
 Function* func_jitmain;
 Value *ptr_reg;
 Value* ptr_PC;
 Value* ptr_RAM;
 PointerType* type_pfunc_callout;
 Value *ptr_func_debug;
-
 #define MAX_REGISTERS 32
 Value* ptr_r8[MAX_REGISTERS];
 Value* ptr_r16[MAX_REGISTERS];
@@ -31,9 +31,7 @@ Value *in_ptr_r8[MAX_REGISTERS];
 Value *in_ptr_r16[MAX_REGISTERS];
 Value *in_ptr_r32[MAX_REGISTERS];
 Value *in_ptr_r64[MAX_REGISTERS];
-
-/* will hold the system's static memory layout for analysis */
-uint8_t *RAM; // XXX global!
+uint8_t *RAM; /* will hold the system's static memory layout for analysis */
 
 typedef enum {				/* bitfield! */
 	TYPE_UNKNOWN     = 0,	/* unused or data */

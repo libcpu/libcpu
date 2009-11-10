@@ -20,7 +20,7 @@ Value *arch_load8(Value *addr, BasicBlock *bb);
 Value *arch_load16_aligned(Value *addr, BasicBlock *bb);
 void arch_store8(Value *val, Value *addr, BasicBlock *bb);
 void arch_store16(Value *val, Value *addr, BasicBlock *bb);
-void arch_branch(bool flag_state, BasicBlock *target1, BasicBlock *target2, Value *flag, Function *f, BasicBlock *bb);
+void arch_branch(bool flag_state, BasicBlock *target1, BasicBlock *target2, Value *flag, BasicBlock *bb);
 void arch_jump(BasicBlock *bb, BasicBlock *bb_target);
 
 Value *arch_encode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb);
@@ -113,7 +113,7 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define RAM32(RAM,a) RAM32BE(RAM,a)
 
 /* branch */
-#define BRANCH(f,pc1,pc2,v) arch_branch(f,pc1,pc2,v,func_jitmain,bb)
+#define BRANCH(f,pc1,pc2,v) arch_branch(f,pc1,pc2,v,bb)
 
 /* jump */
 #define JUMP arch_jump(bb, bb_target)
