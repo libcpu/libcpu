@@ -18,7 +18,10 @@
 #ifndef endian_h
 #define endian_h
 
+#ifdef __LITTLE_ENDIAN__
 #define ARCH_LITTLEENDIAN
+#endif
+
 #ifdef ARCH_LITTLEENDIAN
 static inline uint16_t BE16_toHost(uint16_t val) {
 	return ((val & 0xFF00)>>8) | ((val & 0x00FF)<<8);

@@ -36,9 +36,9 @@ obsd41_us_syscall_find(void *_self, int scno,
 }
 
 static bool
-obsd41_us_syscall_extract (void *_self,
-						   xec_monitor_t *xmon,
-						   xec_us_syscall_desc_t const **desc)
+obsd41_us_syscall_extract(void *_self,
+						  xec_monitor_t *xmon,
+						  xec_us_syscall_desc_t const **desc)
 {
 	int                  scno;
 	obsd41_us_syscall_t *self = (obsd41_us_syscall_t *)_self;

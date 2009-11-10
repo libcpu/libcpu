@@ -7,7 +7,7 @@
 # define START 0x400670
 # define ENTRY 0x52c
 #endif
-//#define SINGLESTEP
+#define SINGLESTEP
 
 #include <mach/mach_time.h>
 #define START_NO 1000000000

@@ -850,6 +850,7 @@ main (int argc, char **argv)
   call_t **calls;
   extern FILE *yyin;
 
+  __xec_log_init ();
   g_calls    = call_list_new (NULL);
   if (argc < 2)
     {

@@ -130,7 +130,7 @@ arch_m88k_get_imm(m88k_insn const &instr, uint32_t bits, unsigned flags,
 
 //////////////////////////////////////////////////////////////////////
 
-#define GET_CARRY()		(new LoadInst(m88k_ptr_C, "", false, bb))
+#define GET_CARRY()		(SEXT32(new LoadInst(m88k_ptr_C, "", false, bb)))
 #define SET_CARRY(v)	(new StoreInst(v, m88k_ptr_C, bb))
 
 //////////////////////////////////////////////////////////////////////
@@ -148,13 +148,21 @@ arch_m88k_branch(cpu_t *cpu, addr_t pc, Value *cond, bool delay,
 	Value *v = ICMP_EQ(AND(R32(reg), CONST32(1 << (bit))), CONST(0));	\
 	if (delay) DELAY_SLOT;												\
 	arch_m88k_branch(cpu, pc, v, delay, !set, bb, bb_target, bb_next);	\
-} while (0)
+} while(0)
 
 #define BRANCH_COND(cond, delay) do {									\
 	Value *v = (cond);													\
 	if (delay) DELAY_SLOT;												\
 	arch_m88k_branch(cpu, pc, v, delay, true, bb, bb_target, bb_next);	\
-} while (0)
+} while(0)
+
+//////////////////////////////////////////////////////////////////////
+
+#define COMPUTE_CARRY(src1, src2, result) \
+	(AND(ICMP_NE(src2, CONST(0)), ICMP_ULT(result, src1)))
+
+#define COMPUTE_BORROW(src1, src2, result) \
+	(AND(ICMP_NE(src2, CONST(0)), ICMP_UGT(result, src1)))
 
 static void
 arch_m88k_addsub(cpu_t *cpu, addr_t pc, m88k_reg_t dst, Value *src1, Value *src2,
@@ -181,9 +189,9 @@ arch_m88k_addsub(cpu_t *cpu, addr_t pc, m88k_reg_t dst, Value *src1, Value *src2
 
 	if (carry & M88K_CARRY_OUT) {
 		if (sub)
-			SET_CARRY(ICMP_UGT(result, src1));
+			SET_CARRY(COMPUTE_BORROW(src1, src2, result));
 		else
-			SET_CARRY(ICMP_ULT(result, src1));
+			SET_CARRY(COMPUTE_CARRY(src1, src2, result));
 	}
 
 	LET32(dst, result);
@@ -593,9 +601,9 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 				LOAD32(instr.rd() & ~1, ADD(R32(instr.rs1()), IMM));
 				LOAD32(instr.rd() | 1, ADD(ADD(R32(instr.rs1()), IMM),
 					CONST32(4)));
-			} else if (fmt == M88K_IFMT_XMEM)
-				BAD;
-			else {
+			} else if (fmt == M88K_IFMT_XMEM) {
+				//BAD;
+			} else {
 				LOAD32(instr.rd() & ~1, ADD(R32(instr.rs1()),
 					SHL(R32(instr.rs2()), CONST32(3))));
 				LOAD32(instr.rd() | 1, ADD(R32(instr.rs1()),
@@ -604,15 +612,15 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 			break;
 
 		case M88K_OPC_LD_X:
-			BAD;
+			//BAD;
 			break;
 
 		case M88K_OPC_ST:
 			if (fmt == M88K_IFMT_MEM)
 				STORE32(R(instr.rd()), ADD(R32(instr.rs1()), IMM));
-			else if (fmt == M88K_IFMT_XMEM)
-				BAD;
-			else
+			else if (fmt == M88K_IFMT_XMEM) {
+				// BAD;
+			} else
 				STORE32(R(instr.rd()), ADD(R32(instr.rs1()),
 					SHL(R32(instr.rs2()), CONST32(2))));
 			break;
@@ -637,9 +645,9 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 				STORE32(R(instr.rd() & ~1), ADD(R32(instr.rs1()), IMM));
 				STORE32(R(instr.rd() | 1), ADD(ADD(R32(instr.rs1()), IMM),
 					CONST32(4)));
-			} else if (fmt == M88K_IFMT_XMEM)
-				BAD;
-			else {
+			} else if (fmt == M88K_IFMT_XMEM) {
+				// BAD;
+			} else {
 				STORE32(R(instr.rd() & ~1), ADD(R32(instr.rs1()),
 					SHL(R32(instr.rs2()), CONST32(3))));
 				STORE32(R(instr.rd() | 1), ADD(R32(instr.rs1()),
@@ -648,7 +656,7 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 			break;
 
 		case M88K_OPC_ST_X:
-			BAD;
+			//BAD;
 			break;
 
 		case M88K_OPC_XMEM:
@@ -714,7 +722,7 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_TB0:
 		case M88K_OPC_TB1:
 		case M88K_OPC_TBND:
-			BAD;
+			//BAD;
 			break;
 
 		default:

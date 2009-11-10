@@ -40,6 +40,8 @@ typedef enum _xec_mem_err
 
 typedef struct _xec_mem_if xec_mem_if_t;
 
+typedef struct _xec_mem_if_vtbl xec_mem_if_vtbl_t;
+
 struct _xec_mem_if_vtbl
   {
     xec_gaddr_t   (*gmap)(xec_mem_if_t *self, xec_haddr_t addr, size_t len, unsigned flags);
@@ -48,7 +50,7 @@ struct _xec_mem_if_vtbl
     xec_haddr_t   (*gtoh)(xec_mem_if_t *self, xec_gaddr_t addr, xec_mem_flg_t *mf);
 
     xec_mem_flg_t (*read)(xec_mem_if_t *self, xec_gaddr_t gaddr, uint8_t *buf, size_t sz);
-    xec_mem_flg_t (*write)(xec_mem_if_t *self, xec_gaddr_t addr, uint8_t const *buf, size_t sz);
+    xec_mem_flg_t (*write)(xec_mem_if_t *self, xec_gaddr_t gaddr, uint8_t const *buf, size_t sz);
   };
 
 struct _xec_mem_if

@@ -188,12 +188,11 @@ xec_mmap_create_with_file (char const *path,
 
       if (size == XEC_MMAP_WHOLE)
         {
-#if 0
           /* Mapping whole the address space!? */
           if (sizeof (off_t) >= sizeof (size_t)
               && st.st_size >= (off_t)(SIZE_T_MAX >> 1))
             goto fail;
-#endif
+
           size = st.st_size;
         }
 

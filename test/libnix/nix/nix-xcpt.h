@@ -22,10 +22,18 @@ do {								\
 	nix_xcpt_forget();				\
 } while (0);
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void
 nix_xcpt_record(sigjmp_buf jb);
 
 void
 nix_xcpt_forget(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* !__nix_xcpt_h */

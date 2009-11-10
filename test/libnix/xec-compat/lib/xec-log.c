@@ -126,7 +126,7 @@ xec_abort (bool coredump)
 void
 __xec_log_init (void)
 {
-  g_global.name   = "XEC";
+  g_global.name   = "<global>";
   g_global.min    = XEC_LOG_DEBUG;
   g_global.cookie = &g_global;
   g_global.flags  = LOG_ENABLED;
@@ -498,8 +498,12 @@ xec_logv (void               *cookie,
 
   if (g_log_flags & XEC_LOG_SOURCEINFO)
     {
-      if (filename != NULL && line != 0)
-        fprintf (tag->output, "[%s:%u]", filename, line);
+      if (filename != NULL && line != 0) {
+        if (strlen(filename) > 20)
+          fprintf (tag->output, "[...%s:%u]", filename + strlen (filename) - 20, line);
+        else
+          fprintf (tag->output, "[%s:%u]", filename, line);
+      }
       fprintf (tag->output, " (%u): ", getpid ());
       if (function != NULL)
         fprintf (tag->output, "%s: ", function);

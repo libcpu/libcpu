@@ -47,7 +47,7 @@ CALLS
 39 word getppid (void)
 40 word lstat_compat43 (ptr, ptr)
 41 word dup (word)
-42 word opipe (void)
+42 word opipe (ptr)
 43 word getegid (void)
 44 word profil (ptr, word, word, word)
 45 word ktrace (ptr, word, word, word)

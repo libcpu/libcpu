@@ -6,7 +6,7 @@
 
 Value *m88k_ptr_C;
 
-void
+static void
 arch_m88k_init(cpu_t *cpu)
 {
 	m88k_regfile_t *reg;
@@ -38,27 +38,57 @@ arch_m88k_init(cpu_t *cpu)
 	printf("Motorola 88100 initialized.\n");
 }
 
-addr_t
+static addr_t
 arch_m88k_get_pc(void *reg)
 {
 	return ((m88k_regfile_t*)reg)->sxip;
 }
 
-void
+#define C_SHIFT 28
+
+static Value *
+arch_m88k_flags_encode(BasicBlock *bb)
+{
+	Value *flags = ConstantInt::get(getIntegerType(32), 0);
+
+	flags = arch_encode_bit(flags, m88k_ptr_C, C_SHIFT, 32, bb);
+
+	return flags;
+}
+
+static void
+arch_m88k_flags_decode(Value *flags, BasicBlock *bb)
+{
+	arch_decode_bit(flags, m88k_ptr_C, C_SHIFT, 32, bb);
+}
+
+static void
 arch_m88k_emit_decode_reg(BasicBlock *bb)
 {
 	// declare flags
 	m88k_ptr_C = new AllocaInst(getIntegerType(1), "C", bb);
 
+#if not_yet
 	// decode PSR
-//	Value *flags = new LoadInst(ptr_PSR, "", false, bb);
+	Value *flags = new LoadInst(ptr_PSR, "", false, bb);
+	arch_m88k_flags_decode(flags, bb);
+#endif
+}
+
+static void
+arch_m88k_spill_reg_state(BasicBlock *bb)
+{
+#if not_yet
+	Value *flags = arch_m88k_flags_encode(bb);
+	new StoreInst(flags, ptr_PSR, false, bb);
+#endif
 }
 
 arch_func_t arch_func_m88k = {
 	arch_m88k_init,
 	arch_m88k_get_pc,
 	arch_m88k_emit_decode_reg,
-	NULL, /* spill_reg_state */
+	arch_m88k_spill_reg_state,
 	arch_m88k_tag_instr,
 	arch_m88k_disasm_instr,
 	arch_m88k_recompile_instr
