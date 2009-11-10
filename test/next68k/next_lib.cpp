@@ -148,10 +148,9 @@
 #define CAST32(a) (*(uint32_t*)(&(a)))
 #define RAM32(a) (CAST32(RAM[CAST_ADDR(a)]))
 #define STORE32(a,b) (RAM32(a) = htonl(b)) 
-extern uint8_t *RAM;
 
 void
-init_os(int argc, char **argv) {
+init_os(uint8_t *RAM, int argc, char **argv) {
 	STORE32(4, ExecBase);
 	STORE32(ExecBase+_LVOOldOpenLibrary, ADDR_OldOpenLibrary);
 	STORE32(ExecBase+_LVOCloseLibrary, ADDR_CloseLibrary);
