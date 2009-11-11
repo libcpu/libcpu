@@ -16,10 +16,17 @@ INCLUDE_DIRECTORIES(arch/${GUEST})
 CONFIGURE_FILE(nix-obsd41-config.h.cmake ${PROJECT_BINARY_DIR}/nix-obsd41-config.h)
 
 # Execute sc2int
+IF(XCODE)
 ADD_CUSTOM_COMMAND(OUTPUT ${PROJECT_BINARY_DIR}/obsd41-callbacks.c
-                   COMMAND ${PROJECT_BINARY_DIR}/../tools/sc2int/sc2int < ${PROJECT_SOURCE_DIR}/obsd41.sc
+                   COMMAND ${PROJECT_BINARY_DIR}/../tools/sc2int/${CMAKE_BUILD_TYPE}/sc2int ${PROJECT_SOURCE_DIR}/obsd41.sc
                    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
                    COMMENT "Generating System Calls Callbacks")
+ELSE()
+ADD_CUSTOM_COMMAND(OUTPUT ${PROJECT_BINARY_DIR}/obsd41-callbacks.c
+                   COMMAND ${PROJECT_BINARY_DIR}/../tools/sc2int/sc2int ${PROJECT_SOURCE_DIR}/obsd41.sc
+                   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+                   COMMENT "Generating System Calls Callbacks")
+ENDIF()
 
 ADD_LIBRARY(obsd41
 			SHARED
