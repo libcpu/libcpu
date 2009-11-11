@@ -5,4 +5,3 @@ ADD_LIBRARY(6502 STATIC
 			isa.cpp
 			recompile.cpp
 			tag.cpp)
-

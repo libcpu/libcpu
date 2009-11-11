@@ -2,4 +2,3 @@ PROJECT(test_6502)
 
 ADD_EXECUTABLE(test_6502 main.cpp cbmbasic_lib.cpp)
 TARGET_LINK_LIBRARIES(test_6502 cpu)
-TARGET_LINK_LLVM(test_6502)

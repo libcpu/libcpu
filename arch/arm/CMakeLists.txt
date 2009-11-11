@@ -1,4 +1,4 @@
-PROJECT(mips)
+PROJECT(arm)
 
 ADD_LIBRARY(arm STATIC
 			disasm.cpp

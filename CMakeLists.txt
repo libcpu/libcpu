@@ -16,6 +16,10 @@ SET(GUEST_EXTRA_TESTS next68k)
 #
 # Build Universal image.
 #
+IF(APPLE)
+  OPTION(UNIVERSAL "Build Universal Executable" OFF)
+ENDIF(APPLE)
+
 IF(APPLE AND UNIVERSAL)
 	INCLUDE(CMake/AppleMultiArch.cmake)
 ENDIF()

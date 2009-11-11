@@ -2,8 +2,8 @@ PROJECT(test_m88k)
 
 ADD_EXECUTABLE(test_m88k main.cpp)
 TARGET_LINK_LIBRARIES(test_m88k cpu)
-TARGET_LINK_LLVM(test_m88k)
 
+### Run88 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/test/libnix/xec-compat/lib
 					${CMAKE_SOURCE_DIR}/test/libnix/xec-compat/engine
 					${CMAKE_SOURCE_DIR}/test/libnix/xec-compat/arch
@@ -14,4 +14,3 @@ INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/test/libnix/xec-compat/lib
 
 ADD_EXECUTABLE(run_m88k run88.cpp loader.c)
 TARGET_LINK_LIBRARIES(run_m88k cpu obsd41)
-TARGET_LINK_LLVM(run_m88k)
