@@ -205,9 +205,14 @@ arch_m88k_shift(m88k_opcode_t opc, m88k_reg_t rd, Value *src1, Value *src2,
 	uint32_t wmask = ifmt ? ((1 << width) - 1) : -1U;
 
 	switch (opc) {
-		case M88K_OPC_ROT:
-			assert (!ifmt && "Must be a tradic opcode.");
-			abort();
+		case M88K_OPC_ROT: // (rs1 >> bits)|(rs1 << (32-bits))
+			if (ifmt)
+				LET32(rd, OR(LSHR(src1, CONST32(offset)),
+							 SHL(src1, CONST32(32 - offset))));
+			else
+				LET32(rd, OR(LSHR(src1, AND(src2, CONST32(0x1f))),
+							 SHL(src1, SUB(CONST32(32),
+										   AND(src2, CONST32(0x1f))))));
 			break;
 
 		case M88K_OPC_MAK: // (rs1 & wmask) << offset
@@ -557,11 +562,16 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_LD:
 			if (fmt == M88K_IFMT_MEM)
 				LOAD32(instr.rd(), ADD(R32(instr.rs1()), IMM));
-			else if (fmt == M88K_IFMT_XMEM)
+			else if (fmt == M88K_IFMT_XMEM) {
 				BAD;
-			else
+			} else if (fmt == M88K_TFMT_REG) {
+				LOAD32(instr.rd(), ADD(R32(instr.rs1()), R32(instr.rs2())));
+			} else if (fmt == M88K_TFMT_REGS) {
 				LOAD32(instr.rd(), ADD(R32(instr.rs1()), SHL(R32(instr.rs2()),
 					CONST32(2))));
+			} else {
+				BAD;
+			}
 			break;
 
 		case M88K_OPC_LD_B:
@@ -579,21 +589,31 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 			break;
 
 		case M88K_OPC_LD_H:
-			if (fmt == M88K_IFMT_MEM)
+			if (fmt == M88K_IFMT_MEM) {
 				LOAD16S(instr.rd(), ADD(R32(instr.rs1()), IMM));
-			else
+			} else if (fmt == M88K_TFMT_REG) {
+				LOAD16S(instr.rd(), ADD(R32(instr.rs1()), R32(instr.rs2())));
+			} else if (fmt == M88K_TFMT_REGS) {
 				LOAD16S(instr.rd(), ADD(R32(instr.rs1()), SHL(R32(instr.rs2()),
 					CONST32(1))));
+			} else {
+				BAD;
+			}
 			break;
 
 		case M88K_OPC_LD_HU:
-			if (fmt == M88K_IFMT_MEM)
+			if (fmt == M88K_IFMT_MEM) {
 				LOAD16(instr.rd(), ADD(R32(instr.rs1()), IMM));
-			else if (fmt == M88K_IFMT_XMEM)
+			} else if (fmt == M88K_IFMT_XMEM) {
 				BAD;
-			else
+			} else if (fmt == M88K_TFMT_REG) {
+				LOAD16(instr.rd(), ADD(R32(instr.rs1()), R32(instr.rs2())));
+			} else if (fmt == M88K_TFMT_REGS) {
 				LOAD16(instr.rd(), ADD(R32(instr.rs1()), SHL(R32(instr.rs2()),
 					CONST32(1))));
+			} else {
+				BAD;
+			}
 			break;
 
 		case M88K_OPC_LD_D:
@@ -603,11 +623,17 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 					CONST32(4)));
 			} else if (fmt == M88K_IFMT_XMEM) {
 				//BAD;
-			} else {
+			} else if (fmt == M88K_TFMT_REG) {
+				LOAD32(instr.rd() & ~1, ADD(R32(instr.rs1()), R32(instr.rs2())));
+				LOAD32(instr.rd() | 1, ADD(R32(instr.rs1()),
+					ADD(R32(instr.rs2()), CONST32(4))));
+			} else if (fmt == M88K_TFMT_REGS) {
 				LOAD32(instr.rd() & ~1, ADD(R32(instr.rs1()),
 					SHL(R32(instr.rs2()), CONST32(3))));
 				LOAD32(instr.rd() | 1, ADD(R32(instr.rs1()),
 					ADD(SHL(R32(instr.rs2()), CONST32(3)), CONST32(4))));
+			} else {
+				BAD;
 			}
 			break;
 
@@ -620,9 +646,14 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 				STORE32(R(instr.rd()), ADD(R32(instr.rs1()), IMM));
 			else if (fmt == M88K_IFMT_XMEM) {
 				// BAD;
-			} else
+			} else if (fmt == M88K_TFMT_REG) {
+				STORE32(R(instr.rd()), ADD(R32(instr.rs1()), R32(instr.rs2())));
+			} else if (fmt == M88K_TFMT_REGS) {
 				STORE32(R(instr.rd()), ADD(R32(instr.rs1()),
 					SHL(R32(instr.rs2()), CONST32(2))));
+			} else {
+				BAD;
+			}
 			break;
 
 		case M88K_OPC_ST_B:
@@ -635,9 +666,14 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_ST_H:
 			if (fmt == M88K_IFMT_MEM)
 				STORE16(R(instr.rd()), ADD(R32(instr.rs1()), IMM));
-			else
+			else if (fmt == M88K_TFMT_REG)
+				STORE16(R(instr.rd()), ADD(R32(instr.rs1()), R32(instr.rs2())));
+			else if (fmt == M88K_TFMT_REGS)
 				STORE16(R(instr.rd()), ADD(R32(instr.rs1()),
 					SHL(R32(instr.rs2()), CONST32(1))));
+			else {
+				BAD;
+			}
 			break;
 
 		case M88K_OPC_ST_D:
@@ -647,7 +683,11 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 					CONST32(4)));
 			} else if (fmt == M88K_IFMT_XMEM) {
 				// BAD;
-			} else {
+			} else if (fmt == M88K_TFMT_REG) {
+				STORE32(R(instr.rd() & ~1), ADD(R32(instr.rs1()), R32(instr.rs2())));
+				STORE32(R(instr.rd() | 1), ADD(R32(instr.rs1()),
+					ADD(R32(instr.rs2()), CONST32(4))));
+			} else if (fmt == M88K_TFMT_REGS) {
 				STORE32(R(instr.rd() & ~1), ADD(R32(instr.rs1()),
 					SHL(R32(instr.rs2()), CONST32(3))));
 				STORE32(R(instr.rd() | 1), ADD(R32(instr.rs1()),

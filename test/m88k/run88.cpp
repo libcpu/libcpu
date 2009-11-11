@@ -35,7 +35,7 @@ run88_mem_gtoh(xec_mem_if_t *self, xec_gaddr_t addr, xec_mem_flg_t *mf)
 static xec_gaddr_t
 run88_mem_htog(xec_mem_if_t *self, xec_haddr_t addr, xec_mem_flg_t *mf)
 {
-	return (xec_haddr_t)((uintptr_t)addr - (uintptr_t)RAM);
+	return (xec_gaddr_t)((uintptr_t)addr - (uintptr_t)RAM);
 }
 
 static xec_mem_if_vtbl_t const run88_mem_if_vtbl = {
@@ -75,9 +75,9 @@ void *g_uframe_log = NULL;
 void
 openbsd_m88k_setup_uframe(cpu_t           *cpu,
 						  xec_mem_if_t    *mem,
-                          int              argc,
-                          char           **argv,
-                          char           **envp,
+						  int              argc,
+						  char           **argv,
+						  char           **envp,
 						  m88k_uintptr_t  *stack_top)
 {
 	char          **p;
@@ -176,8 +176,7 @@ openbsd_m88k_setup_uframe(cpu_t           *cpu,
 
 	*stack_top = STACK_GUEST(uframe);
 
-	XEC_LOG(g_uframe_log, XEC_LOG_DEBUG, 0, "New Stack guest = %lx", (unsigned long)(*stack_top));
-	XEC_LOG(g_uframe_log, XEC_LOG_DEBUG, 0, "kernel frame set up.", 0);
+	XEC_LOG(g_uframe_log, XEC_LOG_DEBUG, 0, "Guest Stack Pointer = %lx", (unsigned long)(*stack_top));
 }
 
 static void
@@ -221,7 +220,7 @@ main(int ac, char **av, char **ep)
 	}
 
 	/* Initialize xec, nix and loader. */
-	__xec_log_init();
+	xec_init();
 	obsd41_init();
 	loader_init();
 
@@ -311,7 +310,11 @@ main(int ac, char **av, char **ep)
 #ifdef SINGLESTEP
 		dump_state(RAM, (m88k_regfile_t*)cpu->reg);
 		printf ("NPC=%08x\n", PC);
-#endif
+
+		cpu_flush(cpu);
+		printf("*** PRESS <ENTER> TO CONTINUE ***\n");
+		getchar();
+#else
 		switch (rc) {
 			case JIT_RETURN_NOERR: /* JIT code wants us to end execution */
 				break;
@@ -335,11 +338,6 @@ main(int ac, char **av, char **ep)
 				printf("unknown return code: %d\n", rc);
 				break;
 		}
-
-#ifdef SINGLESTEP
-		cpu_flush(cpu);
-		printf("*** PRESS <ENTER> TO CONTINUE ***\n");
-		getchar();
 #endif
 	}
 

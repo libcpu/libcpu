@@ -6,7 +6,7 @@
 /* nix-init.c */
 void nix_init(size_t nfds, size_t nsigs);
 /* nix-xcpt.c */
-void nix_xcpt_record(jmp_buf jb);
+void nix_xcpt_record(jmp_buf *jb);
 void nix_xcpt_forget(void);
 /* nix-env.c */
 nix_env_t *nix_env_create(xec_mem_if_t *mem);

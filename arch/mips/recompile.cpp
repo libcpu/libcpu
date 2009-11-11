@@ -530,7 +530,7 @@ int arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, Ba
 	case 0x26: /* INCPU_LWR */		BAD;
 	case 0x27: /* INCPU_LWU */		BAD;
 	case 0x28: /* INCPU_SB */		STORE8(R(RT),ADD(R32(RS),IMM32));							break;
-	case 0x29: /* INCPU_SB */		STORE16(R(RT),ADD(R32(RS),IMM32));							break;
+	case 0x29: /* INCPU_SH */		STORE16(R(RT),ADD(R32(RS),IMM32));							break;
 	case 0x2A: /* INCPU_SWL */		BAD;
 	case 0x2B: /* INCPU_SW */		STORE32(R(RT),ADD(R32(RS),IMM32));						break;
 	case 0x2C: /* INCPU_SDL */	BAD;

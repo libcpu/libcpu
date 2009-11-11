@@ -209,12 +209,12 @@ m88k_insn::insn_desc const m88k_insn::desc_ext2[8][64] =
     { // 0
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 00 [illegal]
       { M88K_TFMT_REGS,  M88K_OPC_XMEM    }, // 01 xmem   rD, rS1, rS2
-      { M88K_TFMT_REGS,  M88K_OPC_LD_HU   }, // 02 ld.hu  rD, rS1, rS2
-      { M88K_TFMT_REGS,  M88K_OPC_LD_BU   }, // 03 ld.bu  rD, rS1, rS2
-      { M88K_TFMT_REGS,  M88K_OPC_LD_D    }, // 04 ld.d   rD, rS1, rS2
-      { M88K_TFMT_REGS,  M88K_OPC_LD      }, // 05 ld     rD, rS1, rS2
-      { M88K_TFMT_REGS,  M88K_OPC_LD_H    }, // 06 ld.h   rD, rS1, rS2
-      { M88K_TFMT_REGS,  M88K_OPC_LD_B    }, // 07 ld.b   rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_LD_HU   }, // 02 ld.hu  rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_LD_BU   }, // 03 ld.bu  rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_LD_D    }, // 04 ld.d   rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_LD      }, // 05 ld     rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_LD_H    }, // 06 ld.h   rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_LD_B    }, // 07 ld.b   rD, rS1, rS2
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 08 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 09 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0a [illegal]
@@ -281,13 +281,13 @@ m88k_insn::insn_desc const m88k_insn::desc_ext2[8][64] =
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 05 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 06 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 07 [illegal]
-      { M88K_TFMT_REGS,  M88K_OPC_ST_D    }, // 08 st.d   rD, rS1, rS2
-      { M88K_TFMT_REGS,  M88K_OPC_ST      }, // 09 st     rD, rS1, rS2
-      { M88K_TFMT_REGS,  M88K_OPC_ST_H    }, // 0a st.h   rD, rS1, rS2
-      { M88K_TFMT_REGS,  M88K_OPC_ST_B    }, // 0b st.b   rD, rS1, rS2
-      { M88K_TFMT_REGX,  M88K_OPC_LDA_D   }, // 0c lda.d  rD, rS1[rS2]
-      { M88K_TFMT_REGX,  M88K_OPC_LDA     }, // 0d lda    rD, rS1[rS2]
-      { M88K_TFMT_REGX,  M88K_OPC_LDA_H   }, // 0e lda.h  rD, rS1[rS2]
+      { M88K_TFMT_REG,   M88K_OPC_ST_D    }, // 08 st.d   rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_ST      }, // 09 st     rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_ST_H    }, // 0a st.h   rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_ST_B    }, // 0b st.b   rD, rS1, rS2
+      { M88K_TFMT_REGS,  M88K_OPC_LDA_D   }, // 0c lda.d  rD, rS1[rS2]
+      { M88K_TFMT_REGS,  M88K_OPC_LDA     }, // 0d lda    rD, rS1[rS2]
+      { M88K_TFMT_REGS,  M88K_OPC_LDA_H   }, // 0e lda.h  rD, rS1[rS2]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0f [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 10 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 11 [illegal]

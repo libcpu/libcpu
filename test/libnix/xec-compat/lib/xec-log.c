@@ -117,8 +117,15 @@ xec_abort (bool coredump)
 {
   log_close_all ();
 
+  /* Disable signal handlers. */
+  sigsetmask(0);
+  signal(SIGSEGV, SIG_DFL);
+#ifdef SIGBUS
+  signal(SIGBUS, SIG_DFL);
+#endif
+
   if (coredump)
-    *(int *)1 = 1;
+    *(int *)(-1) = 1;
   else
     abort ();
 }

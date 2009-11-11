@@ -34,8 +34,7 @@ static char const * const m88k_insn_formats[] = {
 	"$b, $r1, $p",     // M88K_BRFMT_BIT
 	"$rd, $r1, $r2",   // M88K_TFMT_REG
 	"$xd, $x1, $x2",   // M88K_TFMT_XREG
-	"$rd, $r1, $r2",   // M88K_TFMT_REGS
-	"$rd, $r1[$r2]",   // M88K_TFMT_REGX
+	"$rd, $r1[$r2]",   // M88K_TFMT_REGS
 	"$rd, $r1, $w<$s>",// M88K_BFMT_REG
 	"$rd, $r1, $i",    // M88K_BFMT_TST
 	"$rd, $c1",        // M88K_CFMT_REG

@@ -70,4 +70,14 @@ xec_ilog2 (uint32_t n)
   return (i | (n >> 1)); 
 } 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void xec_init(void);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif  /* !__xec_base_h */

@@ -6,6 +6,16 @@ bool is_little_endian;
 bool has_special_r0;
 
 //////////////////////////////////////////////////////////////////////
+
+#define SWAP16(x)		(OR(SHL(AND(x, CONST(0xff00)), CONST(8)), \
+							LSHR(AND(x, CONST(0x00ff)), CONST(8))))
+#define SWAP32(x)		(OR(OR(OR(										\
+						 LSHR(AND(x, CONST(0xff000000)), CONST(24)),	\
+						 LSHR(AND(x, CONST(0x00ff0000)), CONST(8))),	\
+						 SHL(AND(x, CONST(0x0000ff00)), CONST(8))), 	\
+						 SHL(AND(x, CONST(0x000000ff)), CONST(24))))
+
+//////////////////////////////////////////////////////////////////////
 // GENERIC: register access
 //////////////////////////////////////////////////////////////////////
 
@@ -91,14 +101,27 @@ arch_gep32(Value *a, BasicBlock *bb) {
 Value *
 arch_load32_aligned(Value *a, BasicBlock *bb) {
 	a = arch_gep32(a, bb);
-	return new LoadInst(a, "", false, bb);
+#ifdef __LITTLE_ENDIAN__
+	bool swap = !is_little_endian;
+#else
+	bool swap = is_little_endian;
+#endif
+	if(swap)
+		return SWAP32(new LoadInst(a, "", false, bb));
+	else
+		return new LoadInst(a, "", false, bb);
 }
 
 /* store 32 bit ALIGNED value to RAM */
 void
 arch_store32_aligned(Value *v, Value *a, BasicBlock *bb) {
 	a = arch_gep32(a, bb);
-	new StoreInst(v, a, bb);
+#ifdef __LITTLE_ENDIAN__
+	bool swap = !is_little_endian;
+#else
+	bool swap = is_little_endian;
+#endif
+	new StoreInst(swap ? SWAP32(v) : v, a, bb);
 }
 
 //////////////////////////////////////////////////////////////////////

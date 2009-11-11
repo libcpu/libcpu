@@ -160,7 +160,6 @@ typedef enum _m88k_insnfmt {
 	M88K_TFMT_REG,
 	M88K_TFMT_XREG,
 	M88K_TFMT_REGS, /* shifted form */
-	M88K_TFMT_REGX, /* indexed form */
 	M88K_BFMT_REG,
 	M88K_BFMT_TST,
 	M88K_CFMT_REG,

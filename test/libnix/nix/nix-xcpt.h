@@ -5,10 +5,10 @@
 
 #define __nix_try					\
 do {								\
-	sigjmp_buf __jb;				\
-	int __xcpt = _setjmp(__jb);		\
+	jmp_buf __jb;				    \
+	volatile int __xcpt = setjmp(__jb);		\
 	if (__xcpt == 0)				\
-		nix_xcpt_record(__jb);		\
+		nix_xcpt_record(&__jb);		\
 	else							\
     	nix_xcpt_forget();			\
 	if (__xcpt == 0) {
@@ -27,7 +27,7 @@ extern "C" {
 #endif
 
 void
-nix_xcpt_record(sigjmp_buf jb);
+nix_xcpt_record(jmp_buf *jb);
 
 void
 nix_xcpt_forget(void);

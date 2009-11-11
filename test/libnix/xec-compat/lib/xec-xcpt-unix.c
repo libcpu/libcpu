@@ -18,7 +18,7 @@ static struct sigaction    g_old_sigsegv;
 static xec_xcpt_handler_t  g_xcpt_handler = NULL;
 static void               *g_xcpt_log = NULL;
 
-void
+static void
 _xec_signal_handler (int signo)
 {
   XEC_ASSERT (g_xcpt_log, g_xcpt_handler != NULL);

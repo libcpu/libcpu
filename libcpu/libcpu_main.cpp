@@ -541,7 +541,7 @@ printf("%s:%d\n", __func__, __LINE__);
 		emit_store_pc(cpu, cur_bb, new_pc1);
 }
 #endif
-	bytes = cpu->f.recompile_instr(cpu, pc, bb_ret, cur_bb, NULL, NULL, bb_next);
+	bytes = cpu->f.recompile_instr(cpu, pc, bb_ret, cur_bb, bb_target, NULL, bb_next);
 
 	/* If it's not a branch, append "store PC & return" to basic block */
 	if (flow_type == FLOW_TYPE_CONTINUE ) {
@@ -556,11 +556,11 @@ get_struct_reg(cpu_t *cpu) {
 
 	for (uint32_t i = 0; i < cpu->count_regs_i8; i++) /* 8 bit registers */
 		type_struct_reg_t_fields.push_back(getIntegerType(8));
-	for (uint32_t i = 0; i < cpu->count_regs_i16; i++) /* 8 bit registers */
+	for (uint32_t i = 0; i < cpu->count_regs_i16; i++) /* 16 bit registers */
 		type_struct_reg_t_fields.push_back(getIntegerType(16));
-	for (uint32_t i = 0; i < cpu->count_regs_i32; i++) /* 8 bit registers */
+	for (uint32_t i = 0; i < cpu->count_regs_i32; i++) /* 32 bit registers */
 		type_struct_reg_t_fields.push_back(getIntegerType(32));
-	for (uint32_t i = 0; i < cpu->count_regs_i64; i++) /* 8 bit registers */
+	for (uint32_t i = 0; i < cpu->count_regs_i64; i++) /* 64 bit registers */
 		type_struct_reg_t_fields.push_back(getIntegerType(64));
 
 	type_struct_reg_t_fields.push_back(getIntegerType(cpu->pc_width)); /* PC */
@@ -638,8 +638,10 @@ emit_decode_reg_helper(int count, int width, Value **in_ptr_r, Value **ptr_r, Ba
 #ifdef OPT_LOCAL_REGISTERS
 	// decode struct reg and copy the registers into local variables
 	for (int i = 0; i < count; i++) {
+		char reg_name[16];
+		snprintf(reg_name, sizeof(reg_name), "gpr_%u", i);
 		in_ptr_r[i] = get_struct_member_pointer(ptr_reg, i, bb);
-		ptr_r[i] = new AllocaInst(getIntegerType(width), "", bb);
+		ptr_r[i] = new AllocaInst(getIntegerType(width), reg_name, bb);
 		LoadInst* v = new LoadInst(in_ptr_r[i], "", false, bb);
 		new StoreInst(v, ptr_r[i], false, bb);
 	}

@@ -17,5 +17,5 @@ ENDIF()
 INCLUDE_DIRECTORIES(lib engine arch ${PROJECT_BINARY_DIR})
 CONFIGURE_FILE(xec-base.h.cmake ${PROJECT_BINARY_DIR}/xec-base.h)
 
-ADD_LIBRARY(xec-compat SHARED lib/xec-log.c lib/xec-mem.c ${MMAP_SOURCE} ${XCPT_SOURCE}
+ADD_LIBRARY(xec-compat SHARED lib/xec-init.c lib/xec-log.c lib/xec-mem.c ${MMAP_SOURCE} ${XCPT_SOURCE}
     engine/xec-us-syscall.c engine/xec-monitor.c)
