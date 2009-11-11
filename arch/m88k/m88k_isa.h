@@ -79,6 +79,7 @@ typedef enum _m88k_opcode {
 	M88K_OPC_BCND,
 	M88K_OPC_BCND_N,
 
+	M88K_OPC_TCND,
 	M88K_OPC_TBND,
 	M88K_OPC_TB0,
 	M88K_OPC_TB1,

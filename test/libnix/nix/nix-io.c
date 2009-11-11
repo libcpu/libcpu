@@ -1,14 +1,20 @@
+#include "nix-config.h"
+
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
 #include <sys/uio.h>
+#ifdef HAVE_SYS_FILIO_H
+#include <sys/filio.h>
+#endif
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <poll.h>
 #include <termios.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "nix.h"

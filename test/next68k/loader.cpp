@@ -666,8 +666,8 @@ int LdrLoadSegment(struct segment_command *segment_command, void **buf, unsigned
 	segment_command->vmaddr += reloffset;
 
 	debug_printf("segname: %s\n", segment_command->segname);
-	debug_printf("vmaddr: %#x\n", segment_command->vmaddr);
-	debug_printf("vmsize: %#x\n", segment_command->vmsize);
+	debug_printf("vmaddr: %#lx\n", (unsigned long)segment_command->vmaddr);
+	debug_printf("vmsize: %#lx\n", (unsigned long)segment_command->vmsize);
 
 	/* Check if vmaddr + vmsize exceed the space allocated by spMemInit() */
 #if 0

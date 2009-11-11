@@ -9,7 +9,7 @@
 #endif
 //#define SINGLESTEP
 
-#include <mach/mach_time.h>
+#include "timings.h"
 #define START_NO 1000000000
 #define TIMES 100
 
@@ -291,21 +291,21 @@ double_break:
 	R[4] = start_no; // parameter
 	breakpoint();
 
-	t1 = mach_absolute_time();
+	t1 = abs_time();
 //	for (int i=0; i<TIMES; i++)
 		cpu_run(cpu, debug_function);
 	r1 = R[2];
-	t2 = mach_absolute_time();
+	t2 = abs_time();
 
 	printf("done!\n");
 
-  dump_state(RAM, (reg_mips32_t*)cpu->reg);
+	dump_state(RAM, (reg_mips32_t*)cpu->reg);
 
 	printf("RUN2..."); fflush(stdout);
-	t3 = mach_absolute_time();
+	t3 = abs_time();
 //	for (int i=0; i<TIMES; i++)
 		r2 = fib(start_no);
-	t4 = mach_absolute_time();
+	t4 = abs_time();
 	printf("done!\n");
 
 	printf("%d -- %d\n", r1, r2);

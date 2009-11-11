@@ -110,10 +110,18 @@ nix_getrlimit(int resource, struct nix_rlimit *rlim, nix_env_t *env)
 	  case NIX_RLIMIT_CPU:     rrsrc = RLIMIT_CPU;     break;
 	  case NIX_RLIMIT_DATA:    rrsrc = RLIMIT_DATA;    break;
 	  case NIX_RLIMIT_FSIZE:   rrsrc = RLIMIT_FSIZE;   break;
+#ifdef RLIMIT_MEMLOCK
 	  case NIX_RLIMIT_MEMLOCK: rrsrc = RLIMIT_MEMLOCK; break;
+#endif
 	  case NIX_RLIMIT_NOFILE:  rrsrc = RLIMIT_NOFILE;  break;
+#ifdef RLIMIT_NPROC
 	  case NIX_RLIMIT_NPROC:   rrsrc = RLIMIT_NPROC;   break;
+#endif
+#if defined(RLIMIT_RSS)
 	  case NIX_RLIMIT_RSS:     rrsrc = RLIMIT_RSS;     break;
+#elif defined(RLIMIT_VMEM)
+	  case NIX_RLIMIT_RSS:     rrsrc = RLIMIT_VMEM;    break;
+#endif
 	  case NIX_RLIMIT_STACK:   rrsrc = RLIMIT_STACK;   break;
 	  default:				   nix_env_set_errno(env, EINVAL);
 							   return (-1);

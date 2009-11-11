@@ -73,10 +73,16 @@ stat_to_nix_stat(struct stat const *in,
 	out->st_gid     = in->st_gid;
 	out->st_rdev    = in->st_rdev;
 
-#ifndef __linux__
+#if !defined(__linux__)
+#if defined(sun)
+	timespec_to_nix_timespec(&in->st_atim, &out->st_atimespec);
+	timespec_to_nix_timespec(&in->st_mtim, &out->st_mtimespec);
+	timespec_to_nix_timespec(&in->st_ctim, &out->st_ctimespec);
+#else
 	timespec_to_nix_timespec(&in->st_atimespec, &out->st_atimespec);
 	timespec_to_nix_timespec(&in->st_mtimespec, &out->st_mtimespec);
 	timespec_to_nix_timespec(&in->st_ctimespec, &out->st_ctimespec);
+#endif
 #if defined (__FreeBSD__) || defined (__NetBSD__) || defined (__OpenBSD__)
 	timespec_to_nix_timespec(&in->__st_birthtimespec, &out->st_btimespec);
 #else
@@ -92,7 +98,7 @@ stat_to_nix_stat(struct stat const *in,
 	out->st_size    = in->st_size;
 	out->st_blocks  = in->st_blocks;
 	out->st_blksize = in->st_blksize;
-#ifndef __linux__
+#if !defined(__linux__) && !defined(sun)
 	out->st_gen     = in->st_gen;
 #endif
 }
@@ -833,8 +839,13 @@ termios_to_nix_termios(struct termios const *in,
 	out->c_oflag  = termios_oflag_to_nix_termios_oflag(in->c_oflag);
 	out->c_cflag  = termios_cflag_to_nix_termios_cflag(in->c_cflag);
 	out->c_lflag  = termios_lflag_to_nix_termios_lflag(in->c_lflag);
+#if defined(sun)
+	out->c_ispeed = cfgetispeed(in);
+	out->c_ospeed = cfgetospeed(in);
+#else
 	out->c_ispeed = termios_speed_to_nix_termios_speed(in->c_ispeed);
 	out->c_ospeed = termios_speed_to_nix_termios_speed(in->c_ospeed);
+#endif
 	termios_cc_to_nix_termios_cc(in->c_cc, out->c_cc);
 }
 
@@ -846,7 +857,12 @@ nix_termios_to_termios(struct nix_termios const *in,
 	out->c_oflag  = nix_termios_oflag_to_termios_oflag(in->c_oflag);
 	out->c_cflag  = nix_termios_cflag_to_termios_cflag(in->c_cflag);
 	out->c_lflag  = nix_termios_lflag_to_termios_lflag(in->c_lflag);
+#if defined(sun)
+	cfsetispeed(out, nix_termios_speed_to_termios_speed(in->c_ispeed));
+	cfsetospeed(out, nix_termios_speed_to_termios_speed(in->c_ospeed));
+#else
 	out->c_ispeed = nix_termios_speed_to_termios_speed(in->c_ispeed);
 	out->c_ospeed = nix_termios_speed_to_termios_speed(in->c_ospeed);
+#endif
 	nix_termios_cc_to_termios_cc(in->c_cc, out->c_cc);
 }

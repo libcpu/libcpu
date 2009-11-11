@@ -73,6 +73,11 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 			}
 			break;
 
+    case M88K_OPC_TB0:
+    case M88K_OPC_TB1:
+    case M88K_OPC_TBND:
+    case M88K_OPC_TCND:
+
 		default:
 			*flow_type = FLOW_TYPE_CONTINUE;
 			break;

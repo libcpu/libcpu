@@ -1,10 +1,26 @@
-#include <sys/param.h>
-#include <sys/mount.h>
+#include "nix-config.h"
+
 #include <sys/types.h>
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+#ifdef HAVE_SYS_MOUNT_H
+#include <sys/mount.h>
+#endif
 #include <sys/time.h>
-#ifdef __linux__
+#ifdef HAVE_SYS_VFS_H
 #include <sys/vfs.h>
 #endif
+#ifdef HAVE_SYS_STATFS_H
+#include <sys/statvfs.h>
+#endif
+#ifdef HAVE_SYS_STATVFS_H
+#include <sys/statvfs.h>
+#endif
+#ifdef HAVE_SYS_MKDEV_H
+#include <sys/mkdev.h>
+#endif
+#include <sys/stat.h>
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,10 +28,14 @@
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
+#ifdef HAVE_SYS_MNTTAB_H
+#include <sys/mnttab.h>
+#endif
 
 #include "nix.h"
 #include "xec-mem.h"
 
+#if defined(HAVE_FSTATFS) && defined(HAVE_STATFS)
 static void
 cvt_statfs(struct statfs const *native,
 	struct nix_statfs *dest)
@@ -154,12 +174,121 @@ cvt_statfs(struct statfs const *native,
 	strncpy(dest->f_mntonname, native->f_mntonname, sizeof(dest->f_mntonname));
 #endif
 }
+/*
+ * statvfs
+ */
+#elif defined(HAVE_FSTATVFS) && defined(HAVE_STATVFS)
+static void
+cvt_statfs(struct statvfs const *native,
+	struct nix_statfs *dest)
+{
+	memset(dest, 0, sizeof(*dest));
+
+	dest->f_type   = 0;
+	dest->f_bsize  = native->f_bsize;
+	dest->f_blocks = native->f_blocks;
+	dest->f_bfree  = native->f_bfree;
+	dest->f_bavail = native->f_bavail;
+	dest->f_files  = native->f_files;
+	dest->f_ffree  = native->f_ffree;
+	dest->f_fsid   = native->f_fsid;
+	dest->f_namemax = native->f_namemax;
+	dest->f_iosize = 0;
+	dest->f_syncwrites = 0;
+	dest->f_asyncwrites = 0;
+	dest->f_syncreads = 0;
+	dest->f_asyncreads = 0;
+	dest->f_owner = 0;
+	dest->f_ctime.tv_sec  = 0;
+	dest->f_ctime.tv_nsec = 0;
+	strcpy(dest->f_fstypename, native->f_basetype);
+	/* XXX Fill in mount paths! */
+}
+#endif
+
+#if defined(HAVE_GETEXTMNTENT)
+static void
+setmntpaths_mntent(struct extmnttab const *mnt, struct nix_statfs *dest)
+{
+	/* Stat for owner and ctime */
+	struct stat st;
+
+	if(stat(mnt->mnt_mountp, &st) == 0) {
+		dest->f_owner = st.st_uid;
+		dest->f_ctime.tv_sec  = st.st_ctime;
+		dest->f_ctime.tv_nsec = 0;
+	}
+
+	strncpy(dest->f_mntfromname, mnt->mnt_special, sizeof(dest->f_mntfromname));
+	strncpy(dest->f_mntonname, mnt->mnt_mountp, sizeof(dest->f_mntonname));
+}
+
+static int
+setmntpaths_stat(struct stat const *st, struct nix_statfs *dest, nix_env_t *env)
+{
+	FILE             *fp;
+	struct extmnttab  ent;
+
+	fp = fopen("/etc/mnttab", "r");
+	if(fp == NULL) {
+		nix_env_set_errno(env, errno);
+		return (-1);
+	}
+
+#ifdef HAVE_RESETMNTTAB
+	resetmnttab(fp);
+#endif
+
+	while ((getextmntent(fp, &ent, sizeof(ent))) == 0) {
+		if (ent.mnt_major == major(st->st_dev) &&
+		  ent.mnt_minor == minor(st->st_dev)) {
+			setmntpaths_mntent(&ent, dest);
+			break;
+		}
+	}
+
+	fclose(fp);
+}
+
+static int
+setmntpaths_fd(int fd, struct nix_statfs *dest, nix_env_t *env)
+{
+	/* Get dev major/minor and lookup in the mnttab */
+	struct stat st;
+
+	if(fstat(fd, &st) != 0) {
+		nix_env_set_errno(env, errno);
+		return (-1);
+	}
+
+	return setmntpaths_stat(&st, dest, env);
+}
+
+static int
+setmntpaths_path(char const *path, struct nix_statfs *dest, nix_env_t *env)
+{
+	/* Get dev major/minor and lookup in the mnttab */
+	struct stat st;
+
+	if(stat(path, &st) != 0) {
+		nix_env_set_errno(env, errno);
+		return (-1);
+	}
+
+	return setmntpaths_stat(&st, dest, env);
+}
+#endif
 
 int
 nix_bsd_fstatfs(int fd, struct nix_statfs *buf, nix_env_t *env)
 {
-	struct statfs nsfs;
-	int           rfd;
+#if defined(HAVE_FSTATFS)
+	struct statfs  nsfs;
+#elif defined(HAVE_FSTATVFS)
+	struct statvfs nsfs;
+#endif
+	int            rc;
+	int            rfd;
 
 	if (buf == NULL) {
 		nix_env_set_errno(env, EFAULT);
@@ -171,36 +300,63 @@ nix_bsd_fstatfs(int fd, struct nix_statfs *buf, nix_env_t *env)
 		return (-1);
 	}
 
-	if (fstatfs(rfd, &nsfs) != 0) {
+#if defined(HAVE_FSTATFS)
+	rc = fstatfs(rfd, &nsfs);
+#elif defined(HAVE_FSTATVFS)
+	rc = fstatvfs(rfd, &nsfs);
+#else
+	errno = ENOSYS;
+	rc = -1;
+#endif
+
+	if (rc != 0) {
 		nix_env_set_errno (env, errno);
 		return (-1);
 	}
 
 	__nix_try
 	{
-		cvt_statfs (&nsfs, buf);
+		cvt_statfs(&nsfs, buf);
+#if defined(HAVE_GETEXTMNTENT)
+		rc = setmntpaths_fd(rfd, buf, env);
+#else
+		rc = 0;
+#endif
 	}
 	__nix_catch_any
 	{
 		nix_env_set_errno(env, EFAULT);
-		return (-1);
+		rc = -1;
 	}
 	__nix_end_try
 
-	return (0);
+	return (rc);
 }
 
 int
 nix_bsd_statfs(char const *path, struct nix_statfs *buf, nix_env_t *env)
 {
-	struct statfs nsfs;
+#if defined(HAVE_FSTATFS)
+	struct statfs  nsfs;
+#elif defined(HAVE_FSTATVFS)
+	struct statvfs nsfs;
+#endif
+	int            rc;
 
 	if (path == NULL || buf == NULL) {
 		nix_env_set_errno(env, EFAULT);
 		return (-1);
 	}
 
-	if (statfs(path, &nsfs) != 0) {
+#if defined(HAVE_STATFS)
+	rc = statfs(path, &nsfs);
+#elif defined(HAVE_STATVFS)
+	rc = statvfs(path, &nsfs);
+#else
+	errno = ENOSYS;
+	rc = -1;
+#endif
+	if (rc != 0) {
 		nix_env_set_errno(env, errno);
 		return (-1);
 	}
@@ -208,27 +364,33 @@ nix_bsd_statfs(char const *path, struct nix_statfs *buf, nix_env_t *env)
 	__nix_try
 	{
 		cvt_statfs(&nsfs, buf);
+#if defined(HAVE_GETEXTMNTENT)
+		rc = setmntpaths_path(path, buf, env);
+#else
+		rc = 0;
+#endif
 	}
 	__nix_catch_any
 	{
 		nix_env_set_errno(env, EFAULT);
-		return (-1);
+		rc = -1;
 	}
 	__nix_end_try
 
-	return (0);
+	return (rc);
 }
 
 int
 nix_bsd_getfsstat(struct nix_statfs *buf, size_t bufsiz, int flags,
 	nix_env_t *env)
 {
+#ifdef HAVE_GETFSSTAT
 	struct statfs *nfs;
 	int            n, maxcount;
 	int            nflags = 0;
 	int            count = 0;
 
-#ifndef __linux__
+#ifdef MNT_NOWAIT
 	if (flags == NIX_MNT_NOWAIT)
 		nflags = MNT_NOWAIT;
 #endif
@@ -268,6 +430,9 @@ nix_bsd_getfsstat(struct nix_statfs *buf, size_t bufsiz, int flags,
 	xec_mem_free(nfs);
 
 	return (count);
+#else
+	return (nix_nosys(env));
+#endif
 }
 
 int

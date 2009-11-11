@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <signal.h>
 #include <unistd.h>
 #include <errno.h>
 
@@ -115,10 +116,13 @@ xec_log_set_flags (uint32_t flags)
 void
 xec_abort (bool coredump)
 {
+  sigset_t empty;
+
   log_close_all ();
 
   /* Disable signal handlers. */
-  sigsetmask(0);
+  sigemptyset(&empty);
+  sigprocmask(0, &empty, NULL);
   signal(SIGSEGV, SIG_DFL);
 #ifdef SIGBUS
   signal(SIGBUS, SIG_DFL);

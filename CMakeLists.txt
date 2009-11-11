@@ -2,6 +2,8 @@ PROJECT(libcpu)
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
+INCLUDE(FindThreads)
+
 #
 # 
 #
@@ -11,7 +13,9 @@ SET(CMAKE_BUILD_TYPE "Debug")
 # Add here the architecture you want to support.
 # 
 SET(GUEST_ARCHITECTURES 6502 m68k m88k mips arm)
-SET(GUEST_EXTRA_TESTS next68k)
+IF(APPLE)
+  SET(GUEST_EXTRA_TESTS next68k)
+ENDIF(APPLE)
 
 #
 # Build Universal image.

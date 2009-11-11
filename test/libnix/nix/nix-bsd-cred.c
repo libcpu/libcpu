@@ -55,12 +55,16 @@ nix_bsd_setlogin(char const *name, nix_env_t *env)
 		return (-1);
 	}
 
+#if defined(HAVE_SETLOGIN)
 	if (setlogin(name) != 0) {
 		nix_env_set_errno (env, errno);
 		return (-1);
 	}
 
 	return (0);
+#else
+	return (nix_nosys(env));
+#endif
 }
 
 int

@@ -1,8 +1,11 @@
+#include "nix-config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "nix.h"
@@ -210,6 +213,7 @@ int
 nix_flock(int fd, int op, nix_env_t *env)
 {
 	int rfd;
+	int rc;
 
 	XEC_LOG(g_nix_log, XEC_LOG_DEBUG, 0, "fd=%d, op=%d", fd, op);
 
@@ -218,11 +222,44 @@ nix_flock(int fd, int op, nix_env_t *env)
 		return (-1);
 	}
 
-	if (flock(rfd, op) != 0) {
+#if defined(HAVE_FLOCK)
+	rc = flock(rfd, op);
+#else
+	flock_t flock;
+
+	memset(&flock, 0, sizeof(flock));
+
+	rc = 0;
+
+	switch(op & ~NIX_LOCK_NB) {
+		case NIX_LOCK_UN:
+			flock.l_type |= F_UNLCK;
+			break;
+
+		case NIX_LOCK_SH:
+			flock.l_type |= F_RDLCK;
+			break;
+
+		case NIX_LOCK_EX:
+			flock.l_type |= F_WRLCK;
+			break;
+
+		default:
+			rc = -1;
+			errno = EINVAL;
+			break;
+	}
+
+	if (rc == 0) {
+		int fop = (op & NIX_LOCK_NB) ? F_SETLK : F_SETLKW;
+		rc = fcntl(rfd, fop, &flock);
+	}
+#endif
+
+	if (rc != 0) {
 		nix_env_set_errno (env, errno);
 		return (-1);
 	}
-
 	return (0);
 }
 
@@ -293,6 +330,7 @@ nix_futimes(int fd, struct nix_timeval const *times, nix_env_t *env)
 {
 	struct timeval ntimes[2];
 	int            rfd;
+	int            rc;
   
 	XEC_LOG(g_nix_log, XEC_LOG_DEBUG, 0, "fd=%d, times={ %llu, %llu }", fd, times->tv_sec, times->tv_usec);
 
@@ -311,7 +349,16 @@ nix_futimes(int fd, struct nix_timeval const *times, nix_env_t *env)
 	ntimes[1].tv_sec  = times[1].tv_sec;
 	ntimes[1].tv_usec = times[1].tv_usec;
 
-	if (futimes(rfd, ntimes) != 0) {
+#if defined(HAVE_FUTIMES)
+	rc = futimes(rfd, ntimes);
+#elif defined(HAVE_FUTIMESAT)
+	rc = futimesat(rfd, NULL, ntimes);
+#else
+	rc = -1;
+	errno = ENOSYS;
+#endif
+
+	if (rc != 0) {
 		nix_env_set_errno(env, errno);
 		return (-1);
 	}

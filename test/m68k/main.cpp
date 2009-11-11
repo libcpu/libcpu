@@ -1,3 +1,5 @@
+#include <sys/types.h>
+#include <netinet/in.h>
 #include <libcpu.h>
 
 #include "arch/m68k/libcpu_m68k.h"

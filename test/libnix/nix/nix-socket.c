@@ -1,3 +1,5 @@
+#include "nix-config.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -5,6 +7,9 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef HAVE_UCRED_H
+#include <ucred.h>
+#endif
 
 #include "nix.h"
 #include "xec-debug.h"
@@ -367,9 +372,14 @@ nix_shutdown(int fd, int how, nix_env_t *env)
 int
 nix_getpeereid(int fd, nix_uid_t *euid, nix_gid_t *egid, nix_env_t *env)
 {
-	int   rfd;
-	uid_t uid;
-	gid_t gid;
+	int      rfd;
+#if defined(HAVE_GETPEERUCRED)
+	ucred_t *uc;
+#else
+	uid_t    uid;
+	gid_t    gid;
+#endif
+	int      rc;
 
 	XEC_LOG(g_nix_log, XEC_LOG_DEBUG, 0, "fd=%d, euid=%p, egid=%p", fd, euid, egid);
 
@@ -383,22 +393,40 @@ nix_getpeereid(int fd, nix_uid_t *euid, nix_gid_t *egid, nix_env_t *env)
 		return (-1);
 	}
 
-	if (getpeereid(rfd, &uid, &gid) != 0) {
+#if defined(HAVE_GETPEEREID)
+	rc = getpeereid(rfd, &uid, &gid);
+#elif defined(HAVE_GETPEERUCRED)
+	rc = getpeerucred(rfd, &uc);
+#else
+	rc = -1;
+	errno = ENOSYS;
+#endif
+
+	if (rc != 0) {
 		nix_env_set_errno(env, errno);
 		return (-1);
 	}
 
 	__nix_try
 	{
+#if defined(HAVE_GETPEERUCRED)
+		*euid = ucred_geteuid(uc);
+		*egid = ucred_getegid(uc);
+#else
 		*euid = uid;
 		*egid = gid;
+#endif
 	}
 	__nix_catch_any
 	{
 		nix_env_set_errno(env, EFAULT);
-		return (-1);
+		rc = -1;
 	}
 	__nix_end_try
+
+#if defined(HAVE_GETPEERUCRED)
+	ucred_free(uc);
+#endif
 
 	return (0);
 }

@@ -6,6 +6,7 @@
 #include "nix-env.h"
 #include "nix-xcpt.h"
 #include "nix-signal.h"
+#include "nix-file.h"
 #include "nix-stat.h"
 #include "nix-socket.h"
 #include "nix-rt.h"

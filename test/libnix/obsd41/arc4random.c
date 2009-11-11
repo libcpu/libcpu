@@ -187,7 +187,7 @@ void bsd_arc4random_addrandom (uint8_t const *dat, size_t datlen)
 uint32_t bsd_arc4random(void)
 {
 	if (!rs_initialized || arc4_stir_pid != getpid())
-		arc4random_stir();
+		bsd_arc4random_stir();
 
 	return (arc4_getword(&rs));
 }

@@ -33,7 +33,7 @@ nix_sethostname(char const *hostname, size_t len, nix_env_t *env)
 		return (-1);
 	}
 
-	if (sethostname(hostname, len) != 0) {
+	if (sethostname((char *)hostname, len) != 0) {
 		nix_env_set_errno(env, errno);
 		return (-1);
 	}
