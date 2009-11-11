@@ -29,8 +29,8 @@ struct cpu;
 typedef void        (*fp_init)(struct cpu *cpu);
 typedef StructType *(*fp_get_struct_reg)(void);
 typedef addr_t      (*fp_get_pc)(void *);
-typedef void        (*fp_emit_decode_reg)(BasicBlock *bb);
-typedef void        (*fp_spill_reg_state)(BasicBlock *bb);
+typedef void        (*fp_emit_decode_reg)(struct cpu *cpu, BasicBlock *bb);
+typedef void        (*fp_spill_reg_state)(struct cpu *cpu, BasicBlock *bb);
 typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, int *flow_type, addr_t *new_pc);
 typedef int         (*fp_disasm_instr)(struct cpu *cpu, addr_t pc, char *line, unsigned int max_line);
 typedef int         (*fp_recompile_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next);
@@ -80,6 +80,20 @@ typedef struct cpu {
 	void *fp;
 	void *reg;
 	uint8_t *RAM;
+	Value *ptr_reg;
+	Value *ptr_PC;
+	Value *ptr_RAM;
+	PointerType *type_pfunc_callout;
+	Value *ptr_func_debug;
+	#define MAX_REGISTERS 32
+	Value *ptr_r8[MAX_REGISTERS];
+	Value *ptr_r16[MAX_REGISTERS];
+	Value *ptr_r32[MAX_REGISTERS];
+	Value *ptr_r64[MAX_REGISTERS];
+	Value *in_ptr_r8[MAX_REGISTERS];
+	Value *in_ptr_r16[MAX_REGISTERS];
+	Value *in_ptr_r32[MAX_REGISTERS];
+	Value *in_ptr_r64[MAX_REGISTERS];
 } cpu_t;
 
 enum {

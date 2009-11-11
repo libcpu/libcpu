@@ -12,14 +12,14 @@ extern bool is_little_endian;
 extern bool has_special_r0;
 
 /* emitter functions */
-Value *arch_get_reg(uint32_t index, uint32_t bits, BasicBlock *bb);
-void arch_put_reg(uint32_t index, Value *v, uint32_t bits, bool sext, BasicBlock *bb);
-Value *arch_load32_aligned(Value *a, BasicBlock *bb);
-void arch_store32_aligned(Value *v, Value *a, BasicBlock *bb);
-Value *arch_load8(Value *addr, BasicBlock *bb);
-Value *arch_load16_aligned(Value *addr, BasicBlock *bb);
-void arch_store8(Value *val, Value *addr, BasicBlock *bb);
-void arch_store16(Value *val, Value *addr, BasicBlock *bb);
+Value *arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb);
+void arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, BasicBlock *bb);
+Value *arch_load32_aligned(cpu_t *cpu, Value *a, BasicBlock *bb);
+void arch_store32_aligned(cpu_t *cpu, Value *v, Value *a, BasicBlock *bb);
+Value *arch_load8(cpu_t *cpu, Value *addr, BasicBlock *bb);
+Value *arch_load16_aligned(cpu_t *cpu, Value *addr, BasicBlock *bb);
+void arch_store8(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb);
+void arch_store16(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb);
 void arch_branch(bool flag_state, BasicBlock *target1, BasicBlock *target2, Value *flag, BasicBlock *bb);
 void arch_jump(BasicBlock *bb, BasicBlock *bb_target);
 
@@ -91,23 +91,23 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define SELECT(c,a,b) (SelectInst::Create(c, a, b, "", bb))
 
 /* interface to the GPRs */
-#define R(i) arch_get_reg(i, 0, bb)
-#define R32(i) arch_get_reg(i, 32, bb)
+#define R(i) arch_get_reg(cpu, i, 0, bb)
+#define R32(i) arch_get_reg(cpu, i, 32, bb)
 
-#define LET(i,v) arch_put_reg(i, v, 0, false, bb)
-#define LET32(i,v) arch_put_reg(i, v, 32, true, bb)
-#define LET_ZEXT(i,v) arch_put_reg(i, v, 1, false, bb)
+#define LET(i,v) arch_put_reg(cpu, i, v, 0, false, bb)
+#define LET32(i,v) arch_put_reg(cpu, i, v, 32, true, bb)
+#define LET_ZEXT(i,v) arch_put_reg(cpu, i, v, 1, false, bb)
 
 /* interface to memory */
-#define LOAD8(i,v) arch_put_reg(i, arch_load8(v,bb), 8, false, bb)
-#define LOAD8S(i,v) arch_put_reg(i, arch_load8(v,bb), 8, true, bb)
-#define LOAD16(i,v) arch_put_reg(i, arch_load16_aligned(v,bb), 16, false, bb)
-#define LOAD16S(i,v) arch_put_reg(i, arch_load16_aligned(v,bb), 16, true, bb)
-#define LOAD32(i,v) arch_put_reg(i, arch_load32_aligned(v,bb), 32, true, bb)
+#define LOAD8(i,v) arch_put_reg(cpu, i, arch_load8(cpu,v,bb), 8, false, bb)
+#define LOAD8S(i,v) arch_put_reg(cpu, i, arch_load8(cpu,v,bb), 8, true, bb)
+#define LOAD16(i,v) arch_put_reg(cpu, i, arch_load16_aligned(cpu,v,bb), 16, false, bb)
+#define LOAD16S(i,v) arch_put_reg(cpu, i, arch_load16_aligned(cpu,v,bb), 16, true, bb)
+#define LOAD32(i,v) arch_put_reg(cpu, i, arch_load32_aligned(cpu,v,bb), 32, true, bb)
 
-#define STORE8(v,a) arch_store8(v, a, bb)
-#define STORE16(v,a) arch_store16(v, a, bb)
-#define STORE32(v,a) arch_store32_aligned(v, a, bb)
+#define STORE8(v,a) arch_store8(cpu,v, a, bb)
+#define STORE16(v,a) arch_store16(cpu,v, a, bb)
+#define STORE32(v,a) arch_store32_aligned(cpu,v, a, bb)
 
 /* host */
 #define RAM32(RAM,a) RAM32BE(RAM,a)

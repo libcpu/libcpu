@@ -63,7 +63,7 @@ arch_m88k_flags_decode(Value *flags, BasicBlock *bb)
 }
 
 static void
-arch_m88k_emit_decode_reg(BasicBlock *bb)
+arch_m88k_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	// declare flags
 	m88k_ptr_C = new AllocaInst(getIntegerType(1), "C", bb);
@@ -76,7 +76,7 @@ arch_m88k_emit_decode_reg(BasicBlock *bb)
 }
 
 static void
-arch_m88k_spill_reg_state(BasicBlock *bb)
+arch_m88k_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
 #if not_yet
 	Value *flags = arch_m88k_flags_encode(bb);

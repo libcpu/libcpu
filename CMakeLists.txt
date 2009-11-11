@@ -12,12 +12,6 @@ SET(CMAKE_BUILD_TYPE "Debug")
 # 
 SET(GUEST_ARCHITECTURES 6502 m68k m88k mips arm)
 SET(GUEST_EXTRA_TESTS next68k)
-IF(APPLE AND NOT UNIVERSAL)
-	# Until we fix 64bit archures for next68k :/
-  # NOTE: i486 forces cmake to include -arch, because of
-  # snow leopard change to default to 64bit toolchain.
-  SET(CMAKE_OSX_ARCHITECTURES "i486")
-ENDIF()
 
 #
 # Build Universal image.

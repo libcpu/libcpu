@@ -16,21 +16,6 @@
 
 using namespace llvm;
 //XXX put into cpu_t
-Value *ptr_reg;
-Value* ptr_PC;
-Value* ptr_RAM;
-PointerType* type_pfunc_callout;
-Value *ptr_func_debug;
-#define MAX_REGISTERS 32
-Value* ptr_r8[MAX_REGISTERS];
-Value* ptr_r16[MAX_REGISTERS];
-Value* ptr_r32[MAX_REGISTERS];
-Value* ptr_r64[MAX_REGISTERS];
-Value *in_ptr_r8[MAX_REGISTERS];
-Value *in_ptr_r16[MAX_REGISTERS];
-Value *in_ptr_r32[MAX_REGISTERS];
-Value *in_ptr_r64[MAX_REGISTERS];
-//uint8_t *RAM; /* will hold the system's static memory layout for analysis */
 
 typedef enum {				/* bitfield! */
 	TYPE_UNKNOWN     = 0,	/* unused or data */
@@ -271,12 +256,13 @@ lookup_basicblock(Function* f, addr_t pc) {
 	return NULL;
 }
 
+//XXX called by arch
 void
-create_call(Value *ptr_fp, BasicBlock *bb) {
+create_call(cpu_t *cpu, Value *ptr_fp, BasicBlock *bb) {
 	
 	std::vector<Value*> void_49_params;
-	void_49_params.push_back(ptr_RAM);
-	void_49_params.push_back(ptr_reg);
+	void_49_params.push_back(cpu->ptr_RAM);
+	void_49_params.push_back(cpu->ptr_reg);
 	CallInst* void_49 = CallInst::Create(ptr_fp, void_49_params.begin(), void_49_params.end(), "", bb);
 	void_49->setCallingConv(CallingConv::C);
 	void_49->setTailCall(false);
@@ -418,7 +404,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 
 	// create dispatch basicblock
 	BasicBlock* bb_dispatch = BasicBlock::Create(_CTX(), "dispatch", cpu->func_jitmain, 0);
-	Value *v_pc = new LoadInst(ptr_PC, "", false, bb_dispatch);
+	Value *v_pc = new LoadInst(cpu->ptr_PC, "", false, bb_dispatch);
 	SwitchInst* sw = SwitchInst::Create(v_pc, bb_ret, bbs /*XXX wrong!*/, bb_dispatch);
 
 	for (pc = cpu->code_start; pc<cpu->code_end; pc++) {
@@ -490,7 +476,7 @@ void
 emit_store_pc(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc)
 {
 	Value *v_pc = ConstantInt::get(getIntegerType(cpu->pc_width), new_pc);
-	new StoreInst(v_pc, ptr_PC, bb_branch);
+	new StoreInst(v_pc, cpu->ptr_PC, bb_branch);
 }
 
 void
@@ -588,13 +574,13 @@ cpu_create_function(cpu_t *cpu, const char *name)
 		getType(VoidTy),	/* Result */
 		type_func_callout_args,	/* Params */
 		false);		      	/* isVarArg */
-	type_pfunc_callout = PointerType::get(type_func_callout, 0);
+	cpu->type_pfunc_callout = PointerType::get(type_func_callout, 0);
 
 	// - (*f)(uint8_t *, reg_t *, (*)(...)) [jitmain() function pointer)
 	std::vector<const Type*>type_func_args;
 	type_func_args.push_back(type_pi8);				/* uint8_t *RAM */
 	type_func_args.push_back(type_pstruct_reg_t);	/* reg_t *reg */
-	type_func_args.push_back(type_pfunc_callout);	/* (*debug)(...) */
+	type_func_args.push_back(cpu->type_pfunc_callout);	/* (*debug)(...) */
 	FunctionType* type_func = FunctionType::get(
 		getIntegerType(32),		/* Result */
 		type_func_args,		/* Params */
@@ -633,13 +619,13 @@ get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
 }
 
 void
-emit_decode_reg_helper(int count, int width, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb) {
+emit_decode_reg_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb) {
 #ifdef OPT_LOCAL_REGISTERS
 	// decode struct reg and copy the registers into local variables
 	for (int i = 0; i < count; i++) {
 		char reg_name[16];
 		snprintf(reg_name, sizeof(reg_name), "gpr_%u", i);
-		in_ptr_r[i] = get_struct_member_pointer(ptr_reg, i, bb);
+		in_ptr_r[i] = get_struct_member_pointer(cpu->ptr_reg, i, bb);
 		ptr_r[i] = new AllocaInst(getIntegerType(width), reg_name, bb);
 		LoadInst* v = new LoadInst(in_ptr_r[i], "", false, bb);
 		new StoreInst(v, ptr_r[i], false, bb);
@@ -647,27 +633,27 @@ emit_decode_reg_helper(int count, int width, Value **in_ptr_r, Value **ptr_r, Ba
 #else
 	// just decode struct reg
 	for (int i = 0; i < count; i++) 
-		ptr_r[i] = get_struct_member_pointer(ptr_reg, i, bb);
+		ptr_r[i] = get_struct_member_pointer(cpu->ptr_reg, i, bb);
 #endif
 }
 
 void
 emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
-	emit_decode_reg_helper(cpu->count_regs_i8,   8, in_ptr_r8,  ptr_r8,  bb);
-	emit_decode_reg_helper(cpu->count_regs_i16, 16, in_ptr_r16, ptr_r16, bb);
-	emit_decode_reg_helper(cpu->count_regs_i32, 32, in_ptr_r32, ptr_r32, bb);
-	emit_decode_reg_helper(cpu->count_regs_i64, 64, in_ptr_r64, ptr_r64, bb);
+	emit_decode_reg_helper(cpu, cpu->count_regs_i8,   8, cpu->in_ptr_r8,  cpu->ptr_r8,  bb);
+	emit_decode_reg_helper(cpu, cpu->count_regs_i16, 16, cpu->in_ptr_r16, cpu->ptr_r16, bb);
+	emit_decode_reg_helper(cpu, cpu->count_regs_i32, 32, cpu->in_ptr_r32, cpu->ptr_r32, bb);
+	emit_decode_reg_helper(cpu, cpu->count_regs_i64, 64, cpu->in_ptr_r64, cpu->ptr_r64, bb);
 
 	uint32_t pc_index = 
 		cpu->count_regs_i8 +
 		cpu->count_regs_i16+
 		cpu->count_regs_i32+
 		cpu->count_regs_i64;
-	ptr_PC = get_struct_member_pointer(ptr_reg, pc_index, bb);
+	cpu->ptr_PC = get_struct_member_pointer(cpu->ptr_reg, pc_index, bb);
 
 	if (cpu->f.emit_decode_reg) /* cpu specific part */
-		cpu->f.emit_decode_reg(bb);
+		cpu->f.emit_decode_reg(cpu, bb);
 }
 
 void
@@ -685,12 +671,12 @@ void
 spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
 	if (cpu->f.spill_reg_state) /* cpu specific part */
-		cpu->f.spill_reg_state(bb);
+		cpu->f.spill_reg_state(cpu, bb);
 
-	spill_reg_state_helper(cpu->count_regs_i8,  in_ptr_r8,  ptr_r8,  bb);
-	spill_reg_state_helper(cpu->count_regs_i16, in_ptr_r16, ptr_r16, bb);
-	spill_reg_state_helper(cpu->count_regs_i32, in_ptr_r32, ptr_r32, bb);
-	spill_reg_state_helper(cpu->count_regs_i64, in_ptr_r64, ptr_r64, bb);
+	spill_reg_state_helper(cpu->count_regs_i8,  cpu->in_ptr_r8,  cpu->ptr_r8,  bb);
+	spill_reg_state_helper(cpu->count_regs_i16, cpu->in_ptr_r16, cpu->ptr_r16, bb);
+	spill_reg_state_helper(cpu->count_regs_i32, cpu->in_ptr_r32, cpu->ptr_r32, bb);
+	spill_reg_state_helper(cpu->count_regs_i64, cpu->in_ptr_r64, cpu->ptr_r64, bb);
 }
 
 static void
@@ -700,12 +686,12 @@ cpu_recompile_function(cpu_t *cpu)
 
 	// args
 	Function::arg_iterator args = cpu->func_jitmain->arg_begin();
-	ptr_RAM = args++;
-	ptr_RAM->setName("RAM");
-	ptr_reg = args++;
-	ptr_reg->setName("reg");	
-	ptr_func_debug = args++;
-	ptr_func_debug->setName("debug");
+	cpu->ptr_RAM = args++;
+	cpu->ptr_RAM->setName("RAM");
+	cpu->ptr_reg = args++;
+	cpu->ptr_reg->setName("reg");	
+	cpu->ptr_func_debug = args++;
+	cpu->ptr_func_debug->setName("debug");
 
 	// entry basicblock
 	BasicBlock *label_entry = BasicBlock::Create(_CTX(), "entry", cpu->func_jitmain, 0);
@@ -714,7 +700,7 @@ cpu_recompile_function(cpu_t *cpu)
 #if 0 // bad for debugging, minimal speedup
 	/* make the RAM pointer a constant */
 	PointerType* type_pi8 = PointerType::get(IntegerType::get(8), 0);
-	ptr_RAM = ConstantExpr::getCast(Instruction::IntToPtr, ConstantInt::get(Type::Int64Ty, (uint64_t)(long)cpu->RAM), type_pi8);
+	cpu->ptr_RAM = ConstantExpr::getCast(Instruction::IntToPtr, ConstantInt::get(Type::Int64Ty, (uint64_t)(long)cpu->RAM), type_pi8);
 #endif
 
 	// create ret basicblock

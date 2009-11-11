@@ -13,7 +13,7 @@ static Value* ptr_C;
 static Value* ptr_V;
 static Value* ptr_I;
 
-#define ptr_CPSR ptr_r32[16]
+#define ptr_CPSR cpu->ptr_r32[16]
 
 #define BAD printf("%s:%d\n", __func__, __LINE__); exit(1);
 #define LOG printf("%s:%d\n", __func__, __LINE__);
@@ -165,7 +165,7 @@ arch_arm_flags_decode(Value *flags, BasicBlock *bb)
 }
 
 void
-arch_arm_emit_decode_reg(BasicBlock *bb)
+arch_arm_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	// declare flags
 	ptr_N = new AllocaInst(getIntegerType(1), "N", bb);
@@ -180,7 +180,7 @@ arch_arm_emit_decode_reg(BasicBlock *bb)
 }
 
 void
-arch_arm_spill_reg_state(BasicBlock *bb)
+arch_arm_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
 	Value *flags = arch_arm_flags_encode(bb);
 	new StoreInst(flags, ptr_CPSR, false, bb);

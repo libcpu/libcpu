@@ -7,9 +7,6 @@
 using namespace llvm;
 
 //XXX put into cpu_t
-extern Value* ptr_RAM;
-extern Value* ptr_PC;
-extern Value* ptr_r8[32];
 Value* ptr_C;
 Value* ptr_Z;
 Value* ptr_I;
@@ -17,11 +14,11 @@ Value* ptr_D;
 Value* ptr_V;
 Value* ptr_N;
 
-#define ptr_A ptr_r8[0]
-#define ptr_X ptr_r8[1]
-#define ptr_Y ptr_r8[2]
-#define ptr_S ptr_r8[3]
-#define ptr_P ptr_r8[4]
+#define ptr_A cpu->ptr_r8[0]
+#define ptr_X cpu->ptr_r8[1]
+#define ptr_Y cpu->ptr_r8[2]
+#define ptr_S cpu->ptr_r8[3]
+#define ptr_P cpu->ptr_r8[4]
 
 #define OPCODE cpu->RAM[pc]
 #define OPERAND_8 cpu->RAM[(pc+1)&0xFFFF]
@@ -38,33 +35,33 @@ arch_6502_get_op16(cpu_t *cpu, uint16_t pc, BasicBlock *bb) {
 }
 
 static Value *
-arch_6502_get_x(BasicBlock *bb) {
+arch_6502_get_x(cpu_t *cpu, BasicBlock *bb) {
 	return new LoadInst(ptr_X, "", false, bb);
 }
 
 static Value *
-arch_6502_get_y(BasicBlock *bb) {
+arch_6502_get_y(cpu_t *cpu, BasicBlock *bb) {
 	return new LoadInst(ptr_Y, "", false, bb);
 }
 
 static Value *
-arch_6502_load_ram_8(Value *addr, BasicBlock *bb) {
-	Value* ptr = GetElementPtrInst::Create(ptr_RAM, addr, "", bb);
+arch_6502_load_ram_8(cpu_t *cpu, Value *addr, BasicBlock *bb) {
+	Value* ptr = GetElementPtrInst::Create(cpu->ptr_RAM, addr, "", bb);
 	return new LoadInst(ptr, "", false, bb);
 }
 
 static Value *
-arch_6502_load_ram_16(int is_32, Value *addr, BasicBlock *bb) {
+arch_6502_load_ram_16(cpu_t *cpu, int is_32, Value *addr, BasicBlock *bb) {
 	ConstantInt* const_int32_0001 = ConstantInt::get(getType(Int32Ty), 0x0001);
 	ConstantInt* const_int32_0008 = ConstantInt::get(is_32? getType(Int32Ty) : getType(Int16Ty), 0x0008);
 
 	/* get lo */
-	Value *lo = arch_6502_load_ram_8(addr, bb);
+	Value *lo = arch_6502_load_ram_8(cpu, addr, bb);
 	Value *lo32 = new ZExtInst(lo, getIntegerType(is_32? 32:16), "", bb);
 
 	/* get hi */
 	addr = BinaryOperator::Create(Instruction::Add, addr, const_int32_0001, "", bb);
-	Value *hi = arch_6502_load_ram_8(addr, bb);
+	Value *hi = arch_6502_load_ram_8(cpu, addr, bb);
 	Value *hi32 = new ZExtInst(hi, getIntegerType(is_32? 32:16), "", bb);
 
 	/* combine */
@@ -132,12 +129,12 @@ arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 		ea = BinaryOperator::Create(Instruction::And, ea, const_int32_FFFF, "", bb);
 
 	if (is_indirect)
-		ea = arch_6502_load_ram_16(true, ea, bb);
+		ea = arch_6502_load_ram_16(cpu, true, ea, bb);
 
 	if (index_register_after)
 		ea = arch_6502_add_index(ea, index_register_after, bb);
 
-	return GetElementPtrInst::Create(ptr_RAM, ea, "", bb);
+	return GetElementPtrInst::Create(cpu->ptr_RAM, ea, "", bb);
 }
 
 static Value *
@@ -197,10 +194,10 @@ arch_6502_log(cpu_t *cpu, addr_t pc, Instruction::BinaryOps o, BasicBlock *bb)
 }
 
 static void
-arch_6502_trap(addr_t pc, BasicBlock *bb)
+arch_6502_trap(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 	ConstantInt* v_pc = ConstantInt::get(getType(Int16Ty), pc);
-	new StoreInst(v_pc, ptr_PC, bb);
+	new StoreInst(v_pc, cpu->ptr_PC, bb);
 	ReturnInst::Create(_CTX(), ConstantInt::get(getType(Int32Ty), (uint32_t)-1), bb);//XXX needs #define
 }
 
@@ -309,7 +306,7 @@ arch_6502_addsub(cpu_t *cpu, uint16_t pc, Value *reg, Value *reg2, int is_sub, i
 }
 
 static void
-arch_6502_push(Value *v, BasicBlock *bb) {
+arch_6502_push(cpu_t *cpu, Value *v, BasicBlock *bb) {
 	ConstantInt* const_int32_0100 = ConstantInt::get(getType(Int32Ty), 0x0100);
 	ConstantInt* const_int8_0001 = ConstantInt::get(getType(Int8Ty), 0x0001);
 
@@ -317,7 +314,7 @@ arch_6502_push(Value *v, BasicBlock *bb) {
 	Value *s = new LoadInst(ptr_S, "", false, bb);
 	Value *s_ptr = new ZExtInst(s, getIntegerType(32), "", bb);
 	s_ptr = BinaryOperator::Create(Instruction::Or, s_ptr, const_int32_0100, "", bb);
-	s_ptr = GetElementPtrInst::Create(ptr_RAM, s_ptr, "", bb);
+	s_ptr = GetElementPtrInst::Create(cpu->ptr_RAM, s_ptr, "", bb);
 
 	/* store value */
 	new StoreInst(v, s_ptr, false, bb);
@@ -328,7 +325,7 @@ arch_6502_push(Value *v, BasicBlock *bb) {
 }
 
 static Value *
-arch_6502_pull(BasicBlock *bb) {
+arch_6502_pull(cpu_t *cpu, BasicBlock *bb) {
 	ConstantInt* const_int32_0100 = ConstantInt::get(getType(Int32Ty), 0x0100);
 	ConstantInt* const_int8_0001 = ConstantInt::get(getType(Int8Ty), 0x0001);
 
@@ -340,7 +337,7 @@ arch_6502_pull(BasicBlock *bb) {
 	/* get pointer to TOS */
 	Value *s_ptr = new ZExtInst(s, getIntegerType(32), "", bb);
 	s_ptr = BinaryOperator::Create(Instruction::Or, s_ptr, const_int32_0100, "", bb);
-	s_ptr = GetElementPtrInst::Create(ptr_RAM, s_ptr, "", bb);
+	s_ptr = GetElementPtrInst::Create(cpu->ptr_RAM, s_ptr, "", bb);
 
 	/* load value */
 	return new LoadInst(s_ptr, "", false, bb);
@@ -350,9 +347,9 @@ arch_6502_pull(BasicBlock *bb) {
 //	store i8 %408, i8* %S
 //	%409 = load i8* %S
 static void
-arch_6502_push_c16(uint16_t v, BasicBlock *bb) {
-	arch_6502_push(ConstantInt::get(getType(Int8Ty), v >> 8), bb);
-	arch_6502_push(ConstantInt::get(getType(Int8Ty), v & 0xFF), bb);
+arch_6502_push_c16(cpu_t *cpu, uint16_t v, BasicBlock *bb) {
+	arch_6502_push(cpu, ConstantInt::get(getType(Int8Ty), v >> 8), bb);
+	arch_6502_push(cpu, ConstantInt::get(getType(Int8Ty), v & 0xFF), bb);
 }
 
 #define N_SHIFT 7
@@ -401,12 +398,12 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 #if 0 //XXX this must move into generic code
 	// add a call to debug_function()
 	ConstantInt* v_pc = ConstantInt::get(Type::Int16Ty, pc);
-	new StoreInst(v_pc, ptr_PC, bb);
+	new StoreInst(v_pc, cpu->ptr_PC, bb);
 	// serialize flags
 	Value *flags = arch_6502_flags_encode(bb);
 	new StoreInst(flags, ptr_P, false, bb);
 
-	create_call(ptr_func_debug, bb);
+	create_call(cpu, ptr_func_debug, bb);
 
 	flags = new LoadInst(ptr_P, "", false, bb);
 	arch_6502_flags_decode(flags, bb);
@@ -449,7 +446,7 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			break;
 		case INSTR_BRK:
 			printf("warning: encountered BRK!\n");
-			arch_6502_trap(pc, bb);
+			arch_6502_trap(cpu, pc, bb);
 			break;
 		case INSTR_BVC:
 			arch_6502_branch(cpu, pc, ptr_V, false, bb, bb_target, bb_next);
@@ -483,7 +480,7 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			break;
 		case INSTR_DEX:
 			{
-			Value *v = arch_6502_get_x(bb);
+			Value *v = arch_6502_get_x(cpu, bb);
 			v = BinaryOperator::Create(Instruction::Sub, v, const_int8_0001, "", bb);
 			new StoreInst(v, ptr_X, bb);
 			arch_6502_set_nz(v, bb);
@@ -491,7 +488,7 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			}
 		case INSTR_DEY:
 			{
-			Value *v = arch_6502_get_y(bb);
+			Value *v = arch_6502_get_y(cpu, bb);
 			v = BinaryOperator::Create(Instruction::Sub, v, const_int8_0001, "", bb);
 			new StoreInst(v, ptr_Y, bb);
 			arch_6502_set_nz(v, bb);
@@ -505,7 +502,7 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			break;
 		case INSTR_INX:
 			{
-			Value *v = arch_6502_get_x(bb);
+			Value *v = arch_6502_get_x(cpu, bb);
 			v = BinaryOperator::Create(Instruction::Add, v, const_int8_0001, "", bb);
 			new StoreInst(v, ptr_X, bb);
 			arch_6502_set_nz(v, bb);
@@ -513,7 +510,7 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			}
 		case INSTR_INY:
 			{
-			Value *v = arch_6502_get_y(bb);
+			Value *v = arch_6502_get_y(cpu, bb);
 			v = BinaryOperator::Create(Instruction::Add, v, const_int8_0001, "", bb);
 			new StoreInst(v, ptr_Y, bb);
 			arch_6502_set_nz(v, bb);
@@ -522,8 +519,8 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 		case INSTR_JMP:
 			if (instraddmode[opcode].addmode == ADDMODE_IND) {
 				Value *ea = ConstantInt::get(getType(Int32Ty), OPERAND_16);
-				Value *v = arch_6502_load_ram_16(false, ea, bb);
-				new StoreInst(v, ptr_PC, bb);
+				Value *v = arch_6502_load_ram_16(cpu, false, ea, bb);
+				new StoreInst(v, cpu->ptr_PC, bb);
 				BranchInst::Create(bb_dispatch, bb);
 			} else {
 				if (bb_target) {
@@ -531,18 +528,18 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 				} else {
 					//printf("warning: unknown jmp at $%04X to $%04X!\n", pc, OPERAND_16);
 					ConstantInt* c = ConstantInt::get(getType(Int16Ty), OPERAND_16);
-					new StoreInst(c, ptr_PC, bb);
+					new StoreInst(c, cpu->ptr_PC, bb);
 					BranchInst::Create(bb_dispatch, bb);
 				}
 			}
 			break;
 		case INSTR_JSR:
 			{
-			arch_6502_push_c16(pc+2, bb);
+			arch_6502_push_c16(cpu, pc+2, bb);
 			if (!bb_target) {
 				//printf("warning: unknown jsr at $%04X to $%04X!\n", pc, OPERAND_16);
 				ConstantInt* c = ConstantInt::get(getType(Int16Ty), OPERAND_16);
-				new StoreInst(c, ptr_PC, bb);
+				new StoreInst(c, cpu->ptr_PC, bb);
 				BranchInst::Create(bb_dispatch, bb);
 			} else {
 				BranchInst::Create(bb_target, bb);
@@ -567,20 +564,20 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			arch_6502_log(cpu, pc, Instruction::Or, bb);
 			break;
 		case INSTR_PHA:
-			arch_6502_push(new LoadInst(ptr_A, "", false, bb), bb);
+			arch_6502_push(cpu, new LoadInst(ptr_A, "", false, bb), bb);
 			break;
 		case INSTR_PHP:
-			arch_6502_push(arch_6502_flags_encode(bb), bb);
+			arch_6502_push(cpu, arch_6502_flags_encode(bb), bb);
 			break;
 		case INSTR_PLA:
 			{
-			Value *v1 = arch_6502_pull(bb);
+			Value *v1 = arch_6502_pull(cpu, bb);
 			new StoreInst(v1, ptr_A, bb);
 			arch_6502_set_nz(v1, bb);
 			break;
 			}
 		case INSTR_PLP:
-			arch_6502_flags_decode(arch_6502_pull(bb), bb);
+			arch_6502_flags_decode(arch_6502_pull(cpu, bb), bb);
 			break;
 		case INSTR_ROL:
 			arch_6502_shiftrotate(cpu, pc, true, true, bb);
@@ -590,20 +587,20 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			break;
 		case INSTR_RTI:
 			printf("error: encountered RTI!\n");
-			arch_6502_trap(pc, bb);
+			arch_6502_trap(cpu, pc, bb);
 			break;
 		case INSTR_RTS:
 			{
 			ConstantInt* const_int16_0008 = ConstantInt::get(getType(Int16Ty), 0x0008);
 			ConstantInt* const_int16_0001 = ConstantInt::get(getType(Int16Ty), 0x0001);
-			Value *lo = arch_6502_pull(bb);
-			Value *hi = arch_6502_pull(bb);
+			Value *lo = arch_6502_pull(cpu, bb);
+			Value *hi = arch_6502_pull(cpu, bb);
 			lo = new ZExtInst(lo, getIntegerType(16), "", bb);
 			hi = new ZExtInst(hi, getIntegerType(16), "", bb);
 			hi = BinaryOperator::Create(Instruction::Shl, hi, const_int16_0008, "", bb);
 			lo = BinaryOperator::Create(Instruction::Add, lo, hi, "", bb);
 			lo = BinaryOperator::Create(Instruction::Add, lo, const_int16_0001, "", bb);
-			new StoreInst(lo, ptr_PC, bb);
+			new StoreInst(lo, cpu->ptr_PC, bb);
 			BranchInst::Create(bb_dispatch, bb);
 			break;
 			}
@@ -648,7 +645,7 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			break;
 		case INSTR_XXX:
 			printf("warning: encountered XXX!\n");
-			arch_6502_trap(pc, bb);
+			arch_6502_trap(cpu, pc, bb);
 			break;
 	}
 
@@ -679,7 +676,7 @@ arch_6502_init(cpu_t *cpu)
 }
 
 void
-arch_6502_emit_decode_reg(BasicBlock *bb)
+arch_6502_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	// declare flags
 	ptr_N = new AllocaInst(getIntegerType(1), "N", bb);
@@ -695,7 +692,7 @@ arch_6502_emit_decode_reg(BasicBlock *bb)
 }
 
 void
-arch_6502_spill_reg_state(BasicBlock *bb)
+arch_6502_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
 	Value *flags = arch_6502_flags_encode(bb);
 	new StoreInst(flags, ptr_P, false, bb);

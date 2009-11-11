@@ -20,17 +20,17 @@ bool has_special_r0;
 //////////////////////////////////////////////////////////////////////
 
 static Value **
-ptr_r()
+ptr_r(cpu_t *cpu)
 {
 	switch (reg_size) {
 		case 8:
-			return ptr_r8;
+			return cpu->ptr_r8;
 		case 16:
-			return ptr_r16;
+			return cpu->ptr_r16;
 		case 32:
-			return ptr_r32;
+			return cpu->ptr_r32;
 		case 64:
-			return ptr_r64;
+			return cpu->ptr_r64;
 		default:
 			return 0; /* can't happen */
 	}
@@ -38,7 +38,7 @@ ptr_r()
 
 // GET REGISTER
 Value *
-arch_get_reg(uint32_t index, uint32_t bits, BasicBlock *bb) {
+arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
 	Value *v;
 
 	/* R0 is always 0 (on certain RISCs) */
@@ -46,7 +46,7 @@ arch_get_reg(uint32_t index, uint32_t bits, BasicBlock *bb) {
 		return CONSTs(bits? bits : reg_size, 0);
 
 	/* get the register */
-	v = new LoadInst(ptr_r()[index], "", false, bb);
+	v = new LoadInst(ptr_r(cpu)[index], "", false, bb);
 
 	/* optionally truncate it */
 	if (bits && reg_size != bits)
@@ -57,7 +57,7 @@ arch_get_reg(uint32_t index, uint32_t bits, BasicBlock *bb) {
 
 // PUT REGISTER
 void
-arch_put_reg(uint32_t index, Value *v, uint32_t bits, bool sext, BasicBlock *bb) {
+arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, BasicBlock *bb) {
 	/*
 	 * if the caller cares about bit size and
 	 * the size is not the register size, we'll zext or sext
@@ -70,7 +70,7 @@ arch_put_reg(uint32_t index, Value *v, uint32_t bits, bool sext, BasicBlock *bb)
 
 	/* store value, unless it's R0 (on certain RISCs) */
 	if (!has_special_r0 || index)
-		new StoreInst(v, ptr_r()[index], bb);
+		new StoreInst(v, ptr_r(cpu)[index], bb);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -92,15 +92,15 @@ RAM32BE(uint8_t *RAM, addr_t a) {
 
 /* get a RAM pointer to a 32 bit value */
 static Value *
-arch_gep32(Value *a, BasicBlock *bb) {
-	a = GetElementPtrInst::Create(ptr_RAM, a, "", bb);
+arch_gep32(cpu_t *cpu, Value *a, BasicBlock *bb) {
+	a = GetElementPtrInst::Create(cpu->ptr_RAM, a, "", bb);
 	return new BitCastInst(a, PointerType::get(getType(Int32Ty), 0), "", bb);
 }
 
 /* load 32 bit ALIGNED value from RAM */
 Value *
-arch_load32_aligned(Value *a, BasicBlock *bb) {
-	a = arch_gep32(a, bb);
+arch_load32_aligned(cpu_t *cpu, Value *a, BasicBlock *bb) {
+	a = arch_gep32(cpu, a, bb);
 #ifdef __LITTLE_ENDIAN__
 	bool swap = !is_little_endian;
 #else
@@ -114,8 +114,8 @@ arch_load32_aligned(Value *a, BasicBlock *bb) {
 
 /* store 32 bit ALIGNED value to RAM */
 void
-arch_store32_aligned(Value *v, Value *a, BasicBlock *bb) {
-	a = arch_gep32(a, bb);
+arch_store32_aligned(cpu_t *cpu, Value *v, Value *a, BasicBlock *bb) {
+	a = arch_gep32(cpu, a, bb);
 #ifdef __LITTLE_ENDIAN__
 	bool swap = !is_little_endian;
 #else
@@ -147,37 +147,37 @@ arch_get_shift16(Value *addr, BasicBlock *bb)
 }
 
 Value *
-arch_load8(Value *addr, BasicBlock *bb) {
+arch_load8(cpu_t *cpu, Value *addr, BasicBlock *bb) {
 	Value *shift = arch_get_shift8(addr, bb);
-	Value *val = arch_load32_aligned(AND(addr, CONST(~3ULL)), bb);
+	Value *val = arch_load32_aligned(cpu, AND(addr, CONST(~3ULL)), bb);
 	return TRUNC8(LSHR(val, shift));
 }
 
 Value *
-arch_load16_aligned(Value *addr, BasicBlock *bb) {
+arch_load16_aligned(cpu_t *cpu, Value *addr, BasicBlock *bb) {
 	Value *shift = arch_get_shift16(addr, bb);
-	Value *val = arch_load32_aligned(AND(addr, CONST(~3ULL)), bb);
+	Value *val = arch_load32_aligned(cpu, AND(addr, CONST(~3ULL)), bb);
 	return TRUNC16(LSHR(val, shift));
 }
 
 void
-arch_store8(Value *val, Value *addr, BasicBlock *bb) {
+arch_store8(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb) {
 	Value *shift = arch_get_shift8(addr, bb);
 	addr = AND(addr, CONST(~3ULL));
 	Value *mask = XOR(SHL(CONST(255), shift),CONST(-1ULL));
-	Value *old = AND(arch_load32_aligned(addr, bb), mask);
+	Value *old = AND(arch_load32_aligned(cpu, addr, bb), mask);
 	val = OR(old, SHL(AND(val, CONST(255)), shift));
-	arch_store32_aligned(val, addr, bb);
+	arch_store32_aligned(cpu, val, addr, bb);
 }
 
 void
-arch_store16(Value *val, Value *addr, BasicBlock *bb) {
+arch_store16(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb) {
 	Value *shift = arch_get_shift16(addr, bb);
 	addr = AND(addr, CONST(~3ULL));
 	Value *mask = XOR(SHL(CONST(65535), shift),CONST(-1ULL));
-	Value *old = AND(arch_load32_aligned(addr, bb), mask);
+	Value *old = AND(arch_load32_aligned(cpu, addr, bb), mask);
 	val = OR(old, SHL(AND(val, CONST(65535)), shift));
-	arch_store32_aligned(val, addr, bb);
+	arch_store32_aligned(cpu, val, addr, bb);
 }
 
 
