@@ -16,7 +16,6 @@
 
 using namespace llvm;
 //XXX put into cpu_t
-Function* func_jitmain;
 Value *ptr_reg;
 Value* ptr_PC;
 Value* ptr_RAM;
@@ -409,7 +408,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 	while (pc<cpu->code_end) {
 		//printf("%04X: %d\n", pc, get_tagging_type(cpu, pc));
 		if (get_tagging_type(cpu, pc) & (TYPE_CODE_TARGET|TYPE_ENTRY|TYPE_AFTER_CALL|TYPE_AFTER_BRANCH)) {
-			create_basicblock(pc, func_jitmain);
+			create_basicblock(pc, cpu->func_jitmain);
 			bbs++;
 		}
 
@@ -418,7 +417,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 	printf("bbs: %d\n", bbs);
 
 	// create dispatch basicblock
-	BasicBlock* bb_dispatch = BasicBlock::Create(_CTX(), "dispatch",func_jitmain,0);  
+	BasicBlock* bb_dispatch = BasicBlock::Create(_CTX(), "dispatch", cpu->func_jitmain, 0);
 	Value *v_pc = new LoadInst(ptr_PC, "", false, bb_dispatch);
 	SwitchInst* sw = SwitchInst::Create(v_pc, bb_ret, bbs /*XXX wrong!*/, bb_dispatch);
 
@@ -426,7 +425,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 		if (get_tagging_type(cpu, pc) & (TYPE_ENTRY|TYPE_AFTER_CALL)) {
 			printf("info: adding case: %llx\n", pc);
 			ConstantInt* c = ConstantInt::get(getIntegerType(cpu->pc_width), pc);
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(func_jitmain, pc);
+			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc);
 			if (!target) {
 				printf("error: unknown rts target $%04llx!\n", (unsigned long long)pc);
 				exit(1);
@@ -438,7 +437,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 
 // recompile basic blocks
     Function::const_iterator it;
-    for (it = func_jitmain->getBasicBlockList().begin(); it != func_jitmain->getBasicBlockList().end(); it++) {
+    for (it = cpu->func_jitmain->getBasicBlockList().begin(); it != cpu->func_jitmain->getBasicBlockList().end(); it++) {
 		const BasicBlock *hack = it;
 		BasicBlock *cur_bb = (BasicBlock*)hack;
 		const char *cstr = (*it).getNameStr().c_str();
@@ -457,12 +456,12 @@ printf("basicblock: %04llx\n", (unsigned long long)pc);
 
 			// get branch/call/jump target BB
 			if (flow_type == FLOW_TYPE_BRANCH || flow_type == FLOW_TYPE_CALL || flow_type == FLOW_TYPE_JUMP) {
-				bb_target = (BasicBlock*)lookup_basicblock(func_jitmain, new_pc2);
+				bb_target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, new_pc2);
 			}
 
 			// get not-taken BB for branch
 			if (flow_type == FLOW_TYPE_BRANCH) {
-				bb_next = (BasicBlock*)lookup_basicblock(func_jitmain, pc+bytes);
+				bb_next = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc+bytes);
 			}
 
 			cpu->f.recompile_instr(cpu, pc, bb_dispatch, cur_bb, bb_target, NULL, bb_next);
@@ -474,7 +473,7 @@ printf("basicblock: %04llx\n", (unsigned long long)pc);
 			 !(get_tagging_type(cpu, pc) & (TYPE_CODE_TARGET|TYPE_ENTRY|TYPE_AFTER_CALL|TYPE_AFTER_BRANCH)));
 		// link with next basic block if there isn't a control flow instr. already
 		if (flow_type == FLOW_TYPE_CONTINUE) {
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(func_jitmain, pc);
+			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc);
 			if (!target) {
 				printf("error: unknown continue $%04llx!\n", (unsigned long long)pc);
 				exit(1);
@@ -518,7 +517,7 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret)
 	addr_t pc = cpu->f.get_pc(cpu->reg);
 
 	BasicBlock *cur_bb, *bb_target, *bb_next;
-	cur_bb = BasicBlock::Create(_CTX(), "instruction", func_jitmain, 0);
+	cur_bb = BasicBlock::Create(_CTX(), "instruction", cpu->func_jitmain, 0);
 
 	disasm_instr(cpu, pc);
 
@@ -569,9 +568,9 @@ get_struct_reg(cpu_t *cpu) {
 }
 
 static Function*
-cpu_create_function(cpu_t *cpu)
+cpu_create_function(cpu_t *cpu, const char *name)
 {
-	Function *func_jitmain;
+	Function *func;
 
 	// Type Definitions
 	// - struct reg
@@ -592,22 +591,22 @@ cpu_create_function(cpu_t *cpu)
 	type_pfunc_callout = PointerType::get(type_func_callout, 0);
 
 	// - (*f)(uint8_t *, reg_t *, (*)(...)) [jitmain() function pointer)
-	std::vector<const Type*>type_func_jitmain_args;
-	type_func_jitmain_args.push_back(type_pi8);				/* uint8_t *RAM */
-	type_func_jitmain_args.push_back(type_pstruct_reg_t);	/* reg_t *reg */
-	type_func_jitmain_args.push_back(type_pfunc_callout);	/* (*debug)(...) */
-	FunctionType* type_func_jitmain = FunctionType::get(
+	std::vector<const Type*>type_func_args;
+	type_func_args.push_back(type_pi8);				/* uint8_t *RAM */
+	type_func_args.push_back(type_pstruct_reg_t);	/* reg_t *reg */
+	type_func_args.push_back(type_pfunc_callout);	/* (*debug)(...) */
+	FunctionType* type_func = FunctionType::get(
 		getIntegerType(32),		/* Result */
-		type_func_jitmain_args,		/* Params */
+		type_func_args,		/* Params */
 		false);						/* isVarArg */
 
 	// Function Declarations
-	func_jitmain = Function::Create(
-		type_func_jitmain,				/* Type */
+	func = Function::Create(
+		type_func,				/* Type */
 		GlobalValue::ExternalLinkage,	/* Linkage */
-		"jitmain", cpu->mod);				/* Name */
-	func_jitmain->setCallingConv(CallingConv::C);
-	AttrListPtr func_jitmain_PAL;
+		name, cpu->mod);				/* Name */
+	func->setCallingConv(CallingConv::C);
+	AttrListPtr func_PAL;
 	{
 		SmallVector<AttributeWithIndex, 4> Attrs;
 		AttributeWithIndex PAWI;
@@ -615,11 +614,11 @@ cpu_create_function(cpu_t *cpu)
 		Attrs.push_back(PAWI);
 		PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind;
 		Attrs.push_back(PAWI);
-		func_jitmain_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
+		func_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
 	}
-	func_jitmain->setAttributes(func_jitmain_PAL);
+	func->setAttributes(func_PAL);
 
-	return func_jitmain;
+	return func;
 }
 
 Value *
@@ -697,11 +696,10 @@ spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 static void
 cpu_recompile_function(cpu_t *cpu)
 {
-	func_jitmain = cpu_create_function(cpu);
-	cpu->func_jitmain = func_jitmain;
+	cpu->func_jitmain = cpu_create_function(cpu, "jitmain");
 
 	// args
-	Function::arg_iterator args = func_jitmain->arg_begin();
+	Function::arg_iterator args = cpu->func_jitmain->arg_begin();
 	ptr_RAM = args++;
 	ptr_RAM->setName("RAM");
 	ptr_reg = args++;
@@ -710,7 +708,7 @@ cpu_recompile_function(cpu_t *cpu)
 	ptr_func_debug->setName("debug");
 
 	// entry basicblock
-	BasicBlock *label_entry = BasicBlock::Create(_CTX(), "entry",func_jitmain,0);
+	BasicBlock *label_entry = BasicBlock::Create(_CTX(), "entry", cpu->func_jitmain, 0);
 	emit_decode_reg(cpu, label_entry);
 
 #if 0 // bad for debugging, minimal speedup
@@ -720,7 +718,7 @@ cpu_recompile_function(cpu_t *cpu)
 #endif
 
 	// create ret basicblock
-	BasicBlock *bb_ret = BasicBlock::Create(_CTX(), "ret",func_jitmain,0);  
+	BasicBlock *bb_ret = BasicBlock::Create(_CTX(), "ret", cpu->func_jitmain, 0);  
 	spill_reg_state(cpu, bb_ret);
 	ReturnInst::Create(_CTX(), ConstantInt::get(getType(Int32Ty), JIT_RETURN_FUNCNOTFOUND), bb_ret);
 
@@ -749,7 +747,7 @@ cpu_recompile_function(cpu_t *cpu)
 	}
 
 	printf("*** Recompiling...");
-	cpu->fp = cpu->exec_engine->getPointerToFunction(func_jitmain);
+	cpu->fp = cpu->exec_engine->getPointerToFunction(cpu->func_jitmain);
 	printf("done.\n");
 }
 
