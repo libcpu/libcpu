@@ -15,12 +15,12 @@
 #define __inline
 #endif
 
-unsigned char *RAM = 0;
-unsigned short PC;
-unsigned char A, X, Y, S;
-unsigned int N, V, D, I, Z, C;
+static unsigned char *RAM = 0;
+static unsigned short PC;
+static unsigned char A, X, Y, S;
+static unsigned int N, V, D, I, Z, C;
 
-int
+static int
 stack4(unsigned short a, unsigned short b, unsigned short c, unsigned short d) {
 //	printf("stack4: %x,%x,%x,%x\n", a, b, c, d);
 	if (*(unsigned short*)(&RAM[0x0100+S+1]) + 1 != a) return 0;
@@ -31,19 +31,19 @@ stack4(unsigned short a, unsigned short b, unsigned short c, unsigned short d) {
 }
 
 /* These are required for LDA_STA_CALLOUT, do nothing, and have no performance impact */
-__inline void
+static inline void
 func_lda_abs(unsigned short a) {
 	A = RAM[a];
 	SETSZ(A);
 }
 
-__inline void
+static inline void
 func_bit_abs(unsigned short a) {
 	unsigned char temp8 = RAM[a];
 	SETSZ(temp8);
 	SETV((temp8>>6)&1); 
 }
-__inline void
+static inline void
 func_sta_abs(unsigned short a) {
 		RAM[a] = A;
 }
@@ -68,7 +68,7 @@ func_sta_abs(unsigned short a) {
 0088   E9 D0      SBC #$D0
 008A   60         RTS
 */
-void
+static void
 CHRGET_common(int inc) {
 	unsigned short temp16;
 	if (!inc) goto CHRGOT_start;
@@ -88,11 +88,11 @@ CHRGOT_start:
 	temp16 = (unsigned short)A-(unsigned short)0xD0-(unsigned short)(1-C); SETV(((A ^ temp16) & 0x80) && ((A ^ 0xD0) & 0x80)); A = (unsigned char)temp16; SETSZ(A); SETNC(temp16);
 }
 
-void
+static void
 CHRGET() {
 	CHRGET_common(1);
 }
-void
+static void
 CHRGOT() {
 	CHRGET_common(0);
 }
@@ -123,19 +123,19 @@ CHRGOT() {
 #define KERN_ERR_ILLEGAL_DEVICE_NUMBER	9
 
 /* KERNAL internal state */
-unsigned char kernal_msgflag, kernal_status = 0;
-unsigned short kernal_filename;
-unsigned char kernal_filename_len;
-unsigned char kernal_lfn, kernal_dev, kernal_sec;
-int kernal_quote = 0;
+static unsigned char kernal_msgflag, kernal_status = 0;
+static unsigned short kernal_filename;
+static unsigned char kernal_filename_len;
+static unsigned char kernal_lfn, kernal_dev, kernal_sec;
+static int kernal_quote = 0;
 
 /* shell script hack */
-int readycount = 0;
-int interactive = 1;
-FILE *f;
+static int readycount = 0;
+static int interactive = 1;
+static FILE *f;
 
 #if 0
-void
+static void
 init_os(int argc, char **argv) {
 	if (argc>1) {
 		interactive = 0;
@@ -155,14 +155,14 @@ init_os(int argc, char **argv) {
 }
 #endif
 
-__inline void
+static inline void
 SETMSG() {
 		kernal_msgflag = A;
 		A = kernal_status;
 }
 
 
-__inline void
+static inline void
 MEMTOP() {
 #if DEBUG /* CBMBASIC doesn't do this */
 	if (!C) {
@@ -175,7 +175,7 @@ MEMTOP() {
 }
 
 /* MEMBOT */
-inline void
+static inline void
 MEMBOT() {
 #if DEBUG /* CBMBASIC doesn't do this */
 	if (!C) {
@@ -188,13 +188,13 @@ MEMBOT() {
 }
 
 /* READST */
-__inline void
+static inline void
 READST() {
 		A = kernal_status;
 }
 
 /* SETLFS */
-inline void
+static inline void
 SETLFS() {
 		kernal_lfn = A;
 		kernal_dev = X;
@@ -202,42 +202,42 @@ SETLFS() {
 }
 
 /* SETNAM */
-inline void
+static inline void
 SETNAM() {
 		kernal_filename = X | Y<<8;
 		kernal_filename_len = A;
 }
 
 /* OPEN */
-inline void
+static inline void
 OPEN() {
 		printf("UNIMPL: OPEN\n");
 		exit(1);
 }
 
 /* CLOSE */
-inline void
+static inline void
 CLOSE() {
 		printf("UNIMPL: CLOSE\n");
 		exit(1);
 }
 
 /* CHKIN */
-inline void
+static inline void
 CHKIN() {
 		printf("UNIMPL: CHKIN\n");
 		exit(1);
 }
 
 /* CHKOUT */
-inline void
+static inline void
 CHKOUT() {
 		printf("UNIMPL: CHKOUT\n");
 		exit(1);
 }
 
 /* CLRCHN */
-inline void
+static inline void
 CLRCHN() {
 #ifdef DEBUG
 		printf("WARNING: UNIMPL: CLRCHN\n");
@@ -246,11 +246,11 @@ CLRCHN() {
 
 static const char run[] = { 'R', 'U', 'N', 13 };
 
-int fakerun = 0;
-int fakerun_index = 0;
+static int fakerun = 0;
+static int fakerun_index = 0;
 
 /* CHRIN */
-inline void
+static inline void
 CHRIN() {
 	if ((!interactive) && (readycount==2)) {
 		exit(0);
@@ -278,7 +278,7 @@ CHRIN() {
 }
 
 /* CHROUT */
-inline void
+static inline void
 CHROUT() {
 #if 0
 int a = *(unsigned short*)(&RAM[0x0100+S+1]) + 1;
@@ -355,7 +355,7 @@ printf("CHROUT: %d @ %x,%x,%x,%x\n", A, a, b, c, d);
 }
 
 /* LOAD */
-inline void
+static inline void
 LOAD() {
 		FILE *f;
 		unsigned char savedbyte;
@@ -479,7 +479,7 @@ load_noerr:
 }
 
 /* SAVE */
-inline void
+static inline void
 SAVE() {
 		FILE *f;
 		unsigned char savedbyte;
@@ -515,38 +515,38 @@ SAVE() {
 }
 
 /* SETTIM */
-inline void
+static inline void
 SETTIM() {
 		printf("UNIMPL: SETTIM\n");
 		exit(1);
 }
 
 /* RDTIM */
-inline void
+static inline void
 RDTIM() {
 		printf("UNIMPL: RDTIM\n");
 		exit(1);
 }
 
 /* STOP */
-inline void
+static inline void
 STOP() {
 		SETZ(0); /* TODO we don't support the STOP key */
 }
 
 /* GETIN */
-inline void
+static inline void
 GETIN() {
 	CHRIN();
 }
 
 /* CLALL */
-inline void
+static inline void
 CLALL() {
 }
 
 /* PLOT */
-inline void
+static inline void
 PLOT() {
 		/*
 		 * TODO we always return 0/0 as the cursor position
@@ -558,7 +558,7 @@ PLOT() {
 
 
 /* IOBASE */
-inline void
+static inline void
 IOBASE() {
 		printf("UNIMPL: IOBASE\n");
 		exit(1);
