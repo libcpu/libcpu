@@ -1,16 +1,5 @@
 #include "libcpu.h"
 
-extern Value* ptr_RAM;
-
-extern Value* ptr_r8[32];
-extern Value* ptr_r16[32];
-extern Value* ptr_r32[32];
-extern Value* ptr_r64[32];
-
-extern uint32_t reg_size;
-extern bool is_little_endian;
-extern bool has_special_r0;
-
 /* emitter functions */
 Value *arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb);
 void arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, BasicBlock *bb);
@@ -40,7 +29,7 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define CONST32(v) CONSTs(32,v)
 #define CONST64(v) CONSTs(64,v)
 
-#define CONST(v) CONSTs(reg_size,v)
+#define CONST(v) CONSTs(cpu->reg_size,v)
 
 #define TRUNC(s,v) new TruncInst(v, getIntegerType(s), "", bb)
 #define TRUNC1(v) TRUNC(1,v)

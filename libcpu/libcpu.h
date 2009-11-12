@@ -27,8 +27,8 @@ using namespace llvm;
 
 struct cpu;
 typedef void        (*fp_init)(struct cpu *cpu);
-typedef StructType *(*fp_get_struct_reg)(void);
-typedef addr_t      (*fp_get_pc)(void *);
+typedef StructType *(*fp_get_struct_reg)(struct cpu *cpu);
+typedef addr_t      (*fp_get_pc)(struct cpu *cpu, void *regs);
 typedef void        (*fp_emit_decode_reg)(struct cpu *cpu, BasicBlock *bb);
 typedef void        (*fp_spill_reg_state)(struct cpu *cpu, BasicBlock *bb);
 typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, int *flow_type, addr_t *new_pc);
@@ -80,6 +80,9 @@ typedef struct cpu {
 	void *fp;
 	void *reg;
 	uint8_t *RAM;
+	uint32_t reg_size;
+	bool is_little_endian;
+	bool has_special_r0;
 	Value *ptr_reg;
 	Value *ptr_PC;
 	Value *ptr_RAM;

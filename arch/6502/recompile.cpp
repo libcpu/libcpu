@@ -699,7 +699,7 @@ arch_6502_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 }
 
 addr_t
-arch_6502_get_pc(void *reg)
+arch_6502_get_pc(cpu_t *, void *reg)
 {
 	return ((reg_6502_t*)reg)->pc;
 }

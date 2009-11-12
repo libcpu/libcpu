@@ -5,9 +5,9 @@
 void
 arch_arm_init(cpu_t *cpu)
 {
-	reg_size = 32;
-	is_little_endian = !!(cpu->flags_arch & CPU_ARM_IS_LE);
-	has_special_r0 = false;
+	cpu->reg_size = 32;
+	cpu->is_little_endian = !!(cpu->flags_arch & CPU_ARM_IS_LE);
+	cpu->has_special_r0 = false;
 
 	reg_arm_t *reg;
 	reg = (reg_arm_t*)malloc(sizeof(reg_arm_t));
@@ -23,7 +23,7 @@ arch_arm_init(cpu_t *cpu)
 }
 
 addr_t
-arch_arm_get_pc(void *reg)
+arch_arm_get_pc(cpu_t *, void *reg)
 {
 	return ((reg_arm_t*)reg)->pc;
 }

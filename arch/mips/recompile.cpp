@@ -238,29 +238,30 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 //////////////////////////////////////////////////////////////////////
 
 Value *
-arch_mips_get_imm(uint32_t instr, uint32_t bits, bool sext, BasicBlock *bb) {
+arch_mips_get_imm(cpu_t *cpu, uint32_t instr, uint32_t bits, bool sext,
+  BasicBlock *bb) {
 	uint64_t imm;
 	if (sext)
 		imm = (uint64_t)(sint16_t)GetImmediate;
 	else
 		imm = (uint64_t)(uint16_t)GetImmediate;
 
-	return ConstantInt::get(getIntegerType(bits? bits : reg_size), imm);
+	return ConstantInt::get(getIntegerType(bits? bits : cpu->reg_size), imm);
 }
 
-#define IMM arch_mips_get_imm(instr, 0, true, bb)
-#define IMMU arch_mips_get_imm(instr, 0, false, bb)
-#define IMM32 arch_mips_get_imm(instr, 32, true, bb)
+#define IMM arch_mips_get_imm(cpu, instr, 0, true, bb)
+#define IMMU arch_mips_get_imm(cpu, instr, 0, false, bb)
+#define IMM32 arch_mips_get_imm(cpu, instr, 32, true, bb)
 
 //////////////////////////////////////////////////////////////////////
 
 Value *
-arch_mips_get_sa(uint32_t instr, uint32_t bits, BasicBlock *bb) {
-	return ConstantInt::get(getIntegerType(bits? bits : reg_size), GetSA);
+arch_mips_get_sa(cpu_t *cpu, uint32_t instr, uint32_t bits, BasicBlock *bb) {
+	return ConstantInt::get(getIntegerType(bits? bits : cpu->reg_size), GetSA);
 }
 
-#define SA arch_mips_get_sa(instr, 0, bb)
-#define SA32 arch_mips_get_sa(instr, 32, bb)
+#define SA arch_mips_get_sa(cpu, instr, 0, bb)
+#define SA32 arch_mips_get_sa(cpu, instr, 32, bb)
 
 //////////////////////////////////////////////////////////////////////
 

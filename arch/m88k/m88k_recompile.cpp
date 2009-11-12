@@ -91,8 +91,8 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 enum { I_SEXT = 1, I_UPPER = 2, I_BS = 4 };
 
 Value *
-arch_m88k_get_imm(m88k_insn const &instr, uint32_t bits, unsigned flags,
-	BasicBlock *bb)
+arch_m88k_get_imm(cpu_t *cpu, m88k_insn const &instr, uint32_t bits,
+  unsigned flags, BasicBlock *bb)
 {
 	uint64_t imm;
 	if (flags & I_SEXT)
@@ -107,17 +107,17 @@ arch_m88k_get_imm(m88k_insn const &instr, uint32_t bits, unsigned flags,
 	} else if (flags & I_BS)
 		imm |= 0xffff0000;
 
-	return ConstantInt::get(getIntegerType(bits ? bits : reg_size), imm);
+	return ConstantInt::get(getIntegerType(bits ? bits : cpu->reg_size), imm);
 }
 
-#define IMM    arch_m88k_get_imm(instr, 0, I_SEXT, bb)
-#define UIMM   arch_m88k_get_imm(instr, 0, 0, bb)
+#define IMM    arch_m88k_get_imm(cpu, instr, 0, I_SEXT, bb)
+#define UIMM   arch_m88k_get_imm(cpu, instr, 0, 0, bb)
 
-#define IMM_U  arch_m88k_get_imm(instr, 0, I_UPPER, bb)
-#define IMM_B  arch_m88k_get_imm(instr, 0, I_BS, bb)
-#define IMM_UB arch_m88k_get_imm(instr, 0, I_UPPER | I_BS, bb)
+#define IMM_U  arch_m88k_get_imm(cpu, instr, 0, I_UPPER, bb)
+#define IMM_B  arch_m88k_get_imm(cpu, instr, 0, I_BS, bb)
+#define IMM_UB arch_m88k_get_imm(cpu, instr, 0, I_UPPER | I_BS, bb)
 
-#define IMM32  arch_m88k_get_imm(instr, 32, I_SEXT, bb)
+#define IMM32  arch_m88k_get_imm(cpu, instr, 32, I_SEXT, bb)
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////

@@ -1,10 +1,5 @@
 #include "cpu_generic.h"
 
-//XXX put into cpu_t
-uint32_t reg_size;
-bool is_little_endian;
-bool has_special_r0;
-
 //////////////////////////////////////////////////////////////////////
 
 #define SWAP16(x)		(OR(SHL(AND(x, CONST(0xff00)), CONST(8)), \
@@ -22,7 +17,7 @@ bool has_special_r0;
 static Value **
 ptr_r(cpu_t *cpu)
 {
-	switch (reg_size) {
+	switch (cpu->reg_size) {
 		case 8:
 			return cpu->ptr_r8;
 		case 16:
@@ -42,14 +37,14 @@ arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
 	Value *v;
 
 	/* R0 is always 0 (on certain RISCs) */
-	if (has_special_r0 && !index)
-		return CONSTs(bits? bits : reg_size, 0);
+	if (cpu->has_special_r0 && !index)
+		return CONSTs(bits? bits : cpu->reg_size, 0);
 
 	/* get the register */
 	v = new LoadInst(ptr_r(cpu)[index], "", false, bb);
 
 	/* optionally truncate it */
-	if (bits && reg_size != bits)
+	if (bits && cpu->reg_size != bits)
 		v = TRUNC(bits, v);
 	
 	return v;
@@ -62,14 +57,14 @@ arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, Bas
 	 * if the caller cares about bit size and
 	 * the size is not the register size, we'll zext or sext
 	 */
-	if (bits && reg_size != bits)
+	if (bits && cpu->reg_size != bits)
 		if (sext)
-			v = SEXT(reg_size, v);
+			v = SEXT(cpu->reg_size, v);
 		else
-			v = ZEXT(reg_size, v);
+			v = ZEXT(cpu->reg_size, v);
 
 	/* store value, unless it's R0 (on certain RISCs) */
-	if (!has_special_r0 || index)
+	if (!cpu->has_special_r0 || index)
 		new StoreInst(v, ptr_r(cpu)[index], bb);
 }
 
@@ -102,9 +97,9 @@ Value *
 arch_load32_aligned(cpu_t *cpu, Value *a, BasicBlock *bb) {
 	a = arch_gep32(cpu, a, bb);
 #ifdef __LITTLE_ENDIAN__
-	bool swap = !is_little_endian;
+	bool swap = !cpu->is_little_endian;
 #else
-	bool swap = is_little_endian;
+	bool swap = cpu->is_little_endian;
 #endif
 	if(swap)
 		return SWAP32(new LoadInst(a, "", false, bb));
@@ -117,9 +112,9 @@ void
 arch_store32_aligned(cpu_t *cpu, Value *v, Value *a, BasicBlock *bb) {
 	a = arch_gep32(cpu, a, bb);
 #ifdef __LITTLE_ENDIAN__
-	bool swap = !is_little_endian;
+	bool swap = !cpu->is_little_endian;
 #else
-	bool swap = is_little_endian;
+	bool swap = cpu->is_little_endian;
 #endif
 	new StoreInst(swap ? SWAP32(v) : v, a, bb);
 }
@@ -129,40 +124,40 @@ arch_store32_aligned(cpu_t *cpu, Value *v, Value *a, BasicBlock *bb) {
 //////////////////////////////////////////////////////////////////////
 
 static Value *
-arch_get_shift8(Value *addr, BasicBlock *bb)
+arch_get_shift8(cpu_t *cpu, Value *addr, BasicBlock *bb)
 {
 	Value *shift = AND(addr,CONST(3));
-	if (!is_little_endian)
+	if (!cpu->is_little_endian)
 		shift = XOR(shift, CONST(3));
 	return SHL(CONST(3), shift);
 }
 
 static Value *
-arch_get_shift16(Value *addr, BasicBlock *bb)
+arch_get_shift16(cpu_t *cpu, Value *addr, BasicBlock *bb)
 {
 	Value *shift = AND(addr,CONST(1));
-	if (!is_little_endian)
+	if (!cpu->is_little_endian)
 		shift = XOR(shift, CONST(1));
 	return SHL(CONST(4), shift);
 }
 
 Value *
 arch_load8(cpu_t *cpu, Value *addr, BasicBlock *bb) {
-	Value *shift = arch_get_shift8(addr, bb);
+	Value *shift = arch_get_shift8(cpu, addr, bb);
 	Value *val = arch_load32_aligned(cpu, AND(addr, CONST(~3ULL)), bb);
 	return TRUNC8(LSHR(val, shift));
 }
 
 Value *
 arch_load16_aligned(cpu_t *cpu, Value *addr, BasicBlock *bb) {
-	Value *shift = arch_get_shift16(addr, bb);
+	Value *shift = arch_get_shift16(cpu, addr, bb);
 	Value *val = arch_load32_aligned(cpu, AND(addr, CONST(~3ULL)), bb);
 	return TRUNC16(LSHR(val, shift));
 }
 
 void
 arch_store8(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb) {
-	Value *shift = arch_get_shift8(addr, bb);
+	Value *shift = arch_get_shift8(cpu, addr, bb);
 	addr = AND(addr, CONST(~3ULL));
 	Value *mask = XOR(SHL(CONST(255), shift),CONST(-1ULL));
 	Value *old = AND(arch_load32_aligned(cpu, addr, bb), mask);
@@ -172,7 +167,7 @@ arch_store8(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb) {
 
 void
 arch_store16(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb) {
-	Value *shift = arch_get_shift16(addr, bb);
+	Value *shift = arch_get_shift16(cpu, addr, bb);
 	addr = AND(addr, CONST(~3ULL));
 	Value *mask = XOR(SHL(CONST(65535), shift),CONST(-1ULL));
 	Value *old = AND(arch_load32_aligned(cpu, addr, bb), mask);

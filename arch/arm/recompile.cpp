@@ -69,7 +69,7 @@ static inline unsigned shift4(unsigned opcode)
 #endif
 }
 
-static inline void setsub(Value *op1, Value *op2, BasicBlock *bb)
+static inline void setsub(cpu_t *cpu, Value *op1, Value *op2, BasicBlock *bb)
 {
 	Value *v = BinaryOperator::Create(Instruction::Sub, op1, op2, "", bb);
 	Value* z = new ICmpInst(*bb, ICmpInst::ICMP_EQ, v, CONST(0));
@@ -122,7 +122,7 @@ int arch_arm_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, Bas
 			if (RD==15) {
 				BAD;
 			} else {
-				setsub(R(RN),CONST(rotate2(instr)), bb);
+				setsub(cpu, R(RN),CONST(rotate2(instr)), bb);
 			}
 			break;
 		default:

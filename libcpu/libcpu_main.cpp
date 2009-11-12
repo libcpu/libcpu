@@ -500,7 +500,7 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret)
 	int bytes;
 	addr_t new_pc1;
 	int flow_type;
-	addr_t pc = cpu->f.get_pc(cpu->reg);
+	addr_t pc = cpu->f.get_pc(cpu, cpu->reg);
 
 	BasicBlock *cur_bb, *bb_target, *bb_next;
 	cur_bb = BasicBlock::Create(_CTX(), "instruction", cpu->func_jitmain, 0);
@@ -607,7 +607,7 @@ cpu_create_function(cpu_t *cpu, const char *name)
 	return func;
 }
 
-Value *
+static Value *
 get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
 	ConstantInt* const_0 = ConstantInt::get(getType(Int32Ty), 0);
 	ConstantInt* const_index = ConstantInt::get(getType(Int32Ty), index);
@@ -618,7 +618,7 @@ get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
 	return (Value*) GetElementPtrInst::Create(s, ptr_11_indices.begin(), ptr_11_indices.end(), "", bb);
 }
 
-void
+static void
 emit_decode_reg_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb) {
 #ifdef OPT_LOCAL_REGISTERS
 	// decode struct reg and copy the registers into local variables
@@ -637,7 +637,7 @@ emit_decode_reg_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r, Value
 #endif
 }
 
-void
+static void
 emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	emit_decode_reg_helper(cpu, cpu->count_regs_i8,   8, cpu->in_ptr_r8,  cpu->ptr_r8,  bb);
@@ -656,7 +656,7 @@ emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 		cpu->f.emit_decode_reg(cpu, bb);
 }
 
-void
+static void
 spill_reg_state_helper(int count, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb)
 {
 #ifdef OPT_LOCAL_REGISTERS
@@ -667,7 +667,7 @@ spill_reg_state_helper(int count, Value **in_ptr_r, Value **ptr_r, BasicBlock *b
 #endif
 }
 
-void
+static void
 spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
 	if (cpu->f.spill_reg_state) /* cpu specific part */

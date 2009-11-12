@@ -11,9 +11,9 @@ arch_m88k_init(cpu_t *cpu)
 {
 	m88k_regfile_t *reg;
 
-	reg_size = 32;
-	is_little_endian = !!(cpu->flags_arch & CPU_M88K_IS_LE);
-	has_special_r0 = true;
+	cpu->is_little_endian = !!(cpu->flags_arch & CPU_M88K_IS_LE);
+	cpu->reg_size = 32;
+	cpu->has_special_r0 = true;
 
 	reg = (m88k_regfile_t*)malloc(sizeof(m88k_regfile_t));
 	for (int i=0; i<32; i++) {
@@ -39,7 +39,7 @@ arch_m88k_init(cpu_t *cpu)
 }
 
 static addr_t
-arch_m88k_get_pc(void *reg)
+arch_m88k_get_pc(cpu_t *, void *reg)
 {
 	return ((m88k_regfile_t*)reg)->sxip;
 }

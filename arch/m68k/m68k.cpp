@@ -5,9 +5,9 @@
 void
 arch_m68k_init(cpu_t *cpu)
 {
-	reg_size = 32;
-	is_little_endian = true;
-	has_special_r0 = false;
+	cpu->reg_size = 32;
+	cpu->is_little_endian = true;
+	cpu->has_special_r0 = false;
 
 	reg_m68k_t *reg;
 	reg = (reg_m68k_t*)malloc(sizeof(reg_m68k_t));
@@ -23,7 +23,7 @@ arch_m68k_init(cpu_t *cpu)
 }
 
 addr_t
-arch_m68k_get_pc(void *reg)
+arch_m68k_get_pc(cpu_t *, void *reg)
 {
 	return ((reg_m68k_t*)reg)->pc;
 }
