@@ -15,6 +15,10 @@ void arch_jump(BasicBlock *bb, BasicBlock *bb_target);
 Value *arch_encode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb);
 void arch_decode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb);
 
+Value *arch_bswap(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
+Value *arch_ctlz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
+Value *arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
+
 /* host functions */
 uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 
@@ -97,6 +101,36 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define STORE8(v,a) arch_store8(cpu,v, a, bb)
 #define STORE16(v,a) arch_store16(cpu,v, a, bb)
 #define STORE32(v,a) arch_store32_aligned(cpu,v, a, bb)
+
+/* byte swap */
+#define SWAP16(v) arch_bswap(cpu, 16, v, bb)
+#define SWAP32(v) arch_bswap(cpu, 32, v, bb)
+#define SWAP64(v) arch_bswap(cpu, 64, v, bb)
+
+/* bit fiddling */
+#define CTTZ(s,v) arch_cttz(cpu, s, v, bb)
+#define CTTZ8(v)  CTTZ(8,v)
+#define CTTZ16(v) CTTZ(16,v)
+#define CTTZ32(v) CTTZ(32,v)
+#define CTTZ64(v) CTTZ(64,v)
+
+#define CTLZ(s,v) arch_ctlz(cpu, s, v, bb)
+#define CTLZ8(v)  CTLZ(8,v)
+#define CTLZ16(v) CTLZ(16,v)
+#define CTLZ32(v) CTLZ(32,v)
+#define CTLZ64(v) CTLZ(64,v)
+
+#define FFS(s,v) CTTZ(s,v)
+#define FFS8(v)  FFS(8,v)
+#define FFS16(v) FFS(16,v)
+#define FFS32(v) FFS(32,v)
+#define FFS64(v) FFS(64,v)
+
+#define FFC(s,v) CTTZ(s,COM(v))
+#define FFC8(v)  FFC(8,v)
+#define FFC16(v) FFC(16,v)
+#define FFC32(v) FFC(32,v)
+#define FFC64(v) FFC(64,v)
 
 /* host */
 #define RAM32(RAM,a) RAM32BE(RAM,a)

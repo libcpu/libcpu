@@ -9,6 +9,7 @@
 #include "llvm/Function.h"
 #include "llvm/PassManager.h"
 #include "llvm/CallingConv.h"
+#include "llvm/Intrinsics.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Assembly/PrintModulePass.h"
 #include "llvm/Support/IRBuilder.h"

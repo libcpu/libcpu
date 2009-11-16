@@ -1,16 +1,6 @@
 #include "cpu_generic.h"
 
 //////////////////////////////////////////////////////////////////////
-
-#define SWAP16(x)		(OR(SHL(AND(x, CONST(0xff00)), CONST(8)), \
-							LSHR(AND(x, CONST(0x00ff)), CONST(8))))
-#define SWAP32(x)		(OR(OR(OR(										\
-						 LSHR(AND(x, CONST(0xff000000)), CONST(24)),	\
-						 LSHR(AND(x, CONST(0x00ff0000)), CONST(8))),	\
-						 SHL(AND(x, CONST(0x0000ff00)), CONST(8))), 	\
-						 SHL(AND(x, CONST(0x000000ff)), CONST(24))))
-
-//////////////////////////////////////////////////////////////////////
 // GENERIC: register access
 //////////////////////////////////////////////////////////////////////
 
@@ -197,6 +187,25 @@ arch_store16(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb) {
 	arch_store32_aligned(cpu, val, addr, bb);
 }
 
+//////////////////////////////////////////////////////////////////////
+
+Value *
+arch_bswap(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
+	Type const *ty = getIntegerType(width);
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::bswap, &ty, 1), v, "", bb);
+}
+
+Value *
+arch_ctlz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
+	Type const *ty = getIntegerType(width);
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::ctlz, &ty, 1), v, "", bb);
+}
+
+Value *
+arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
+	Type const *ty = getIntegerType(width);
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::cttz, &ty, 1), v, "", bb);
+}
 
 // branches
 
