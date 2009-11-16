@@ -2,6 +2,12 @@
 #include "tag_generic.h"
 #include "tag.h"
 
+/*
+ * TODO: on architectures with constant instruction sizes,
+ * this shouldn't waste extra tag data for every byte of
+ * code memory, but have one tag per instruction location.
+ */
+
 static void
 init_tagging(cpu_t *cpu)
 {
@@ -42,6 +48,8 @@ is_code(cpu_t *cpu, addr_t a)
 	return !!(get_tagging_type(cpu, a) & TAG_TYPE_CODE);
 }
 
+extern void disasm_instr(cpu_t *cpu, addr_t pc);
+
 static void
 tag_recursive(cpu_t *cpu, addr_t pc, int level)
 {
@@ -57,7 +65,7 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 
 #ifdef VERBOSE
 		for (int i=0; i<level; i++) printf(" ");
-//		disasm_instr(cpu, pc);
+		disasm_instr(cpu, pc);
 #endif
 
 		or_tagging_type(cpu, pc, TAG_TYPE_CODE);
@@ -67,21 +75,25 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 		switch (flow_type) {
 			case FLOW_TYPE_ERR:
 			case FLOW_TYPE_RET:
+				or_tagging_type(cpu, pc, TAG_TYPE_RET);
 				/* execution ends here, the follwing location is not reached */
 				return;
 			case FLOW_TYPE_JUMP:
 				/* continue tagging at target of jump */
+				or_tagging_type(cpu, pc, TAG_TYPE_BRANCH);
 				or_tagging_type(cpu, new_pc, TAG_TYPE_BRANCH_TARGET);
 				pc = new_pc;
 				continue;
 			case FLOW_TYPE_BRANCH:
 				/* tag target of branch, then continue with next instruction */
+				or_tagging_type(cpu, pc, TAG_TYPE_BRANCH);
 				or_tagging_type(cpu, new_pc, TAG_TYPE_BRANCH_TARGET);
 				or_tagging_type(cpu, pc+bytes, TAG_TYPE_AFTER_BRANCH);
 				tag_recursive(cpu, new_pc, level+1);
 				break;
 			case FLOW_TYPE_CALL:
 				/* tag subroutine, then continue with next instruction */
+				or_tagging_type(cpu, pc, TAG_TYPE_CALL);
 				or_tagging_type(cpu, new_pc, TAG_TYPE_SUBROUTINE);
 				or_tagging_type(cpu, pc+bytes, TAG_TYPE_AFTER_CALL);
 				tag_recursive(cpu, new_pc, level+1);
