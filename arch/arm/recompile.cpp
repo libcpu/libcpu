@@ -26,7 +26,7 @@ int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
 
 	if (instr == 0xE1A0F00E) /* MOV r15, r0, r14 */
-		*flow_type = FLOW_TYPE_RET;
+		*flow_type = FLOW_TYPE_RETURN;
 //	else if (instr >> 24 < 0x0E)
 //		*flow_type = FLOW_TYPE_BRANCH;
 	else 

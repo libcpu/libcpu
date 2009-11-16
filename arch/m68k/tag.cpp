@@ -13,14 +13,14 @@ arch_m68k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		*flow_type = FLOW_TYPE_CALL;
 		*new_pc = NEW_PC_NONE;
 	} else if (bits(opcode,12,15)==6) {		/* Bcc */
-		*flow_type = FLOW_TYPE_BRANCH;
+		*flow_type = FLOW_TYPE_COND_BRANCH;
 		disp = arch_disasm_get_disp(cpu, pc, opcode);
 		*new_pc = pc+2+disp;
 	} else if (bits(opcode,12,15)==5 && bits(opcode,3,5)==1 && bits(opcode,6,7)==3) {
-		*flow_type = FLOW_TYPE_BRANCH;
+		*flow_type = FLOW_TYPE_COND_BRANCH;
 		*new_pc = pc+2+RAM16(pc+2);
 	} else if (opcode==0x4e75) {			/* RTS */
-		*flow_type = FLOW_TYPE_RET;
+		*flow_type = FLOW_TYPE_RETURN;
 	} else {
 		*flow_type = FLOW_TYPE_CONTINUE;
 	}

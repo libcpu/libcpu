@@ -41,7 +41,7 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case 0x00: //INCPU_SPECIAL
 			switch(instr & 0x3F) {
 				case 0x08: //INCPUS_JR
-					*flow_type = FLOW_TYPE_RET;
+					*flow_type = FLOW_TYPE_RETURN;
 					break;
 				case 0x01: //IN_invalid
 				case 0x05: //IN_invalid
@@ -69,7 +69,7 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 				case 0x00: //INCPUR_BLTZ
 				case 0x01: //INCPUR_BGEZ
 					*new_pc = MIPS_BRANCH_TARGET;
-					*flow_type = FLOW_TYPE_BRANCH;
+					*flow_type = FLOW_TYPE_COND_BRANCH;
 					break;
 				case 0x10: //INCPUR_BLTZAL
 				case 0x11: //INCPUR_BGEZAL
@@ -79,7 +79,7 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 				case 0x02: //INCPUR_BLTZL
 				case 0x03: //INCPUR_BGEZL
 					*new_pc = MIPS_BRANCH_TARGET;
-					*flow_type = FLOW_TYPE_BRANCH;
+					*flow_type = FLOW_TYPE_COND_BRANCH;
 					break;
 				case 0x12: //INCPUR_BLTZALL
 				case 0x13: //INCPUR_BGEZALL
@@ -112,7 +112,7 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 			}
 		case 0x02: //INCPU_J
 			*new_pc = (pc & 0xF0000000) | (GetTarget << 2);
-			*flow_type = FLOW_TYPE_BRANCH;
+			*flow_type = FLOW_TYPE_COND_BRANCH;
 		case 0x03: //INCPU_JAL
 			*new_pc = (pc & 0xF0000000) | (GetTarget << 2);
 			*flow_type = FLOW_TYPE_CALL;
@@ -120,17 +120,17 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case 0x04: //INCPU_BEQ
 			if (!RS && !RT) { // special case: B
 				*new_pc = MIPS_BRANCH_TARGET;
-				*flow_type = FLOW_TYPE_JUMP;
+				*flow_type = FLOW_TYPE_BRANCH;
 			} else {
 				*new_pc = MIPS_BRANCH_TARGET;
-				*flow_type = FLOW_TYPE_BRANCH;
+				*flow_type = FLOW_TYPE_COND_BRANCH;
 			}
 			break;
 		case 0x05: //INCPU_BNE
 		case 0x06: //INCPU_BLEZ
 		case 0x07: //INCPU_BGTZ
 			*new_pc = MIPS_BRANCH_TARGET;
-			*flow_type = FLOW_TYPE_BRANCH;
+			*flow_type = FLOW_TYPE_COND_BRANCH;
 			break;
 		case 0x10: //INCPU_COP0
 			// we don't translate any of the INCPU_COP0 branch
@@ -209,7 +209,7 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case 0x16: //INCPU_BLEZL
 		case 0x17: //INCPU_BGTZL
 			*new_pc = MIPS_BRANCH_TARGET;
-			*flow_type = FLOW_TYPE_BRANCH;
+			*flow_type = FLOW_TYPE_COND_BRANCH;
 			break;
 		case 0x12: //IN_invalid
 		case 0x13: //IN_invalid
@@ -229,10 +229,10 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 			*flow_type = FLOW_TYPE_CONTINUE;
 			break;
 	}
-	return (*flow_type == FLOW_TYPE_BRANCH ||
-			*flow_type == FLOW_TYPE_JUMP ||
+	return (*flow_type == FLOW_TYPE_COND_BRANCH ||
+			*flow_type == FLOW_TYPE_BRANCH ||
 			*flow_type == FLOW_TYPE_CALL ||
-			*flow_type == FLOW_TYPE_RET)? 8 : 4;
+			*flow_type == FLOW_TYPE_RETURN)? 8 : 4;
 }
 
 //////////////////////////////////////////////////////////////////////

@@ -1,11 +1,12 @@
 enum {
-	FLOW_TYPE_ERR,		/* instruction that we can't handle (e.g. HLT, JMP ind.) */
-	FLOW_TYPE_RET,		/* "return" (e.g. RET) */
-	FLOW_TYPE_JUMP,		/* end of execution, new code elsewhere (i.e. JMP) */
-	FLOW_TYPE_CALL,		/* new code elsewhere, will implicitly return to next instruction (i.e. CALL) */
-	FLOW_TYPE_BRANCH,	/* execution branch */
-	FLOW_TYPE_CONTINUE	/* continued execution */
+	FLOW_TYPE_ERR         = 0,	/* unknown/bad/trap - we won't reach next instr */
+	FLOW_TYPE_CALL        = 1,	/* subroutine call */
+	FLOW_TYPE_RETURN      = 2,	/* return from subroutine */
+	FLOW_TYPE_BRANCH      = 3,	/* conditional or unconditional jump/branch */
+	FLOW_TYPE_CONTINUE    = 4,	/* control will flow into the next instr */
+	FLOW_TYPE_CONDITIONAL = 128	/* FLAG: this instruction is conditional */
 };
+#define FLOW_TYPE_COND_BRANCH (FLOW_TYPE_BRANCH|FLOW_TYPE_CONDITIONAL)
 
 /*
  * NEW_PC_NONE states that the destination of a call is unknown.

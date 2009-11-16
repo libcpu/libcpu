@@ -11,31 +11,17 @@ arch_6502_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 
 	switch (instraddmode[opcode].instr) {
 		case INSTR_BRK:
-#ifdef WARNINGS
-			printf("Warning: BRK at $%04X\n", pc);
-#endif
 			*flow_type = FLOW_TYPE_ERR;
 			break;
 		case INSTR_RTS:
-			*flow_type = FLOW_TYPE_RET;
+			*flow_type = FLOW_TYPE_RETURN;
 			break;
 		case INSTR_JMP:
-			switch (instraddmode[opcode].addmode) {
-				case ADDMODE_ABS:
-					*new_pc = cpu->RAM[pc+1] | cpu->RAM[pc+2]<<8;
-					*flow_type = FLOW_TYPE_JUMP;
-					break;
-				case ADDMODE_IND:
-#ifdef WARNINGS
-					printf("Warning: JMP ($%04X) at $%04X\n", RAM[pc+1] | RAM[pc+2]<<8, pc);
-#endif
-					/* TODO: handle this, if address is in ROM */
-					*flow_type = FLOW_TYPE_ERR;
-					break;
-				default:
-					printf("Table error at %s:%d\n", __FILE__, __LINE__);
-					exit(1);
-			}
+			if (instraddmode[opcode].addmode == ADDMODE_ABS)
+				*new_pc = cpu->RAM[pc+1] | cpu->RAM[pc+2]<<8;
+			else 
+				*new_pc = NEW_PC_NONE;	/* jmp indirect */
+			*flow_type = FLOW_TYPE_BRANCH;
 			break;
 		case INSTR_JSR:
 			*new_pc = cpu->RAM[pc+1] | cpu->RAM[pc+2]<<8;
@@ -50,9 +36,11 @@ arch_6502_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case INSTR_BVC:
 		case INSTR_BVS:
 			*new_pc = pc+2 + (int8_t)cpu->RAM[pc+1];
-			*flow_type = FLOW_TYPE_BRANCH;
+			*flow_type = FLOW_TYPE_COND_BRANCH;
 			break;
 		default:
+			//XXX only known instrunctions should be FLOW_TYPE_CONTINUE,
+			//XXX all others should be FLOW_TYPE_ERR
 			*flow_type = FLOW_TYPE_CONTINUE;
 			break;
 	}

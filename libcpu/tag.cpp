@@ -72,24 +72,19 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 
 		bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc);
 		
-		switch (flow_type) {
+		switch (flow_type & ~FLOW_TYPE_CONDITIONAL) {
 			case FLOW_TYPE_ERR:
-			case FLOW_TYPE_RET:
+			case FLOW_TYPE_RETURN:
 				or_tagging_type(cpu, pc, TAG_TYPE_RET);
 				/* execution ends here, the follwing location is not reached */
 				return;
-			case FLOW_TYPE_JUMP:
-				/* continue tagging at target of jump */
-				or_tagging_type(cpu, pc, TAG_TYPE_BRANCH);
-				or_tagging_type(cpu, new_pc, TAG_TYPE_BRANCH_TARGET);
-				pc = new_pc;
-				continue;
 			case FLOW_TYPE_BRANCH:
-				/* tag target of branch, then continue with next instruction */
 				or_tagging_type(cpu, pc, TAG_TYPE_BRANCH);
 				or_tagging_type(cpu, new_pc, TAG_TYPE_BRANCH_TARGET);
-				or_tagging_type(cpu, pc+bytes, TAG_TYPE_AFTER_BRANCH);
 				tag_recursive(cpu, new_pc, level+1);
+				if (!(flow_type & FLOW_TYPE_CONDITIONAL))
+					return;
+				or_tagging_type(cpu, pc+bytes, TAG_TYPE_AFTER_BRANCH);
 				break;
 			case FLOW_TYPE_CALL:
 				/* tag subroutine, then continue with next instruction */

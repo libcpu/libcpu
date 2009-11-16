@@ -319,13 +319,13 @@ printf("%s:%d\n", __func__, __LINE__);
 	bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc);
 
 	/* Create two "return" BBs for the branch targets */
-	if (flow_type == FLOW_TYPE_BRANCH) {
+	if (flow_type == FLOW_TYPE_COND_BRANCH) {
 printf("%s:%d\n", __func__, __LINE__);
 		bb_next = create_singlestep_return_basicblock(cpu, pc+bytes, bb_ret);
 		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
 	}
 	/* Create one "return" BB for the jump target */
-	if (flow_type == FLOW_TYPE_JUMP || flow_type == FLOW_TYPE_CALL)
+	if (flow_type == FLOW_TYPE_BRANCH || flow_type == FLOW_TYPE_CALL)
 		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
 #if 0
 	/* If it's a call, "store PC" (will return anyway) */

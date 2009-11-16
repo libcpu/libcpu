@@ -27,7 +27,7 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 
 		case M88K_OPC_JMP:
 		case M88K_OPC_JMP_N:
-			*flow_type = FLOW_TYPE_RET;
+			*flow_type = FLOW_TYPE_RETURN;
 			break;
 
 		case M88K_OPC_JSR: // XXX is this implemented yet?
@@ -38,7 +38,7 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 		case M88K_OPC_BR:
 		case M88K_OPC_BR_N:
 			*new_pc = pc + (instr.branch26() << 2);
-			*flow_type = FLOW_TYPE_JUMP;
+			*flow_type = FLOW_TYPE_BRANCH;
 			break;
 
 		case M88K_OPC_BSR:
@@ -52,7 +52,7 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 		case M88K_OPC_BB1:
 		case M88K_OPC_BB1_N:
 			*new_pc = pc + (instr.branch16() << 2);
-			*flow_type = FLOW_TYPE_BRANCH;
+			*flow_type = FLOW_TYPE_COND_BRANCH;
 			break;
 
 		case M88K_OPC_BCND:
@@ -64,11 +64,11 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 					break;
 
 				case M88K_BCND_ALWAYS:
-					*flow_type = FLOW_TYPE_JUMP;
+					*flow_type = FLOW_TYPE_BRANCH;
 					break;
 
 				default:
-					*flow_type = FLOW_TYPE_BRANCH;
+					*flow_type = FLOW_TYPE_COND_BRANCH;
 					break;
 			}
 			break;

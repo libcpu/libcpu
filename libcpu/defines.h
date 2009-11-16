@@ -5,7 +5,6 @@
 //#define BACK_TO_RECOMPILER		/* jump back to recompiler if an unknown entry is discovered */
 //#define SHOW_RECOMPILING		/* print messages when jumping into recompiler */
 #define NICE_C				/* add source assembly as comments into output C file */
-//#define WARNINGS				/* log warnings to stdout */
 #define JUST_RECOMPILE			/* don't run */
 //	#define INVOKE_CC
 #define NO_CLRHOME				/* don't print CLR/HOME ANSI sequences to make debug output more readable */
