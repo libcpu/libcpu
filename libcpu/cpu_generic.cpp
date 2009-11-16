@@ -68,6 +68,28 @@ arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, Bas
 		new StoreInst(v, ptr_r(cpu)[index], bb);
 }
 
+//XXX TODO
+// The guest CPU can be little endian or big endian, so we need both
+// host mode access routines as well as IR generators that deal with
+// both modes. In practice, we need two sets of functions, one that
+// deals with host native endianness, and one that deals with the other
+// endianness; and interface functions that dispatch calls to endianness
+// functions depending on the host endianness.
+// i.e. there should be RAM32NE() which reads a 32 bit address from RAM,
+// using the "Native Endianness" of the host, and RAM32SW() which does
+// a swapped read. RAM32BE() and RAM32LE() should choose either of
+// RAM32NE() and RAM32SW() depending on the endianness of the host.
+//
+// Swapped endianness can be implemented in different ways: by swapping
+// every non-byte memory read and write, or by keeping aligned words
+// in the host's native endianness, not swapping aligned reads and
+// writes, and correcting unaligned accesses. (This makes more sense
+// on guest CPUs that only allow aligned memory access.)
+// The client should be able to specify a specific strategy, but each
+// CPU frontend should default to the typically best strategy. Functions
+// like RAM32SW() will have to respect the setting, so that all memory
+// access is consistent with the strategy.
+
 //////////////////////////////////////////////////////////////////////
 // GENERIC: host memory access
 //////////////////////////////////////////////////////////////////////
