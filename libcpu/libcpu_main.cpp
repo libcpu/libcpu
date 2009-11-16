@@ -1,7 +1,7 @@
 #define OPT_LOCAL_REGISTERS
 /*
  libcpu
- (C)2007-2009 Michael Steil
+ (C)2007-2009 Michael Steil et al.
  */
 
 #include <stdio.h>
@@ -13,23 +13,9 @@
 #include "tag_generic.h"
 #include "disasm.h"
 #include "arch.h"
+#include "tag.h"
 
 using namespace llvm;
-//XXX put into cpu_t
-
-typedef enum {				/* bitfield! */
-	TYPE_UNKNOWN     = 0,	/* unused or data */
-	TYPE_CODE        = 1,	/* identified as code */
-	TYPE_CODE_TARGET = 2,	/* static entry address */
-	TYPE_AFTER_CALL  = 4,	/* dynamic entry address, will require handling in dynamic entry table */
-	TYPE_AFTER_BRANCH= 8,	/* start of basic block, because after branch */
-	TYPE_ENTRY       = 16,	/* start of basic block, because after branch */
-	TYPE_SUBROUTINE  = 32,	/* CALLs point there */
-#ifdef RET_OPTIMIZATION
-	TYPE_CALL        = 64,	/* this instruction is a CALL */
-	TYPE_SAME_ENTRY  = 128	/* all instructions tagged with this at a time are at the same stack level */
-#endif
-};
 
 #include "arch/6502/libcpu_6502.h"
 #include "arch/m68k/libcpu_m68k.h"
@@ -139,101 +125,6 @@ void disasm_instr(cpu_t *cpu, addr_t pc) {
 	}
 #endif
 	printf("%-23s\n", disassembly_line);
-}
-
-//////////////////////////////////////////////////////////////////////
-// tagging
-//////////////////////////////////////////////////////////////////////
-static void
-init_tagging(cpu_t *cpu)
-{
-	addr_t tagging_size, i;
-
-	tagging_size = cpu->code_end - cpu->code_start;
-	cpu->tagging_type = (tagging_type_t*)malloc(tagging_size);
-	for (i = 0; i < tagging_size; i++)
-		cpu->tagging_type[i] = TYPE_UNKNOWN;
-}
-
-static tagging_type_t
-get_tagging_type(cpu_t *cpu, addr_t a) {
-	return cpu->tagging_type[a - cpu->code_start];
-}
-
-static void
-or_tagging_type(cpu_t *cpu, addr_t a, tagging_type_t t) {
-	if (a >= cpu->code_start && a <= cpu->code_end)
-		cpu->tagging_type[a - cpu->code_start] |= t;
-}
-
-static void
-tag_recursive(cpu_t *cpu, addr_t pc, int level) {
-	int bytes;
-	int flow_type;
-	addr_t new_pc;
-
-	or_tagging_type(cpu, pc, TYPE_CODE_TARGET); /* someone branches here */
-
-	for(;;) {
-		if ((pc < cpu->code_start) || (pc >= cpu->code_end))
-			return;
-
-		if (get_tagging_type(cpu, pc) & TYPE_CODE)	/* we have already been here */
-			return;
-
-#ifdef VERBOSE
-		for (int i=0; i<level; i++) printf(" ");
-		disasm_instr(cpu, pc);
-#endif
-
-		or_tagging_type(cpu, pc, TYPE_CODE);
-
-		bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc);
-		
-		switch (flow_type) {
-			case FLOW_TYPE_ERR:
-			case FLOW_TYPE_RET:
-				return;
-			case FLOW_TYPE_JUMP:
-				tag_recursive(cpu, new_pc, level+1);
-				return;
-			case FLOW_TYPE_CALL:
-#ifdef RET_OPTIMIZATION
-				or_tagging_type(cpu, pc, TYPE_CALL);
-#endif
-				or_tagging_type(cpu, pc+bytes, TYPE_AFTER_CALL); /* next instruction needs a label */
-				if (new_pc != NEW_PC_NONE) {
-					//or_tagging_type(cpu, new_pc, TYPE_SUBROUTINE);
-					tag_recursive(cpu, new_pc, level+1);
-				}
-				break;
-			case FLOW_TYPE_BRANCH:
-				tag_recursive(cpu, new_pc, level+1);
-				or_tagging_type(cpu, pc+bytes, TYPE_AFTER_BRANCH); /* next instruction needs a label */
-				break;
-			case FLOW_TYPE_CONTINUE:
-				break; /* continue with next instruction */
-		}
-		pc += bytes;
-	}
-}
-
-void
-cpu_tag(cpu_t *cpu, addr_t pc) {
-	/* for singlestep, we don't need this */
-	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP)
-		return;
-
-	/* initialize data structure on demand */
-	if (!cpu->tagging_type)
-		init_tagging(cpu);
-
-#if VERBOSE
-	printf("starting tagging at $%02llx\n", (unsigned long long)pc);
-#endif
-
-	or_tagging_type(cpu, pc, TYPE_ENTRY); /* add dispatch entry */
-	tag_recursive(cpu, pc, 0);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -384,6 +275,26 @@ create_basicblock(addr_t addr, Function *f) {
 	return BasicBlock::Create(_CTX(), label, f, 0);
 }
 
+static bool
+is_start_of_basicblock(cpu_t *cpu, addr_t a)
+{
+	return !!(get_tagging_type(cpu, a) &
+		(TAG_TYPE_BRANCH_TARGET |	/* someone jumps/branches here */
+		 TAG_TYPE_SUBROUTINE |		/* someone calls this */
+		 TAG_TYPE_AFTER_CALL |		/* instruction after a call */
+		 TAG_TYPE_AFTER_BRANCH |	/* instruction after a branch */
+		 TAG_TYPE_ENTRY));			/* client wants to enter guest code here */
+}
+
+static bool
+needs_dispatch_entry(cpu_t *cpu, addr_t a)
+{
+	return !!(get_tagging_type(cpu, a) &
+		(TAG_TYPE_ENTRY |			/* client wants to enter guest code here */
+		 TAG_TYPE_AFTER_CALL));		/* instruction after a call */
+}
+
+
 static BasicBlock *
 cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 {
@@ -393,7 +304,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 	pc = cpu->code_start;
 	while (pc<cpu->code_end) {
 		//printf("%04X: %d\n", pc, get_tagging_type(cpu, pc));
-		if (get_tagging_type(cpu, pc) & (TYPE_CODE_TARGET|TYPE_ENTRY|TYPE_AFTER_CALL|TYPE_AFTER_BRANCH)) {
+		if (is_start_of_basicblock(cpu, pc)) {
 			create_basicblock(pc, cpu->func_jitmain);
 			bbs++;
 		}
@@ -408,7 +319,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 	SwitchInst* sw = SwitchInst::Create(v_pc, bb_ret, bbs /*XXX wrong!*/, bb_dispatch);
 
 	for (pc = cpu->code_start; pc<cpu->code_end; pc++) {
-		if (get_tagging_type(cpu, pc) & (TYPE_ENTRY|TYPE_AFTER_CALL)) {
+		if (needs_dispatch_entry(cpu, pc)) {
 			printf("info: adding case: %llx\n", pc);
 			ConstantInt* c = ConstantInt::get(getIntegerType(cpu->pc_width), pc);
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc);
@@ -454,9 +365,7 @@ printf("basicblock: %04llx\n", (unsigned long long)pc);
 
 			last_pc = pc;
 			pc += bytes;
-		} while ((pc<cpu->code_end) &&
-			 (get_tagging_type(cpu, pc) & TYPE_CODE) &&
-			 !(get_tagging_type(cpu, pc) & (TYPE_CODE_TARGET|TYPE_ENTRY|TYPE_AFTER_CALL|TYPE_AFTER_BRANCH)));
+		} while (is_code(cpu, pc) && !(is_start_of_basicblock(cpu, pc)));
 		// link with next basic block if there isn't a control flow instr. already
 		if (flow_type == FLOW_TYPE_CONTINUE) {
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc);
