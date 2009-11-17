@@ -57,6 +57,9 @@
 #define M88K_BRFMT_OFF_SHIFT   0    // Br/Bsr
 #define M88K_BRFMT_OFF_MASK    0x3ffffff
 
+#define M88K_CFMT_CR_SHIFT     5
+#define M88K_CFMT_CR_MASK      0x1f
+
 class m88k_insn {
 	uint32_t m_insn;
 
@@ -66,12 +69,12 @@ private:
 		m88k_opcode_t  opcode;
 	};
 
-    static insn_desc const desc_major[64];
-    static insn_desc const desc_cfmt[64];
-    static insn_desc const desc_ext1[64];
-    static insn_desc const desc_ext2[8][64];
-    static insn_desc const desc_sfu1[64];
-    //static insn_desc const desc_sfu2[64]; Vectorial Engine nyi
+	static insn_desc const desc_major[64];
+	static insn_desc const desc_cfmt[64];
+	static insn_desc const desc_ext1[64];
+	static insn_desc const desc_ext2[8][64];
+	static insn_desc const desc_sfu1[64];
+	static insn_desc const desc_sfu2[64];
 
 public:
 	m88k_insn (uint32_t insn)
@@ -80,59 +83,82 @@ public:
 	}
 
 public:
-	inline m88k_opcode_t opcode () const
+	inline m88k_opcode_t opcode() const
 	{
-		insn_desc const *d = desc ();
-		if (d != NULL)
+		insn_desc const *d = desc();
+		if (d != NULL) {
+			if (d->opcode == M88K_OPC_DIVU && d->format == M88K_TFMT_REG) {
+				if (m_insn & 0x100)
+					return M88K_OPC_DIVU_D;
+			} else if (d->opcode == M88K_OPC_MULU && d->format == M88K_TFMT_REG) {
+				if (m_insn & 0x200)
+					return M88K_OPC_MULS;
+				if (m_insn & 0x100)
+					return M88K_OPC_MULU_D;
+			} else if(d->opcode == M88K_OPC_RTE) {
+				switch(m_insn & 3) {
+					case 0: return M88K_OPC_RTE;
+					case 1: return M88K_OPC_ILLOP1;
+					case 2: return M88K_OPC_ILLOP2;
+					case 3: return M88K_OPC_ILLOP3;
+				}
+			} else if(d->opcode == M88K_OPC_FCMP) {
+				if(m_insn & 0x20)
+					return M88K_OPC_FCMPU;
+			}
 			return d->opcode;
-		else
+		} else
 			return M88K_OPC_ILLEGAL;
 	}
 
-	inline m88k_insnfmt_t format () const
+	inline m88k_insnfmt_t format() const
 	{
-		insn_desc const *d = desc ();
-		if (d != NULL)
-			return d->format;
-		else
+		insn_desc const *d = desc();
+		if (d != NULL) {
+			m88k_insnfmt_t fmt = d->format;
+			if (is_load_or_store(d->opcode) && (m_insn & 0x200) != 0) {
+				switch (fmt) {
+					case M88K_TFMT_REG:
+						fmt = M88K_TFMT_REGS;
+						break;
+					case M88K_TFMT_XREG:
+						fmt = M88K_TFMT_XREGS;
+						break;
+				}
+			}
+			return fmt;
+		} else {
 			return M88K_FMT_NONE;
-	}
-
-	inline insn_desc const *desc () const
-	{
-		insn_desc const *desc = &desc_major[major_opcode ()];
-
-		switch (desc->opcode) {
-			case M88K_POPC_BFMT:
-				desc = &desc_cfmt[sub_opcode_1 ()];
-				break;
-
-			case M88K_POPC_EXT1:
-				desc = &desc_ext1[sub_opcode_1 ()];
-				break;
-
-			case M88K_POPC_EXT2:
-				desc = &desc_ext2[sub_opcode_0 () >> 8][sub_opcode_1 ()];
-				break;
-
-			case M88K_POPC_SFU1:
-				desc = &desc_sfu1[sub_opcode_1 ()];
-				break;
-
-			case M88K_POPC_SFU2:
-				desc = NULL;
-				break;
-
-      default:
-        break;
 		}
-
-		if (desc != NULL && desc->opcode == M88K_OPC_ILLEGAL)
-			desc = NULL;
-
-		return (desc);
 	}
 
+	inline bool has_usr() const
+	{
+		if (is_load_or_store(opcode())) {
+			switch(format()) {
+				case M88K_IFMT_MEM:
+				case M88K_IFMT_XMEM:
+					return (false);
+				default:
+					return (true);
+			}
+		}
+		return (false);
+	}
+
+	inline bool has_wt() const
+	{
+		if (is_store(opcode())) {
+			switch(format()) {
+				case M88K_IFMT_MEM:
+				case M88K_IFMT_XMEM:
+					return (false);
+				default:
+					return (true);
+			}
+		}
+		return (false);
+	}
 	inline bool is_branch() const
 	{
 		switch (opcode()) {
@@ -179,7 +205,7 @@ public:
 			case M88K_OPC_ADDU:
 			case M88K_OPC_SUB:
 			case M88K_OPC_SUBU:
-				return (true);
+				return (format() != M88K_IFMT_REG);
 			default:
 				return (false);
 		}
@@ -251,29 +277,72 @@ public: // Floating
 	// SDD/SDS/DSS/DSD/DDS
 	inline uint32_t float_format() const
 	{
-		return (t2() | (t1() << 1) | (td () << 2));
+		return (td() | (t1() << 2) | (t2() << 4));
 	}
 
-	// Is using XFR register?
-	inline bool is_xfr() const
+	// using XFR register?
+	inline bool use_xfr() const
 	{
-		return ((m_insn & 0x8000) != 0);
+		return ((m_insn & 0x8200) != 0);
 	}
 
-private:
+	inline uint32_t is_float_triadic() const
+	{
+		switch(opcode()) {
+			case M88K_OPC_FCVT:
+			case M88K_OPC_FLT:
+			case M88K_OPC_FSQRT:
+			case M88K_OPC_INT:
+			case M88K_OPC_NINT:
+			case M88K_OPC_TRNC:
+				return false;
+			default:
+				return true;
+		}
+	}
+
+public: // Control Register
+    inline uint32_t cr() const
+    {
+        return ((m_insn >> M88K_CFMT_CR_SHIFT) & M88K_CFMT_CR_MASK);
+    }
+
+	inline bool is_float_cr() const
+	{
+		return ((sub_opcode_1() & 2) != 0);
+	}
+
+public: // Load/Store
+	inline bool usr() const
+	{
+		return ((m_insn & 0x100) != 0);
+	}
+
+	inline bool wt() const
+	{
+		return ((m_insn & 0x80) != 0);
+	}
+
+public:
 	inline uint32_t td() const
 	{
-		return ((m_insn >> 5) & 1);
+		switch(opcode()) {
+			case M88K_OPC_FCMP:
+			case M88K_OPC_FCMPU:
+				return 0;
+			default:
+				return ((m_insn >> 5) & 3);
+		}
 	}
 
 	inline uint32_t t1() const
 	{
-		return ((m_insn >> 9) & 1);
+		return ((m_insn >> 9) & 3);
 	}
 
 	inline uint32_t t2() const
 	{
-		return ((m_insn >> 5) & 1);
+		return ((m_insn >> 7) & 3);
 	}
 
 private:
@@ -291,6 +360,105 @@ private:
 	{
 		return ((m_insn >> M88K_BFMT_MINOPC_SHIFT) & M88K_BFMT_MINOPC_MASK);
 	}
+
+public:
+	static inline bool is_load(m88k_opcode_t opc)
+	{
+		switch(opc) {
+			case M88K_OPC_LD_B:
+			case M88K_OPC_LD_BU:
+			case M88K_OPC_LD_H:
+			case M88K_OPC_LD_HU:
+			case M88K_OPC_LD:
+			case M88K_OPC_LD_D:
+			case M88K_OPC_LD_X:
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	static inline bool is_store(m88k_opcode_t opc)
+	{
+		switch(opc) {
+			case M88K_OPC_ST_B:
+			case M88K_OPC_ST_H:
+			case M88K_OPC_ST:
+			case M88K_OPC_ST_D:
+			case M88K_OPC_ST_X:
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	static inline bool is_xmem(m88k_opcode_t opc)
+	{
+		switch(opc) {
+			case M88K_OPC_XMEM:
+			case M88K_OPC_XMEM_BU:
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	static inline bool is_load_or_store(m88k_opcode_t opc)
+	{
+		return (is_load(opc) || is_store(opc) || is_xmem(opc));
+	}
+
+public:
+	inline bool is_sfu1() const
+	{
+		insn_desc const *desc = &desc_major[major_opcode()];
+		return (desc->opcode == M88K_POPC_SFU1);
+	}
+
+	inline bool is_sfu2() const
+	{
+		insn_desc const *desc = &desc_major[major_opcode()];
+		return (desc->opcode == M88K_POPC_SFU1);
+	}
+
+private:
+	inline insn_desc const *desc() const
+	{
+		insn_desc const *desc = &desc_major[major_opcode()];
+
+		switch (desc->opcode) {
+			case M88K_POPC_BFMT:
+				desc = &desc_cfmt[sub_opcode_1()];
+				break;
+
+			case M88K_POPC_EXT1:
+				desc = &desc_ext1[sub_opcode_1()];
+				break;
+
+			case M88K_POPC_EXT2:
+				desc = &desc_ext2[sub_opcode_0() >> 8][sub_opcode_1()];
+				break;
+
+			case M88K_POPC_SFU1:
+				desc = &desc_sfu1[sub_opcode_1()];
+				break;
+
+			case M88K_POPC_SFU2:
+				desc = &desc_sfu2[sub_opcode_1()];
+				break;
+
+			default:
+				break;
+		}
+
+		if (desc != NULL && desc->opcode == M88K_OPC_ILLEGAL)
+			desc = NULL;
+
+		return (desc);
+	}
+
+public:
+	inline operator uint32_t() const { return m_insn; }
 };
 
 #endif  // !__m88k_insn_h

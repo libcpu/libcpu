@@ -33,13 +33,24 @@ static char const * const m88k_insn_formats[] = {
 	"$C, $r1, $p",     // M88K_BRFMT_COND
 	"$b, $r1, $p",     // M88K_BRFMT_BIT
 	"$rd, $r1, $r2",   // M88K_TFMT_REG
-	"$xd, $x1, $x2",   // M88K_TFMT_XREG
+	"$xd, $r1, $r2",   // M88K_TFMT_XREG
 	"$rd, $r1[$r2]",   // M88K_TFMT_REGS
+	"$xd, $r1[$r2]",   // M88K_TFMT_XREGS
+	"$xd, $x1, $x2",   // M88K_TFMT_XFR
+	"$rd, $x2",        // M88K_TFMT_REGX
 	"$rd, $r1, $w<$s>",// M88K_BFMT_REG
 	"$rd, $r1, $i",    // M88K_BFMT_TST
-	"$rd, $c1",        // M88K_CFMT_REG
-	"$cd, $r1"         // M88K_CFMT_GER
+	"$rd, $c",         // M88K_CFMT_REG
+	"$r1, $c",         // M88K_CFMT_GER
+	"$rd, $r1, $c"     // M88K_CFMT_REG2
 };
+
+static char const *m88k_insn_2args_format = "$rd, $r2";
+static char const *m88k_insn_tbnd_args_format = "$r1, $r2";
+static char const *m88k_insn_tbnd_iargs_format = "$r1, $i";
+static char const *m88k_insn_x2args_format = "$xd, $x2";
+static char const *m88k_insn_xrargs_format = "$xd, $r2";
+static char const *m88k_insn_jmp_format = "$r2";
 
 static char const * const m88k_bcmp_values[] = {
 	NULL, NULL, "eq", "ne", "gt", "le", "lt", "ge",
@@ -66,9 +77,11 @@ static char const * const m88k_insn_mnemonics[] = {
 
 	"muls",
 	"mulu",
+	"mulu.d",
 
 	"divs",
 	"divu",
+	"divu.d",
 
 	"mask",
 	"mask.u",
@@ -129,13 +142,18 @@ static char const * const m88k_insn_mnemonics[] = {
 	"bcnd",
 	"bcnd.n",
 
-	"tbnd",
 	"tb0",
 	"tb1",
+	"tbnd",
+	"tcnd",
 
 	"ldcr",
 	"stcr",
+	"xcr",
 
+	"illop1",
+	"illop2",
+	"illop3",
 	"rte",
 
 	/* FP Opcodes (SFU1) */
@@ -156,7 +174,24 @@ static char const * const m88k_insn_mnemonics[] = {
 	"fsqrt",
 
 	"fldcr",
-	"fstcr"
+	"fstcr",
+	"fxcr",
+
+	/* Vectorial Opcodes */
+	"padd",
+
+	"pcmp",
+
+	"pmul",
+
+	"ppack",
+
+	"prot",
+
+	"psub",
+
+	"punpk",
+	NULL
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -194,6 +229,69 @@ static int m88k_disassemble(strbuf_t *strbuf, m88k_address_t pc,
 				break;
 		}
 	}
+	if (insn.opcode() == M88K_OPC_ILLEGAL)
+		return (0);
+
+	if (insn.has_usr() && insn.usr()) {
+		if (strbuf_append(strbuf, ".usr"))
+			return (-1);
+	}
+	if (insn.has_wt() && insn.wt()) {
+		if (strbuf_append(strbuf, ".wt"))
+			return (-1);
+	}
+	if (insn.is_sfu1()) {
+		static char const sizes[] = { 's', 'd', 'x', '?' };
+		if (strbuf_append_char(strbuf, '.'))
+			return (-1);
+		if (insn.opcode() != M88K_OPC_MOV) {
+			if (strbuf_append_char(strbuf, sizes[insn.td()]))
+				return (-1);
+			if (insn.is_float_triadic()) {
+				if (strbuf_append_char(strbuf, sizes[insn.t1()]))
+					return (-1);
+			} else if (insn.format() != M88K_TFMT_REGX) {
+				if (insn.use_xfr()) {
+					if (insn.opcode() == M88K_OPC_FLT)
+						format = m88k_insn_xrargs_format;
+					else
+						format = m88k_insn_x2args_format;
+				} else {
+					format = m88k_insn_2args_format;
+				}
+			}
+		} else if (insn.format() == M88K_TFMT_XREG) {
+			format = m88k_insn_xrargs_format;
+		} else if (insn.format() == M88K_TFMT_REGX) {
+			if (insn & 0x200)
+				format = m88k_insn_x2args_format;
+		}
+
+		if (strbuf_append_char(strbuf, sizes[insn.t2()]))
+			return (-1);
+	}
+
+	switch (insn.opcode()) {
+		case M88K_OPC_JMP:
+		case M88K_OPC_JMP_N:
+			format = m88k_insn_jmp_format;
+			break;
+
+		case M88K_OPC_FF0:
+		case M88K_OPC_FF1:
+			format = m88k_insn_2args_format;
+			break;
+
+		case M88K_OPC_TBND:
+			if (insn.format() == M88K_TFMT_REG)
+				format = m88k_insn_tbnd_args_format;
+			else
+				format = m88k_insn_tbnd_iargs_format;
+			break;
+
+		default:
+			break;
+	}
 
 	if (format == NULL)
 		return (0);
@@ -206,6 +304,9 @@ static int m88k_disassemble(strbuf_t *strbuf, m88k_address_t pc,
 			format++;
 			switch (*format++) {
 				case 'c':
+					if (strbuf_append_format(strbuf, "%scr%u", insn.is_float_cr() ? "f" : "", insn.cr()))
+						return (-1);
+                    break;
 				case 'x':
 				case 'r':
 					reg_char = format[-1];
@@ -233,7 +334,7 @@ static int m88k_disassemble(strbuf_t *strbuf, m88k_address_t pc,
 					break;
 
 				case 'i':
-					if (strbuf_append_format(strbuf, "%#x", insn.immediate()))
+					if (strbuf_append_format(strbuf, "%#x", (uint16_t)insn.immediate()))
 						return (-1);
 					break;
 

@@ -1,3 +1,4 @@
+#include "libcpu.h"
 #include "m88k_insn.h"
 
 m88k_insn::insn_desc const m88k_insn::desc_major[64] =
@@ -88,8 +89,8 @@ m88k_insn::insn_desc const m88k_insn::desc_cfmt[64] =
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0f [illegal]
     { M88K_CFMT_REG,   M88K_OPC_LDCR    }, // 10 ldcr
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 11 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 12 [illegal]
-    { M88K_CFMT_REG,   M88K_OPC_FLDCR   }, // 13 fldcr
+    { M88K_CFMT_REG,   M88K_OPC_FLDCR   }, // 12 fldcr
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 13 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 14 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 15 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 16 [illegal]
@@ -104,7 +105,7 @@ m88k_insn::insn_desc const m88k_insn::desc_cfmt[64] =
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1f [illegal]
     { M88K_CFMT_GER,   M88K_OPC_STCR    }, // 20 stcr
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 21 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 22 [illegal]
+    { M88K_CFMT_GER,   M88K_OPC_FSTCR   }, // 22 fstcr
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 23 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 24 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 25 [illegal]
@@ -118,9 +119,9 @@ m88k_insn::insn_desc const m88k_insn::desc_cfmt[64] =
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2d [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2e [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2f [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 30 [illegal]
+    { M88K_CFMT_REG2,  M88K_OPC_XCR     }, // 30 xcr
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 31 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 32 [illegal]
+    { M88K_CFMT_REG2,  M88K_OPC_FXCR    }, // 32 fxcr      
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 33 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 34 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 35 [illegal]
@@ -142,13 +143,13 @@ m88k_insn::insn_desc const m88k_insn::desc_ext1[64] =
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 01 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 02 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 03 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 04 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 05 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 06 [illegal]
+    { M88K_TFMT_XREG,  M88K_OPC_LD_D    }, // 04 ld.d   xD, rS1, rS2 / rS1[rS2]
+    { M88K_TFMT_XREG,  M88K_OPC_LD      }, // 05 ld     xD, rS1, rS2 / rS1[rS2]
+    { M88K_TFMT_XREG,  M88K_OPC_LD_X    }, // 06 ld.x   xD, rS1, rS2 / rS1[rS2]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 07 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 08 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 09 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0a [illegal]
+    { M88K_TFMT_XREG,  M88K_OPC_ST_D    }, // 08 st.d   xD, rS1, rS2 / rS1[rS2]
+    { M88K_TFMT_XREG,  M88K_OPC_ST      }, // 09 st     xD, rS1, rS2 / rS1[rS2]
+    { M88K_TFMT_XREG,  M88K_OPC_ST_X    }, // 0a st.x   xD, rS1, rS2 / rS1[rS2]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0b [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0c [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0d [illegal]
@@ -180,7 +181,7 @@ m88k_insn::insn_desc const m88k_insn::desc_ext1[64] =
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 27 [illegal]
     { M88K_BFMT_REG,   M88K_OPC_MAK     }, // 28 mak    rD, rS, nn<w>
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 29 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2a [illegal]
+    { M88K_BFMT_REG,   M88K_OPC_ROT     }, // 2a rot    rD, rS, <w>
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2b [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2c [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 2d [illegal]
@@ -190,13 +191,13 @@ m88k_insn::insn_desc const m88k_insn::desc_ext1[64] =
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 31 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 32 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 33 [illegal]
-    { M88K_BFMT_TST,   M88K_OPC_TB0     }, // 34 tb0    D, rS, nnnn
+    { M88K_BRFMT_BIT,  M88K_OPC_TB0     }, // 34 tb0    D, rS, nnnn
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 35 [illegal]
-    { M88K_BFMT_TST,   M88K_OPC_TB1     }, // 36 tb1    D, rS, nnnn
+    { M88K_BRFMT_BIT,  M88K_OPC_TB1     }, // 36 tb1    D, rS, nnnn
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 37 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 38 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 39 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 3a [illegal]
+    { M88K_BRFMT_COND, M88K_OPC_TCND    }, // 3a tcnd   <cc>,rS,<16-bit>
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 3b [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 3c [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 3d [illegal]
@@ -207,14 +208,14 @@ m88k_insn::insn_desc const m88k_insn::desc_ext1[64] =
 m88k_insn::insn_desc const m88k_insn::desc_ext2[8][64] =
   {
     { // 0
-      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 00 [illegal]
-      { M88K_TFMT_REGS,  M88K_OPC_XMEM    }, // 01 xmem   rD, rS1, rS2
-      { M88K_TFMT_REG,   M88K_OPC_LD_HU   }, // 02 ld.hu  rD, rS1, rS2
-      { M88K_TFMT_REG,   M88K_OPC_LD_BU   }, // 03 ld.bu  rD, rS1, rS2
-      { M88K_TFMT_REG,   M88K_OPC_LD_D    }, // 04 ld.d   rD, rS1, rS2
-      { M88K_TFMT_REG,   M88K_OPC_LD      }, // 05 ld     rD, rS1, rS2
-      { M88K_TFMT_REG,   M88K_OPC_LD_H    }, // 06 ld.h   rD, rS1, rS2
-      { M88K_TFMT_REG,   M88K_OPC_LD_B    }, // 07 ld.b   rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_XMEM_BU }, // 00 xmem.bu rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_XMEM    }, // 01 xmem    rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_LD_HU   }, // 02 ld.hu   rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_LD_BU   }, // 03 ld.bu   rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_LD_D    }, // 04 ld.d    rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_LD      }, // 05 ld      rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_LD_H    }, // 06 ld.h    rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_LD_B    }, // 07 ld.b    rD, rS1, rS2
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 08 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 09 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0a [illegal]
@@ -288,7 +289,7 @@ m88k_insn::insn_desc const m88k_insn::desc_ext2[8][64] =
       { M88K_TFMT_REGS,  M88K_OPC_LDA_D   }, // 0c lda.d  rD, rS1[rS2]
       { M88K_TFMT_REGS,  M88K_OPC_LDA     }, // 0d lda    rD, rS1[rS2]
       { M88K_TFMT_REGS,  M88K_OPC_LDA_H   }, // 0e lda.h  rD, rS1[rS2]
-      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0f [illegal]
+      { M88K_TFMT_REGS,  M88K_OPC_LDA_X   }, // 0f lda.x  rD, rS1[rS2]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 10 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 11 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 12 [illegal]
@@ -435,7 +436,7 @@ m88k_insn::insn_desc const m88k_insn::desc_ext2[8][64] =
       { M88K_TFMT_REG,   M88K_OPC_MULU    }, // 1b mulu   rD, rS1, rS2
       { M88K_TFMT_REG,   M88K_OPC_ADD     }, // 1c add    rD, rS1, rS2
       { M88K_TFMT_REG,   M88K_OPC_SUB     }, // 1d sub    rD, rS1, rS2
-      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1e [illegal]
+      { M88K_TFMT_REG,   M88K_OPC_DIVS    }, // 1e divs   rD, rS1, rS2
       { M88K_TFMT_REG,   M88K_OPC_CMP     }, // 1f cmp    rD, rS1, rS2
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 20 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 21 [illegal]
@@ -503,9 +504,9 @@ m88k_insn::insn_desc const m88k_insn::desc_ext2[8][64] =
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1d [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1e [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1f [illegal]
-      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 20 [illegal]
+      { M88K_TFMT_REG,   M88K_OPC_CLR     }, // 20 clr    rD, rS1, rS2
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 21 [illegal]
-      { M88K_BFMT_REG,   M88K_OPC_SET     }, // 22 set    rD, rS1, rS2
+      { M88K_TFMT_REG,   M88K_OPC_SET     }, // 22 set    rD, rS1, rS2
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 23 [illegal]
       { M88K_TFMT_REG,   M88K_OPC_EXT     }, // 24 ext    rD, rS1, rS2
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 25 [illegal]
@@ -727,12 +728,12 @@ m88k_insn::insn_desc const m88k_insn::desc_ext2[8][64] =
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 37 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 38 [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 39 [illegal]
-      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 3a [illegal]
+      { M88K_TFMT_REG,   M88K_OPC_FF1     }, // 3a ff1    rD, rS1
       { M88K_TFMT_REG,   M88K_OPC_FF0     }, // 3b ff0    rD, rS1
-      { M88K_TFMT_REG,   M88K_OPC_FF1     }, // 3c ff1    rD, rS1
+      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 3c [illegal]
       { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 3d [illegal]
-      { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 3e [illegal]
-      { M88K_TFMT_REG,   M88K_OPC_RTE     }  // 3f rte
+      { M88K_TFMT_REG,   M88K_OPC_TBND    }, // 3e tbnd   rS1,rS2
+      { M88K_FMT_NONE,   M88K_OPC_RTE     }  // 3f rte
     },
   };
 
@@ -752,13 +753,13 @@ m88k_insn::insn_desc const m88k_insn::desc_sfu1[] =
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0b [illegal]
     { M88K_TFMT_REG,   M88K_OPC_FSUB    }, // 0c fsub   rD,rS1,rS2
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0d [illegal]
-    { M88K_TFMT_REG,   M88K_OPC_FCMP    }, // 0e fcmp   rD,rS1,rS2
+    { M88K_TFMT_REG,   M88K_OPC_FCMP    }, // 0e fcmp   rD,rS1,rS2 (fcmpu)
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0f [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 10 [illegal]
+    { M88K_TFMT_XREG,  M88K_OPC_MOV     }, // 10 mov    xD,rD
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 11 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 12 [illegal]
+    { M88K_TFMT_REG,   M88K_OPC_INT     }, // 12 int    rD,rS
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 13 [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 14 [illegal]
+    { M88K_TFMT_REG,   M88K_OPC_NINT    }, // 14 nint   rD,rS
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 15 [illegal]
     { M88K_TFMT_REG,   M88K_OPC_TRNC    }, // 16 trnc   rD,rS
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 17 [illegal]
@@ -768,7 +769,75 @@ m88k_insn::insn_desc const m88k_insn::desc_sfu1[] =
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1b [illegal]
     { M88K_TFMT_REG,   M88K_OPC_FDIV    }, // 1c fdiv   rD,rS1,rS2
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1d [illegal]
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1e [illegal]
+    { M88K_TFMT_REG,   M88K_OPC_FSQRT   }, // 1e fsqrt  rD,rS
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1f [illegal]
+    { M88K_TFMT_XFR,   M88K_OPC_FMUL    }, // 20 fmul   xD,xS1,xS2
+    { M88K_TFMT_XFR,   M88K_OPC_FMUL    }, // 21 fmul   xD,xS1,xS2
+    { M88K_TFMT_XFR,   M88K_OPC_FCVT    }, // 22 fcvt   xD,xS
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 23 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 24 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 25 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 26 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 27 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 28 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 29 [illegal]
+    { M88K_TFMT_XFR,   M88K_OPC_FADD    }, // 2a fadd   xD,xS1,xS2
+    { M88K_TFMT_XFR,   M88K_OPC_FADD    }, // 2b fadd   xD,xS1,xS2
+    { M88K_TFMT_XFR,   M88K_OPC_FSUB    }, // 2c fsub   xD,xS1,xS2
+    { M88K_TFMT_XFR,   M88K_OPC_FSUB    }, // 2d fsub   xD,xS1,xS2
+    { M88K_TFMT_XFR,   M88K_OPC_FCMP    }, // 2e fcmp   xD,xS1,xS2 (fcmpu)
+    { M88K_TFMT_XFR,   M88K_OPC_FCMP    }, // 2f fcmp   xD,xS1,xS2 (fcmpu)
+    { M88K_TFMT_REGX,  M88K_OPC_MOV     }, // 30 mov    rD,xD
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 31 [illegal]
+    { M88K_TFMT_REGX,  M88K_OPC_INT     }, // 32 int    rD,xS
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 33 [illegal]
+    { M88K_TFMT_REGX,  M88K_OPC_NINT    }, // 34 int    rD,xS
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 35 [illegal]
+    { M88K_TFMT_REGX,  M88K_OPC_TRNC    }, // 36 trnc   rD,xS
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 37 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 38 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 39 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 3a [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 3b [illegal]
+    { M88K_TFMT_XFR,   M88K_OPC_FDIV    }, // 3c fdiv   xD,xS1,xS2
+    { M88K_TFMT_XFR,   M88K_OPC_FDIV    }, // 3d fdiv   xD,xS1,xS2
+    { M88K_TFMT_XFR,   M88K_OPC_FSQRT   }, // 3e fsqrt  xD,xS
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }  // 3f [illegal]
+  };
+
+m88k_insn::insn_desc const m88k_insn::desc_sfu2[] =
+  {
+    { M88K_TFMT_REG,   M88K_OPC_PMUL    }, // 00 pmul   rD,rS1,rS2
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 01 [illegal]
+    { M88K_TFMT_REG,   M88K_OPC_FCVT    }, // 02 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 03 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 04 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 05 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 06 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 07 [illegal]
+    { M88K_TFMT_REG,   M88K_OPC_PADD    }, // 08 padd   rD,rS1,rS2
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 09 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0a [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0b [illegal]
+    { M88K_TFMT_REG,   M88K_OPC_PSUB    }, // 0c psub   rD,rS1,rS2
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0d [illegal]
+    { M88K_TFMT_REG,   M88K_OPC_PCMP    }, // 0e pcmp   rD,rS1,rS2
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0f [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 10 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 11 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 12 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 13 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 14 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 15 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 16 [illegal]
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 17 [illegal]
+    { M88K_TFMT_REG,   M88K_OPC_PPACK   }, // 18 ppack   rD,rS1,rS2
+    { M88K_TFMT_REG,   M88K_OPC_PPACK   }, // 18 ppack   rD,rS1,rS2
+    { M88K_TFMT_REG,   M88K_OPC_PUNPK   }, // 1a punpk   rD,rS1,rS2
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1b [illegal]
+    { M88K_BFMT_REG,   M88K_OPC_PROT    }, // 1c prot rD,rS1,<w>
+    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1d [illegal]
+    { M88K_TFMT_REG,   M88K_OPC_PROT    }, // 1e prot rD,rS1,rS2
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1f [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 20 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 21 [illegal]
@@ -802,5 +871,5 @@ m88k_insn::insn_desc const m88k_insn::desc_sfu1[] =
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 3d [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 3e [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }  // 3f [illegal]
-    
   };
+

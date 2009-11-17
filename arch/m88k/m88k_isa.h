@@ -16,9 +16,11 @@ typedef enum _m88k_opcode {
 
 	M88K_OPC_MULS,
 	M88K_OPC_MULU,
+	M88K_OPC_MULU_D,
 
 	M88K_OPC_DIVS,
 	M88K_OPC_DIVU,
+	M88K_OPC_DIVU_D,
 
 	M88K_OPC_MASK,
 	M88K_OPC_MASK_U,
@@ -79,14 +81,18 @@ typedef enum _m88k_opcode {
 	M88K_OPC_BCND,
 	M88K_OPC_BCND_N,
 
-	M88K_OPC_TCND,
-	M88K_OPC_TBND,
 	M88K_OPC_TB0,
 	M88K_OPC_TB1,
+	M88K_OPC_TBND,
+	M88K_OPC_TCND,
 
 	M88K_OPC_LDCR,
 	M88K_OPC_STCR,
+	M88K_OPC_XCR,
 
+	M88K_OPC_ILLOP1,
+	M88K_OPC_ILLOP2,
+	M88K_OPC_ILLOP3,
 	M88K_OPC_RTE,
 
 	/* FP Opcodes (SFU1) */
@@ -108,6 +114,16 @@ typedef enum _m88k_opcode {
 
 	M88K_OPC_FLDCR,
 	M88K_OPC_FSTCR,
+	M88K_OPC_FXCR,
+
+	/* Vectorial Opcodes */
+	M88K_OPC_PADD,
+	M88K_OPC_PCMP,
+	M88K_OPC_PMUL,
+	M88K_OPC_PPACK,
+	M88K_OPC_PROT,
+	M88K_OPC_PSUB,
+	M88K_OPC_PUNPK,
 
 	/* Pseudo Opcodes */
 	M88K_POPC_BFMT, /* Bit Format */
@@ -161,10 +177,14 @@ typedef enum _m88k_insnfmt {
 	M88K_TFMT_REG,
 	M88K_TFMT_XREG,
 	M88K_TFMT_REGS, /* shifted form */
+	M88K_TFMT_XREGS, /* shifted form */
+	M88K_TFMT_XFR,
+	M88K_TFMT_REGX,
 	M88K_BFMT_REG,
 	M88K_BFMT_TST,
 	M88K_CFMT_REG,
-	M88K_CFMT_GER
+	M88K_CFMT_GER,
+	M88K_CFMT_REG2
 } m88k_insnfmt_t;
 
 typedef enum _m88k_carry {
