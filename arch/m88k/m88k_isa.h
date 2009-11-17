@@ -231,8 +231,8 @@ typedef struct _m88k_grf {
 		};
 		uint32_t r[32];
 	};
-	uint32_t sxip; /* Execution IP */
 	uint32_t psr;
+	uint32_t sxip; /* Execution IP */
 } m88k_grf_t;
 
 typedef union _m88k_xrf_t {
