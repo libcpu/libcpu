@@ -192,19 +192,8 @@ typedef enum _m88k_carry {
 	M88K_CARRY_OUT	= 1,
 	M88K_CARRY_IN	= 2
 } m88k_carry_t;
-
-typedef union _m88k_fpreg { 
-	union {
-		uint32_t sng[2];
-    	uint64_t dbl;
-	} i;
-	union {
-		float  sng[2];
-		double dbl;
-	} f;
-} m88k_fpreg_t;
     
-typedef struct {
+typedef struct _m88k_grf {
 	union {
 		struct {
 			uint32_t r0;
@@ -240,51 +229,48 @@ typedef struct {
 			uint32_t r30;
 			uint32_t r31;
 		};
-		uint32_t gpr[32];
+		uint32_t r[32];
 	};
-#if the_register_map_has_been_done
-	union {
-		struct {
-			m88k_fpreg_t x0;
-			m88k_fpreg_t x1;
-			m88k_fpreg_t x2;
-			m88k_fpreg_t x3;
-			m88k_fpreg_t x4;
-			m88k_fpreg_t x5;
-			m88k_fpreg_t x6;
-			m88k_fpreg_t x7;
-			m88k_fpreg_t x8;
-			m88k_fpreg_t x9;
-			m88k_fpreg_t x10;
-			m88k_fpreg_t x11;
-			m88k_fpreg_t x12;
-			m88k_fpreg_t x13;
-			m88k_fpreg_t x14;
-			m88k_fpreg_t x15;
-			m88k_fpreg_t x16;
-			m88k_fpreg_t x17;
-			m88k_fpreg_t x18;
-			m88k_fpreg_t x19;
-			m88k_fpreg_t x20;
-			m88k_fpreg_t x21;
-			m88k_fpreg_t x22;
-			m88k_fpreg_t x23;
-			m88k_fpreg_t x24;
-			m88k_fpreg_t x25;
-			m88k_fpreg_t x26;
-			m88k_fpreg_t x27;
-			m88k_fpreg_t x28;
-			m88k_fpreg_t x29;
-			m88k_fpreg_t x30;
-			m88k_fpreg_t x31;
-		};
-		m88k_fpreg_t xfr[32];
-	};
-#endif
 	uint32_t sxip; /* Execution IP */
-	uint32_t snip; /* Next IP */
-	uint32_t sfip; /* Fetch IP */
 	uint32_t psr;
-} m88k_regfile_t;
+} m88k_grf_t;
+
+typedef union _m88k_xrf_t {
+	struct {
+		fp80_reg_t x0;
+		fp80_reg_t x1;
+		fp80_reg_t x2;
+		fp80_reg_t x3;
+		fp80_reg_t x4;
+		fp80_reg_t x5;
+		fp80_reg_t x6;
+		fp80_reg_t x7;
+		fp80_reg_t x8;
+		fp80_reg_t x9;
+		fp80_reg_t x10;
+		fp80_reg_t x11;
+		fp80_reg_t x12;
+		fp80_reg_t x13;
+		fp80_reg_t x14;
+		fp80_reg_t x15;
+		fp80_reg_t x16;
+		fp80_reg_t x17;
+		fp80_reg_t x18;
+		fp80_reg_t x19;
+		fp80_reg_t x20;
+		fp80_reg_t x21;
+		fp80_reg_t x22;
+		fp80_reg_t x23;
+		fp80_reg_t x24;
+		fp80_reg_t x25;
+		fp80_reg_t x26;
+		fp80_reg_t x27;
+		fp80_reg_t x28;
+		fp80_reg_t x29;
+		fp80_reg_t x30;
+		fp80_reg_t x31;
+	};
+	fp80_reg_t x[32];
+} m88k_xrf_t;
 
 #endif  /* !__m88k_isa_h */

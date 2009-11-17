@@ -14,8 +14,9 @@
 #define RAM_SIZE (64 * 1024 * 1024)
 #define STACK_TOP ((long long)(RAM+RAM_SIZE-4))
 
-#define PC (((m88k_regfile_t*)cpu->reg)->sxip)
-#define R (((m88k_regfile_t*)cpu->reg)->gpr)
+#define PC (((m88k_grf_t*)cpu->reg)->sxip)
+#define PSR (((m88k_grf_t*)cpu->reg)->psr)
+#define R (((m88k_grf_t*)cpu->reg)->r)
 
 static uint8_t *RAM;
 
@@ -185,15 +186,15 @@ debug_function(uint8_t *RAM, void *r)
 }
 
 static void
-dump_state(uint8_t *RAM, m88k_regfile_t *reg)
+dump_state(uint8_t *RAM, m88k_grf_t *reg)
 {
 	printf("%08llx:", (unsigned long long)reg->sxip);
 	for (int i=0; i<32; i++) {
 		if (!(i%4))
 			printf("\n");
-		printf("R%02d=%08x ", i, (unsigned int)reg->gpr[i]);
+		printf("R%02d=%08x ", i, (unsigned int)reg->r[i]);
 	}
-	int base = reg->gpr[31];
+	int base = reg->r[31];
 	for (int i=0; i<256 && i+base<65536; i+=4) {
 		if (!(i%16))
 			printf("\nSTACK: ");
@@ -303,12 +304,12 @@ main(int ac, char **av, char **ep)
 
 	cpu_tag(cpu, cpu->code_entry);
 
-	dump_state(RAM, (m88k_regfile_t*)cpu->reg);
+	dump_state(RAM, (m88k_grf_t*)cpu->reg);
 
 	for(;;) {
 		rc = cpu_run(cpu, debug_function);
 #ifdef SINGLESTEP
-		dump_state(RAM, (m88k_regfile_t*)cpu->reg);
+		dump_state(RAM, (m88k_grf_t*)cpu->reg);
 		printf ("NPC=%08x\n", PC);
 
 		cpu_flush(cpu);
@@ -320,7 +321,7 @@ main(int ac, char **av, char **ep)
 				break;
 
 			case JIT_RETURN_FUNCNOTFOUND:
-				dump_state(RAM, (m88k_regfile_t*)cpu->reg);
+				dump_state(RAM, (m88k_grf_t*)cpu->reg);
 
 				if (PC == -1)
 					goto double_break;

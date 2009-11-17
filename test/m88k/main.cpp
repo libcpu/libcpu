@@ -75,15 +75,15 @@ asm("nop");
 }
 
 static void
-dump_state(uint8_t *RAM, m88k_regfile_t *reg)
+dump_state(uint8_t *RAM, m88k_grf_t *reg)
 {
 	printf("%08llx:", (unsigned long long)reg->sxip);
 	for (int i=0; i<32; i++) {
 		if (!(i%4))
 			printf("\n");
-		printf("R%02d=%08x ", i, (unsigned int)reg->gpr[i]);
+		printf("R%02d=%08x ", i, (unsigned int)reg->r[i]);
 	}
-	int base = reg->gpr[31];
+	int base = reg->r[31];
 	for (int i=0; i<256 && i+base<65536; i+=4) {
 		if (!(i%16))
 			printf("\nSTACK: ");
@@ -223,8 +223,9 @@ main(int argc, char **argv)
 
 #define STACK ((long long)(stack+STACK_SIZE-4))
 
-#define PC (((m88k_regfile_t*)cpu->reg)->sxip)
-#define R (((m88k_regfile_t*)cpu->reg)->gpr)
+#define PC (((m88k_grf_t*)cpu->reg)->sxip)
+#define PSR (((m88k_grf_t*)cpu->reg)->psr)
+#define R (((m88k_grf_t*)cpu->reg)->r)
 
 	PC = cpu->code_entry;
 
@@ -243,7 +244,7 @@ define STRING "HelloHelloHelloHelloHelloHelloHelloHelloHelloHello\n"
 	R[6] = 0x2000;
 	strcpy((char*)&RAM[R[4]], STRING);
 #endif
-	dump_state(RAM, (m88k_regfile_t*)cpu->reg);
+	dump_state(RAM, (m88k_grf_t*)cpu->reg);
 
 #ifdef SINGLESTEP
 	for(step = 0;;) {
@@ -251,7 +252,7 @@ define STRING "HelloHelloHelloHelloHelloHelloHelloHelloHelloHello\n"
 
 		cpu_run(cpu, debug_function);
 
-		dump_state(RAM, (m88k_regfile_t*)cpu->reg);
+		dump_state(RAM, (m88k_grf_t*)cpu->reg);
 		printf ("NPC=%08x\n", PC);
 
 		if (PC == -1)
@@ -271,7 +272,7 @@ define STRING "HelloHelloHelloHelloHelloHelloHelloHelloHelloHello\n"
 			case JIT_RETURN_NOERR: /* JIT code wants us to end execution */
 				break;
 			case JIT_RETURN_FUNCNOTFOUND:
-				dump_state(RAM, (m88k_regfile_t*)cpu->reg);
+				dump_state(RAM, (m88k_grf_t*)cpu->reg);
 
 				if (PC == -1)
 					goto double_break;
@@ -311,7 +312,7 @@ double_break:
 
 	printf("done!\n");
 	
-	dump_state(RAM, (m88k_regfile_t*)cpu->reg);
+	dump_state(RAM, (m88k_grf_t*)cpu->reg);
 
 	printf("RUN2..."); fflush(stdout);
 	t3 = abs_time();

@@ -4,40 +4,43 @@
 #include "cpu_generic.h"
 #include "arch_types.h"
 
+#define ptr_PSR ptr_r32[32]
+
 Value *m88k_ptr_C;
 
 static void
 arch_m88k_init(cpu_t *cpu)
 {
-	m88k_regfile_t *reg;
+	m88k_grf_t *reg;
+	m88k_xrf_t *fp_reg;
 
 	cpu->is_little_endian = !!(cpu->flags_arch & CPU_M88K_IS_LE);
 	cpu->reg_size = 32;
 	cpu->has_special_r0 = true;
 
-	reg = (m88k_regfile_t*)malloc(sizeof(m88k_regfile_t));
-	for (int i=0; i<32; i++) {
-		reg->gpr[i] = 0;
-#if the_register_map_has_been_done
-		reg->xfr[i].i.dbl = 0;
-#endif
+	reg = (m88k_grf_t *)malloc(sizeof(m88k_grf_t));
+	fp_reg = (m88k_xrf_t *)malloc(sizeof(m88k_xrf_t));
+	for (int i = 0; i < 32; i++) {
+		reg->r[i] = 0;
+		fp_reg->x[i].i.hi = 0;
+		fp_reg->x[i].i.lo = 0;
 	}
 	reg->sxip = 0;
-	reg->snip = 0;
-	reg->sfip = 0;
+	reg->psr = 0;
+
 	cpu->reg = reg;
 	cpu->pc_width = 32;
 	cpu->count_regs_i8 = 0;
 	cpu->count_regs_i16 = 0;
-	cpu->count_regs_i32 = 32;
+	cpu->count_regs_i32 = 32 + 1;
 	cpu->count_regs_i64 = 0;
 
-	cpu->fp_reg = NULL;
+	cpu->fp_reg = fp_reg;
 	cpu->fp_reg_size = 80;
 	cpu->has_special_fr0 = true;
 	cpu->count_regs_f32 = 0;
 	cpu->count_regs_f64 = 0;
-	cpu->count_regs_f80 = 0;
+	cpu->count_regs_f80 = 32;
 	cpu->count_regs_f128 = 0;
 
 	printf("Motorola 88100 initialized.\n");
@@ -46,7 +49,7 @@ arch_m88k_init(cpu_t *cpu)
 static addr_t
 arch_m88k_get_pc(cpu_t *, void *reg)
 {
-	return ((m88k_regfile_t*)reg)->sxip;
+	return ((m88k_grf_t *)reg)->sxip;
 }
 
 #define C_SHIFT 28
@@ -73,20 +76,16 @@ arch_m88k_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 	// declare flags
 	m88k_ptr_C = new AllocaInst(getIntegerType(1), "C", bb);
 
-#if not_yet
 	// decode PSR
-	Value *flags = new LoadInst(ptr_PSR, "", false, bb);
+	Value *flags = new LoadInst(cpu->ptr_PSR, "", false, bb);
 	arch_m88k_flags_decode(flags, bb);
-#endif
 }
 
 static void
 arch_m88k_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
-#if not_yet
 	Value *flags = arch_m88k_flags_encode(bb);
-	new StoreInst(flags, ptr_PSR, false, bb);
-#endif
+	new StoreInst(flags, cpu->ptr_PSR, false, bb);
 }
 
 arch_func_t arch_func_m88k = {
