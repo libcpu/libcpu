@@ -31,9 +31,14 @@ arch_m88k_init(cpu_t *cpu)
 	cpu->count_regs_i16 = 0;
 	cpu->count_regs_i32 = 32;
 	cpu->count_regs_i64 = 0;
-	//cpu->count_regs_f32 = 0;
-	//cpu->count_regs_f64 = 32;
-	//cpu->count_regs_v64 = 32;
+
+	cpu->fp_reg = NULL;
+	cpu->fp_reg_size = 80;
+	cpu->has_special_fr0 = true;
+	cpu->count_regs_f32 = 0;
+	cpu->count_regs_f64 = 0;
+	cpu->count_regs_f80 = 0;
+	cpu->count_regs_f128 = 0;
 
 	printf("Motorola 88100 initialized.\n");
 }

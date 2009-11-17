@@ -78,7 +78,18 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define NEG(x) SUB(CONST(0), x)
 
 /* floating point */
-#define FREM(a,b) BinaryOperator::Create(Instruction::FRem, a, b, "", bb)
+#define FPCONSTs(s,v) ConstantFP::get(getFloatType(bits), v)
+#define FPCONST32(v) CONSTs(32,v)
+#define FPCONST64(v) CONSTs(64,v)
+#define FPCONST80(v) CONSTs(80,v)
+#define FPCONST128(v) CONSTs(128,v)
+
+#define FPCONST(v) FPCONSTs(cpu->reg_size,v)
+
+#define FPTRUNC(s,v) new FPTruncInst(v, getFloatType(s), "", bb)
+#define FPEXT(s,v) new FPExtInst(v, getFloatType(s), "", bb)
+
+#define FPREM(a,b) BinaryOperator::Create(Instruction::FRem, a, b, "", bb)
 
 /* condition */
 #define SELECT(c,a,b) (SelectInst::Create(c, a, b, "", bb))

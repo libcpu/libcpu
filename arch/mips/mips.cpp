@@ -8,6 +8,8 @@ arch_mips_init(cpu_t *cpu)
 	cpu->reg_size = (cpu->flags_arch & CPU_MIPS_IS_64BIT)? 64:32;
 	cpu->is_little_endian = !!(cpu->flags_arch & CPU_MIPS_IS_LE);
 	cpu->has_special_r0 = true;
+	cpu->fp_reg_size = 64;
+	cpu->has_special_fr0 = true;
 
 	if (cpu->reg_size == 64) {
 		reg_mips64_t *reg;
@@ -33,6 +35,12 @@ arch_mips_init(cpu_t *cpu)
 
 	cpu->count_regs_i8 = 0;
 	cpu->count_regs_i16 = 0;
+
+	cpu->fp_reg = NULL;
+	cpu->count_regs_f32 = 0;
+	cpu->count_regs_f64 = 0;
+	cpu->count_regs_f80 = 0;
+	cpu->count_regs_f128 = 0;
 
 	printf("%d bit MIPS initialized.\n", cpu->reg_size);
 }

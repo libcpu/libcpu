@@ -21,6 +21,23 @@ ptr_r(cpu_t *cpu)
 	}
 }
 
+static Value **
+ptr_f(cpu_t *cpu)
+{
+	switch (cpu->fp_reg_size) {
+		case 32:
+			return cpu->ptr_f32;
+		case 64:
+			return cpu->ptr_f64;
+		case 80:
+			return cpu->ptr_f80;
+		case 128:
+			return cpu->ptr_f128;
+		default:
+			return 0; /* can't happen */
+	}
+}
+
 // GET REGISTER
 Value *
 arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
@@ -36,6 +53,24 @@ arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
 	/* optionally truncate it */
 	if (bits && cpu->reg_size != bits)
 		v = TRUNC(bits, v);
+	
+	return v;
+}
+
+Value *
+arch_get_fp_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
+	Value *v;
+
+	/* R0 is always 0 (on certain RISCs) */
+	if (cpu->has_special_fr0 && !index)
+		return FPCONSTs(bits? bits : cpu->fp_reg_size, 0.0);
+
+	/* get the register */
+	v = new LoadInst(ptr_f(cpu)[index], "", false, bb);
+
+	/* optionally truncate it */
+	if (bits && cpu->fp_reg_size != bits)
+		v = FPTRUNC(bits, v);
 	
 	return v;
 }
@@ -56,6 +91,21 @@ arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, Bas
 	/* store value, unless it's R0 (on certain RISCs) */
 	if (!cpu->has_special_r0 || index)
 		new StoreInst(v, ptr_r(cpu)[index], bb);
+}
+
+void
+arch_put_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, BasicBlock *bb) {
+	/*
+	 * if the caller cares about bit size and
+	 * the size is not the register size, we'll extend.
+	 */
+	if (bits && cpu->fp_reg_size != bits) {
+		v = FPEXT(cpu->fp_reg_size, v);
+	}
+
+	/* store value, unless it's R0 (on certain RISCs) */
+	if (!cpu->has_special_fr0 || index)
+		new StoreInst(v, ptr_f(cpu)[index], bb);
 }
 
 //XXX TODO

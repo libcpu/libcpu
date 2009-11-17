@@ -8,6 +8,8 @@ arch_m68k_init(cpu_t *cpu)
 	cpu->reg_size = 32;
 	cpu->is_little_endian = true;
 	cpu->has_special_r0 = false;
+	cpu->fp_reg_size = 80;
+	cpu->has_special_fr0 = false;
 
 	reg_m68k_t *reg;
 	reg = (reg_m68k_t*)malloc(sizeof(reg_m68k_t));
@@ -20,6 +22,11 @@ arch_m68k_init(cpu_t *cpu)
 	cpu->count_regs_i16 = 0;
 	cpu->count_regs_i32 = 16;
 	cpu->count_regs_i64 = 0;
+
+	cpu->count_regs_f32 = 0;
+	cpu->count_regs_f64 = 0;
+	cpu->count_regs_f80 = 0;
+	cpu->count_regs_f128 = 0;
 }
 
 addr_t

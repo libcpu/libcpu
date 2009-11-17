@@ -343,7 +343,7 @@ printf("%s:%d\n", __func__, __LINE__);
 	return cur_bb;
 }
 
-StructType *
+static StructType *
 get_struct_reg(cpu_t *cpu) {
 	std::vector<const Type*>type_struct_reg_t_fields;
 
@@ -361,6 +361,22 @@ get_struct_reg(cpu_t *cpu) {
 	return getStructType(type_struct_reg_t_fields, /*isPacked=*/true);
 }
 
+static StructType *
+get_struct_fp_reg(cpu_t *cpu) {
+	std::vector<const Type*>type_struct_fp_reg_t_fields;
+
+	for (uint32_t i = 0; i < cpu->count_regs_f32; i++) /* 32 bit registers */
+		type_struct_fp_reg_t_fields.push_back(getFloatType(32));
+	for (uint32_t i = 0; i < cpu->count_regs_f64; i++) /* 64 bit registers */
+		type_struct_fp_reg_t_fields.push_back(getFloatType(64));
+	for (uint32_t i = 0; i < cpu->count_regs_f80; i++) /* 80 bit registers */
+		type_struct_fp_reg_t_fields.push_back(getFloatType(80));
+	for (uint32_t i = 0; i < cpu->count_regs_f128; i++) /* 128 bit registers */
+		type_struct_fp_reg_t_fields.push_back(getFloatType(128));
+
+	return getStructType(type_struct_fp_reg_t_fields, /*isPacked=*/true);
+}
+
 static Function*
 cpu_create_function(cpu_t *cpu, const char *name)
 {
@@ -372,22 +388,29 @@ cpu_create_function(cpu_t *cpu, const char *name)
 	cpu->mod->addTypeName("struct.reg_t", type_struct_reg_t);
 	// - struct reg *
 	PointerType *type_pstruct_reg_t = PointerType::get(type_struct_reg_t, 0);
+	// - struct fp_reg
+	StructType *type_struct_fp_reg_t = get_struct_fp_reg(cpu);
+	cpu->mod->addTypeName("struct.fp_reg_t", type_struct_fp_reg_t);
+	// - struct fp_reg *
+	PointerType *type_pstruct_fp_reg_t = PointerType::get(type_struct_fp_reg_t, 0);
 	// - uint8_t *
 	PointerType *type_pi8 = PointerType::get(getIntegerType(8), 0);
-	// - (*f)(uint8_t *, reg_t *) [debug_function() function pointer]
+	// - (*f)(uint8_t *, reg_t *, fp_reg_t *) [debug_function() function pointer]
 	std::vector<const Type*>type_func_callout_args;
 	type_func_callout_args.push_back(type_pi8);				/* uint8_t *RAM */
 	type_func_callout_args.push_back(type_pstruct_reg_t);	/* reg_t *reg */
+	type_func_callout_args.push_back(type_pstruct_fp_reg_t);	/* fp_reg_t *fp_reg */
 	FunctionType *type_func_callout = FunctionType::get(
 		getType(VoidTy),	/* Result */
 		type_func_callout_args,	/* Params */
 		false);		      	/* isVarArg */
 	cpu->type_pfunc_callout = PointerType::get(type_func_callout, 0);
 
-	// - (*f)(uint8_t *, reg_t *, (*)(...)) [jitmain() function pointer)
+	// - (*f)(uint8_t *, reg_t *, fp_reg_t *, (*)(...)) [jitmain() function pointer)
 	std::vector<const Type*>type_func_args;
 	type_func_args.push_back(type_pi8);				/* uint8_t *RAM */
 	type_func_args.push_back(type_pstruct_reg_t);	/* reg_t *reg */
+	type_func_args.push_back(type_pstruct_fp_reg_t);	/* fp_reg_t *fp_reg */
 	type_func_args.push_back(cpu->type_pfunc_callout);	/* (*debug)(...) */
 	FunctionType* type_func = FunctionType::get(
 		getIntegerType(32),		/* Result */
@@ -446,12 +469,36 @@ emit_decode_reg_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r, Value
 }
 
 static void
+emit_decode_fp_reg_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb) {
+#ifdef OPT_LOCAL_REGISTERS
+	// decode struct reg and copy the registers into local variables
+	for (int i = 0; i < count; i++) {
+		char reg_name[16];
+		snprintf(reg_name, sizeof(reg_name), "fpr_%u", i);
+		in_ptr_r[i] = get_struct_member_pointer(cpu->ptr_fp_reg, i, bb);
+		ptr_r[i] = new AllocaInst(getFloatType(width), 0, (width==80?128:width)>>3, reg_name, bb);
+		LoadInst* v = new LoadInst(in_ptr_r[i], "", false, (width==80?128:width)>>3, bb);
+		new StoreInst(v, ptr_r[i], false, (width==80?128:width)>>3, bb);
+	}
+#else
+	// just decode struct reg
+	for (int i = 0; i < count; i++) 
+		ptr_r[i] = get_struct_member_pointer(cpu->ptr_fp_reg, i, bb);
+#endif
+}
+
+static void
 emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	emit_decode_reg_helper(cpu, cpu->count_regs_i8,   8, cpu->in_ptr_r8,  cpu->ptr_r8,  bb);
 	emit_decode_reg_helper(cpu, cpu->count_regs_i16, 16, cpu->in_ptr_r16, cpu->ptr_r16, bb);
 	emit_decode_reg_helper(cpu, cpu->count_regs_i32, 32, cpu->in_ptr_r32, cpu->ptr_r32, bb);
 	emit_decode_reg_helper(cpu, cpu->count_regs_i64, 64, cpu->in_ptr_r64, cpu->ptr_r64, bb);
+
+	emit_decode_fp_reg_helper(cpu, cpu->count_regs_f32, 32, cpu->in_ptr_f32, cpu->ptr_f32, bb);
+	emit_decode_fp_reg_helper(cpu, cpu->count_regs_f64, 64, cpu->in_ptr_f64, cpu->ptr_f64, bb);
+	emit_decode_fp_reg_helper(cpu, cpu->count_regs_f80, 80, cpu->in_ptr_f80, cpu->ptr_f80, bb);
+	emit_decode_fp_reg_helper(cpu, cpu->count_regs_f128, 128, cpu->in_ptr_f128, cpu->ptr_f128, bb);
 
 	uint32_t pc_index = 
 		cpu->count_regs_i8 +
@@ -476,6 +523,17 @@ spill_reg_state_helper(int count, Value **in_ptr_r, Value **ptr_r, BasicBlock *b
 }
 
 static void
+spill_fp_reg_state_helper(int count, int width, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb)
+{
+#ifdef OPT_LOCAL_REGISTERS
+	for (int i=0; i<count; i++) {
+		LoadInst* v = new LoadInst(ptr_r[i], "", false, (width==80?128:width)>>3, bb);
+		new StoreInst(v, in_ptr_r[i], false, (width==80?128:width)>>3, bb);
+	}
+#endif
+}
+
+static void
 spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
 	if (cpu->f.spill_reg_state) /* cpu specific part */
@@ -485,6 +543,11 @@ spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 	spill_reg_state_helper(cpu->count_regs_i16, cpu->in_ptr_r16, cpu->ptr_r16, bb);
 	spill_reg_state_helper(cpu->count_regs_i32, cpu->in_ptr_r32, cpu->ptr_r32, bb);
 	spill_reg_state_helper(cpu->count_regs_i64, cpu->in_ptr_r64, cpu->ptr_r64, bb);
+
+	spill_fp_reg_state_helper(cpu->count_regs_f32, 32, cpu->in_ptr_f32, cpu->ptr_f32, bb);
+	spill_fp_reg_state_helper(cpu->count_regs_f64, 64, cpu->in_ptr_f64, cpu->ptr_f64, bb);
+	spill_fp_reg_state_helper(cpu->count_regs_f80, 80, cpu->in_ptr_f80, cpu->ptr_f80, bb);
+	spill_fp_reg_state_helper(cpu->count_regs_f128, 128, cpu->in_ptr_f128, cpu->ptr_f128, bb);
 }
 
 static void
@@ -498,6 +561,8 @@ cpu_recompile_function(cpu_t *cpu)
 	cpu->ptr_RAM->setName("RAM");
 	cpu->ptr_reg = args++;
 	cpu->ptr_reg->setName("reg");	
+	cpu->ptr_fp_reg = args++;
+	cpu->ptr_fp_reg->setName("fp_reg");	
 	cpu->ptr_func_debug = args++;
 	cpu->ptr_func_debug->setName("debug");
 
@@ -563,10 +628,10 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 		cpu_recompile_function(cpu);
 
 	/* run it ! */
-	typedef int (*fp_t)(uint8_t *RAM, void *reg, debug_function_t fp);
+	typedef int (*fp_t)(uint8_t *RAM, void *reg, void *fp_reg, debug_function_t fp);
 	fp_t FP = (fp_t)cpu->fp;
 
-	return FP(cpu->RAM, cpu->reg, debug_function);
+	return FP(cpu->RAM, cpu->reg, cpu->fp_reg, debug_function);
 }
 
 void

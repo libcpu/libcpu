@@ -23,6 +23,7 @@
 
 
 #include "types.h"
+#include "fp_types.h"
 
 using namespace llvm;
 
@@ -66,6 +67,10 @@ typedef struct cpu {
 	uint32_t count_regs_i16;
 	uint32_t count_regs_i32;
 	uint32_t count_regs_i64;
+	uint32_t count_regs_f32;
+	uint32_t count_regs_f64;
+	uint32_t count_regs_f80;
+	uint32_t count_regs_f128;
 	const char *name;
 	addr_t code_start;
 	addr_t code_end;
@@ -80,29 +85,42 @@ typedef struct cpu {
 	ExecutionEngine *exec_engine;
 	void *fp;
 	void *reg;
+	void *fp_reg;
 	uint8_t *RAM;
-	uint32_t reg_size;
 	bool is_little_endian;
+	uint32_t reg_size;
 	bool has_special_r0;
+	uint32_t fp_reg_size;
+	bool has_special_fr0;
 	Value *ptr_reg;
+	Value *ptr_fp_reg;
 	Value *ptr_PC;
 	Value *ptr_RAM;
 	PointerType *type_pfunc_callout;
 	Value *ptr_func_debug;
-	#define MAX_REGISTERS 32
+	#define MAX_REGISTERS 64
 	Value *ptr_r8[MAX_REGISTERS];
 	Value *ptr_r16[MAX_REGISTERS];
 	Value *ptr_r32[MAX_REGISTERS];
 	Value *ptr_r64[MAX_REGISTERS];
+	Value *ptr_f32[MAX_REGISTERS];
+	Value *ptr_f64[MAX_REGISTERS];
+	Value *ptr_f80[MAX_REGISTERS];
+	Value *ptr_f128[MAX_REGISTERS];
 	Value *in_ptr_r8[MAX_REGISTERS];
 	Value *in_ptr_r16[MAX_REGISTERS];
 	Value *in_ptr_r32[MAX_REGISTERS];
 	Value *in_ptr_r64[MAX_REGISTERS];
+	Value *in_ptr_f32[MAX_REGISTERS];
+	Value *in_ptr_f64[MAX_REGISTERS];
+	Value *in_ptr_f80[MAX_REGISTERS];
+	Value *in_ptr_f128[MAX_REGISTERS];
 } cpu_t;
 
 enum {
 	JIT_RETURN_NOERR = 0,
-	JIT_RETURN_FUNCNOTFOUND
+	JIT_RETURN_FUNCNOTFOUND,
+	JIT_RETURN_TRAP
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -150,4 +168,27 @@ void cpu_init(cpu_t *cpu);
 #define getIntegerType(x) (IntegerType::get(_CTX(), x))
 #define getStructType(x, ...) (StructType::get(_CTX(), x,    \
 					       #__VA_ARGS__))
+
+static inline fltSemantics const *getFltSemantics(unsigned bits)
+{
+	switch(bits) {
+		case 32: return &APFloat::IEEEsingle;
+		case 64: return &APFloat::IEEEdouble;
+		case 80: return &APFloat::x87DoubleExtended;
+		case 128: return &APFloat::IEEEquad;
+		default: return 0;
+	}
+}
+
+static inline Type const *getFloatType(unsigned bits)
+{
+	switch(bits) {
+		case 32: return Type::getFloatTy(_CTX());
+		case 64: return Type::getDoubleTy(_CTX());
+		case 80: return Type::getX86_FP80Ty(_CTX());
+		case 128: return Type::getFP128Ty(_CTX());
+		default: return 0;
+	}
+}
+
 #endif

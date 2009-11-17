@@ -672,6 +672,13 @@ arch_6502_init(cpu_t *cpu)
 	cpu->count_regs_i32 = 0;
 	cpu->count_regs_i64 = 0;
 
+	cpu->is_little_endian = true;
+	cpu->fp_reg = NULL;
+	cpu->count_regs_f32 = 0;
+	cpu->count_regs_f64 = 0;
+	cpu->count_regs_f80 = 0;
+	cpu->count_regs_f128 = 0;
+
 	assert(offsetof(reg_6502_t, pc) == 5);
 }
 

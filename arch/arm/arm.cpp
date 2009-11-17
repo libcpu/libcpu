@@ -8,6 +8,8 @@ arch_arm_init(cpu_t *cpu)
 	cpu->reg_size = 32;
 	cpu->is_little_endian = !!(cpu->flags_arch & CPU_ARM_IS_LE);
 	cpu->has_special_r0 = false;
+	cpu->fp_reg_size = 64;
+	cpu->has_special_fr0 = false;
 
 	reg_arm_t *reg;
 	reg = (reg_arm_t*)malloc(sizeof(reg_arm_t));
@@ -20,6 +22,12 @@ arch_arm_init(cpu_t *cpu)
 	cpu->count_regs_i16 = 0;
 	cpu->count_regs_i32 = 17;
 	cpu->count_regs_i64 = 0;
+
+	cpu->fp_reg = NULL;
+	cpu->count_regs_f32 = 0;
+	cpu->count_regs_f64 = 0;
+	cpu->count_regs_f80 = 0;
+	cpu->count_regs_f128 = 0;
 }
 
 addr_t
