@@ -101,7 +101,6 @@ typedef enum _m88k_opcode {
 	M88K_OPC_FCMP,
 	M88K_OPC_FCMPU,
 	M88K_OPC_FLT,
-	M88K_OPC_FCNV,
 	M88K_OPC_FCVT,
 	M88K_OPC_INT,
 	M88K_OPC_NINT,
@@ -192,7 +191,7 @@ typedef enum _m88k_carry {
 	M88K_CARRY_OUT	= 1,
 	M88K_CARRY_IN	= 2
 } m88k_carry_t;
-    
+
 typedef struct _m88k_grf {
 	union {
 		struct {

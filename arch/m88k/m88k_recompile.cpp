@@ -233,8 +233,10 @@ arch_m88k_shift(cpu_t *cpu, m88k_opcode_t opc, m88k_reg_t rd, Value *src1, Value
 			break;
 
 		case M88K_OPC_CLR: // rs1 & ~(wmask << n)
-			assert (ifmt && "Cannot be a tradic opcode.");
-			LET32(rd, AND(src1, CONST32(~(wmask << offset))));
+			if (ifmt)
+				LET32(rd, AND(src1, CONST32(~(wmask << offset))));
+			else
+				LET32(rd, AND(src1, COM(SHL(CONST32(wmask), src2))));
 			break;
 
 		case M88K_OPC_EXT: // ((int)rs1 >> n) & wmask
@@ -254,14 +256,6 @@ arch_m88k_shift(cpu_t *cpu, m88k_opcode_t opc, m88k_reg_t rd, Value *src1, Value
 		default:
 			abort();
 	}
-}
-
-static void
-arch_m88k_ff(bool bit, m88k_reg_t rd, Value *src,
-	BasicBlock *bb_dispatch, BasicBlock *bb)
-{
-	// XXX find first set/clear
-	abort();
 }
 
 /*
@@ -407,6 +401,54 @@ arch_m88k_branch_cond(cpu_t *cpu, addr_t pc, Value *src1, m88k_bcnd_t cond,
 	}
 }
 
+static Value *
+arch_m88k_get_fpr(cpu_t *cpu, bool xfr, m88k_reg_t r, uint32_t t,
+	BasicBlock *bb)
+{
+	if (xfr) {
+		switch (t) {
+			case 0: return FPBITCAST32(FR80(r));
+			case 1: return FPBITCAST64(FR80(r));
+			case 2: return FR80(r);
+		}
+	} else {
+		switch (t) {
+			case 0: return FPBITCAST32(R32(r));
+			case 1: if (r < 2)
+						return FPCONST64(0);
+					else
+						return FPBITCAST64(OR(SHL(ZEXT64(R32(r & ~1)), CONST64(32)), ZEXT64(R32(r | 1))));
+			case 2: abort(); // can't happen
+		}
+	}
+}
+
+static void
+arch_m88k_set_fpr(cpu_t *cpu, bool xfr, m88k_reg_t r,
+	uint32_t t, Value *v, BasicBlock *bb)
+{
+	if (xfr) {
+		switch(t) {
+			case 0: LETFP(r, FPBITCAST80(FPBITCAST32(v))); break;
+			case 1: LETFP(r, FPBITCAST80(FPBITCAST64(v))); break;
+			case 2: LETFP(r, FPBITCAST80(v)); break;
+		}
+	} else {
+		Value *iv;
+		switch (t) {
+			case 0: LET32(r, IBITCAST32(FPBITCAST32(v))); break;
+			case 1: iv = IBITCAST64(FPBITCAST64(v));
+					LET32(r & ~1, TRUNC32(LSHR(iv, CONST64(32))));
+					LET32(r | 1, TRUNC32(iv));
+					break;
+			case 2: abort(); // can't happen
+		}
+	}
+}
+
+#define GET_FPR(x,r,t)   arch_m88k_get_fpr(cpu, x, r, t, bb)
+#define SET_FPR(x,r,t,v) arch_m88k_set_fpr(cpu, x, r, t, v, bb)
+
 int
 arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 	BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond,
@@ -529,9 +571,11 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 			break;
 
 		case M88K_OPC_FF0:
+			LET32(instr.rd(), FFC32(R32(instr.rs2())));
+			break;
+
 		case M88K_OPC_FF1:
-			arch_m88k_ff((opc == M88K_OPC_FF1), instr.rd(), R32(instr.rs1()),
-				bb_dispatch, bb);
+			LET32(instr.rd(), FFS32(R32(instr.rs2())));
 			break;
 
 		case M88K_OPC_CMP:
@@ -625,7 +669,7 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 				LOAD32(instr.rd() | 1, ADD(ADD(R32(instr.rs1()), IMM),
 					CONST32(4)));
 			} else if (fmt == M88K_IFMT_XMEM) {
-				//BAD;
+				//arch_m88k_load_xfr(cpu, 64, instr.rd(), ADD(R32(intr.rs1()), IMM));
 			} else if (fmt == M88K_TFMT_REG) {
 				LOAD32(instr.rd() & ~1, ADD(R32(instr.rs1()), R32(instr.rs2())));
 				LOAD32(instr.rd() | 1, ADD(R32(instr.rs1()),
@@ -766,6 +810,73 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_TB1:
 		case M88K_OPC_TBND:
 			//BAD;
+			break;
+
+		//////////////////// FPU ///////////////////
+		case M88K_OPC_FADD:
+			SET_FPR(fmt == M88K_TFMT_XFR, instr.rd(), instr.td(),
+				FPADD(GET_FPR(fmt == M88K_TFMT_XFR, instr.rs1(), instr.t1()),
+					GET_FPR(fmt == M88K_TFMT_XFR, instr.rs2(), instr.t2())));
+			break;
+
+		case M88K_OPC_FSUB:
+			SET_FPR(fmt == M88K_TFMT_XFR, instr.rd(), instr.td(),
+				FPSUB(GET_FPR(fmt == M88K_TFMT_XFR, instr.rs1(), instr.t1()),
+					GET_FPR(fmt == M88K_TFMT_XFR, instr.rs2(), instr.t2())));
+			break;
+
+		case M88K_OPC_FMUL:
+			SET_FPR(fmt == M88K_TFMT_XFR, instr.rd(), instr.td(),
+				FPMUL(GET_FPR(fmt == M88K_TFMT_XFR, instr.rs1(), instr.t1()),
+					GET_FPR(fmt == M88K_TFMT_XFR, instr.rs2(), instr.t2())));
+			break;
+
+		case M88K_OPC_FDIV:
+			SET_FPR(fmt == M88K_TFMT_XFR, instr.rd(), instr.td(),
+				FPDIV(GET_FPR(fmt == M88K_TFMT_XFR, instr.rs1(), instr.t1()),
+					GET_FPR(fmt == M88K_TFMT_XFR, instr.rs2(), instr.t2())));
+			break;
+
+		case M88K_OPC_FCVT:
+			SET_FPR(fmt == M88K_TFMT_XFR, instr.rd(), instr.td(),
+				GET_FPR(fmt == M88K_TFMT_XFR, instr.rs2(), instr.t2()));
+			break;
+
+		case M88K_OPC_INT: // round-to-zero
+			LET32(instr.rd(), FPTOSI(32, GET_FPR(fmt == M88K_TFMT_XFR, instr.rs2(), instr.t2())));
+			break;
+
+		case M88K_OPC_NINT: // round-to-nearest
+			LET32(instr.rd(), FPTOSI(32, GET_FPR(fmt == M88K_TFMT_XFR, instr.rs2(), instr.t2())));
+			break;
+
+		case M88K_OPC_TRNC: // truncation
+			LET32(instr.rd(), FPTOSI(32, GET_FPR(fmt == M88K_TFMT_XFR, instr.rs2(), instr.t2())));
+			break;
+
+		case M88K_OPC_FLT: // flt <- int
+			SET_FPR(fmt == M88K_TFMT_XFR, instr.rd(), instr.td(),
+				SITOFP(32, R32(instr.rs2())));
+			break;
+
+		case M88K_OPC_FSQRT:
+			SET_FPR(fmt == M88K_TFMT_XFR, instr.rd(), instr.td(),
+				FPSQRT(FPBITCAST64(GET_FPR(fmt == M88K_TFMT_XFR,
+					instr.rs2(), instr.t2()))));
+			break;
+
+		case M88K_OPC_MOV:
+			switch(fmt) {
+				case M88K_TFMT_XREG: // xfr <- gpr
+					SET_FPR(true, instr.rd(), 2, GET_FPR(false, instr.rs2(), instr.t2()));
+					break;
+				case M88K_TFMT_REGX: // gpr/xfr <- xfr
+					if (instr & 0x200)
+						SET_FPR(true, instr.rd(), 2, GET_FPR(true, instr.rs2(), 2));
+					else
+						SET_FPR(false, instr.rd(), instr.td(), GET_FPR(true, instr.rs2(), 2));
+					break;
+			}
 			break;
 
 		default:

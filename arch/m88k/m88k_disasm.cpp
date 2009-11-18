@@ -162,7 +162,6 @@ static char const * const m88k_insn_mnemonics[] = {
 	"fcmp",
 	"fcmpu",
 	"flt",
-	"fcnv",
 	"fcvt",
 	"int",
 	"nint",

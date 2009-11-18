@@ -1,13 +1,13 @@
-#define BENCHMARK_FIB
+//#define BENCHMARK_FIB
+//#define SINGLESTEP
 
 #ifdef BENCHMARK_FIB
 # define START 0
 # define ENTRY 0
 #else
-# define START 0x400670
-# define ENTRY 0x52c
+# define START 0
+# define ENTRY 0
 #endif
-//#define SINGLESTEP
 
 #include "timings.h"
 
@@ -74,8 +74,53 @@ breakpoint() {
 asm("nop");
 }
 
+static double
+ieee754_fp80_to_double(fp80_reg_t reg)
+{
+#if defined(__i386__) || defined(__x86_64__)
+	uint32_t sign      = (reg.i.hi & 0x8000) != 0;
+	uint32_t exp       = reg.i.hi & 0x7fff;
+	uint64_t mantissa  = reg.i.lo;
+
+	return (double)reg.f;
+#else
+	uint32_t sign      = (reg.i.hi & 0x8000) != 0;
+	uint32_t exp       = reg.i.hi & 0x7fff;
+	uint64_t mantissa  = reg.i.lo << 1;
+
+	uint64_t v64 = ((uint64_t)sign << 63) | 
+		((uint64_t)(exp & 0x7000) << 48) |
+		((uint64_t)(exp & 0x3ff) << 52) |
+		(mantissa >> 12);
+
+	return *(double *)&v64;
+#endif
+}
+
 static void
-dump_state(uint8_t *RAM, m88k_grf_t *reg)
+ieee754_fp80_set_d(fp80_reg_t *reg, double v)
+{
+#if defined(__i386__) || defined(__x86_64__)
+	reg->f = v;
+#else
+	uint64_t v64       = *(uint64_t *)&v;
+	uint32_t sign      = (v64 >> 63);
+	uint32_t exp       = (v64 >> 52) & 0x7ff;
+	uint64_t mantissa  = v64 & ((1ULL << 52) - 1);
+
+	mantissa <<= 11;
+	mantissa |= (1ULL << 63);
+
+	exp = ((exp & 0x700) << 4) | ((-((exp >> 9) & 1)) & 0xf00) | (exp & 0x3ff);
+
+	reg->i.hi = (sign << 15) | exp;
+	reg->i.lo = mantissa;
+#endif
+}
+
+
+static void
+dump_state(uint8_t *RAM, m88k_grf_t *reg, m88k_xrf_t *xrf)
 {
 	printf("%08llx:", (unsigned long long)reg->sxip);
 	for (int i=0; i<32; i++) {
@@ -83,7 +128,14 @@ dump_state(uint8_t *RAM, m88k_grf_t *reg)
 			printf("\n");
 		printf("R%02d=%08x ", i, (unsigned int)reg->r[i]);
 	}
-	int base = reg->r[31];
+	for (int i=0; xrf != NULL && i<32; i++) {
+		if (!(i%2))
+			printf("\n");
+		printf("X%02d=%04x%016llx (%.8f) ", i,
+			xrf->x[i].i.hi, xrf->x[i].i.lo,
+			ieee754_fp80_to_double(xrf->x[i]));
+	}
+	uint32_t base = reg->r[31];
 	for (int i=0; i<256 && i+base<65536; i+=4) {
 		if (!(i%16))
 			printf("\nSTACK: ");
@@ -158,8 +210,10 @@ main(int argc, char **argv)
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP | CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);
 #else
-//	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
-	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
+//	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
+	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
+//	cpu_set_flags_optimize(cpu, 0x3eff);
+//	cpu_set_flags_optimize(cpu, 0x3eff);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);
 #endif
 
@@ -226,25 +280,23 @@ main(int argc, char **argv)
 #define PC (((m88k_grf_t*)cpu->reg)->sxip)
 #define PSR (((m88k_grf_t*)cpu->reg)->psr)
 #define R (((m88k_grf_t*)cpu->reg)->r)
+#define X (((m88k_xrf_t*)cpu->fp_reg)->x)
 
 	PC = cpu->code_entry;
-
+#if 0
 	for (i = 1; i < 32; i++)
 		R[i] = 0xF0000000 + i;	// DEBUG
-
+#endif
 	R[31] = STACK; // STACK
 	R[1] = -1; // return address
 
 #ifdef BENCHMARK_FIB//fib
 	R[2] = start_no; // parameter
 #else
-define STRING "HelloHelloHelloHelloHelloHelloHelloHelloHelloHello\n"
-	R[4] = 0x1000;
-	R[5] = strlen(STRING);
-	R[6] = 0x2000;
-	strcpy((char*)&RAM[R[4]], STRING);
+	R[2] = 0x3f800000; // 1.0
+	ieee754_fp80_set_d(&X[2], 1.0);
 #endif
-	dump_state(RAM, (m88k_grf_t*)cpu->reg);
+	dump_state(RAM, (m88k_grf_t*)cpu->reg, NULL);
 
 #ifdef SINGLESTEP
 	for(step = 0;;) {
@@ -272,7 +324,7 @@ define STRING "HelloHelloHelloHelloHelloHelloHelloHelloHelloHello\n"
 			case JIT_RETURN_NOERR: /* JIT code wants us to end execution */
 				break;
 			case JIT_RETURN_FUNCNOTFOUND:
-				dump_state(RAM, (m88k_grf_t*)cpu->reg);
+				dump_state(RAM, (m88k_grf_t*)cpu->reg, (m88k_xrf_t*)cpu->fp_reg);
 
 				if (PC == -1)
 					goto double_break;
