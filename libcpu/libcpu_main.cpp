@@ -69,6 +69,20 @@ cpu_new(cpu_arch_t arch)
 	cpu->mod = new Module(cpu->name, _CTX());
 	cpu->exec_engine = ExecutionEngine::create(cpu->mod);
 
+	assert(cpu->exec_engine != NULL);
+
+	//XXX there is a better way to do this?
+	std::string data_layout = cpu->exec_engine->getTargetData()->getStringRepresentation();
+	printf("Target Data Layout = %s\n", data_layout.c_str());
+	if (data_layout.find("f80") != std::string::npos) {
+		fprintf(stderr, "INFO: FP80 supported.\n");
+		cpu->flags |= CPU_FLAG_FP80;
+	}
+	if (data_layout.find("f128") != std::string::npos) {
+		fprintf(stderr, "INFO: FP128 supported.\n");
+		cpu->flags |= CPU_FLAG_FP128;
+	}
+
 //	cpu->mod->setDataLayout("e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32");
 //	cpu->mod->setTargetTriple("i386-pc-linux-gnu");
 
@@ -369,10 +383,24 @@ get_struct_fp_reg(cpu_t *cpu) {
 		type_struct_fp_reg_t_fields.push_back(getFloatType(32));
 	for (uint32_t i = 0; i < cpu->count_regs_f64; i++) /* 64 bit registers */
 		type_struct_fp_reg_t_fields.push_back(getFloatType(64));
-	for (uint32_t i = 0; i < cpu->count_regs_f80; i++) /* 80 bit registers */
-		type_struct_fp_reg_t_fields.push_back(getFloatType(80));
-	for (uint32_t i = 0; i < cpu->count_regs_f128; i++) /* 128 bit registers */
-		type_struct_fp_reg_t_fields.push_back(getFloatType(128));
+	for (uint32_t i = 0; i < cpu->count_regs_f80; i++) { /* 80 bit registers */
+		if (cpu->flags & CPU_FLAG_FP80)
+			type_struct_fp_reg_t_fields.push_back(getFloatType(80));
+		else {
+			/* two 64bits words hold the data */
+			type_struct_fp_reg_t_fields.push_back(getIntegerType(64));
+			type_struct_fp_reg_t_fields.push_back(getIntegerType(64));
+		}
+	}
+	for (uint32_t i = 0; i < cpu->count_regs_f128; i++) { /* 128 bit registers */
+		if (cpu->flags & CPU_FLAG_FP128)
+			type_struct_fp_reg_t_fields.push_back(getFloatType(128));
+		else {
+			/* two 64bits words hold the data */
+			type_struct_fp_reg_t_fields.push_back(getIntegerType(64));
+			type_struct_fp_reg_t_fields.push_back(getIntegerType(64));
+		}
+	}
 
 	return getStructType(type_struct_fp_reg_t_fields, /*isPacked=*/true);
 }
@@ -468,17 +496,41 @@ emit_decode_reg_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r, Value
 #endif
 }
 
+static inline unsigned
+fp_alignment(unsigned width) {
+	return ((width == 80 ? 128 : width) >> 3);
+}
+
 static void
-emit_decode_fp_reg_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb) {
+emit_decode_fp_reg_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r,
+	Value **ptr_r, BasicBlock *bb)
+{
 #ifdef OPT_LOCAL_REGISTERS
 	// decode struct reg and copy the registers into local variables
 	for (int i = 0; i < count; i++) {
 		char reg_name[16];
-		snprintf(reg_name, sizeof(reg_name), "fpr_%u", i);
-		in_ptr_r[i] = get_struct_member_pointer(cpu->ptr_fp_reg, i, bb);
-		ptr_r[i] = new AllocaInst(getFloatType(width), 0, (width==80?128:width)>>3, reg_name, bb);
-		LoadInst* v = new LoadInst(in_ptr_r[i], "", false, (width==80?128:width)>>3, bb);
-		new StoreInst(v, ptr_r[i], false, (width==80?128:width)>>3, bb);
+		if ((width == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) ||
+			(width == 128 && (cpu->flags & CPU_FLAG_FP128) == 0)) {
+			snprintf(reg_name, sizeof(reg_name), "fpr_%u_0", i);
+
+			in_ptr_r[i*2+0] = get_struct_member_pointer(cpu->ptr_fp_reg, i*2+0, bb);
+			ptr_r[i*2+0] = new AllocaInst(getIntegerType(64), 0, 0, reg_name, bb);
+			LoadInst* v = new LoadInst(in_ptr_r[i*2+0], "", false, 0, bb);
+			new StoreInst(v, ptr_r[i*2+0], false, 0, bb);
+
+			snprintf(reg_name, sizeof(reg_name), "fpr_%u_1", i);
+
+			in_ptr_r[i*2+1] = get_struct_member_pointer(cpu->ptr_fp_reg, i*2+1, bb);
+			ptr_r[i*2+1] = new AllocaInst(getIntegerType(64), 0, 0, reg_name, bb);
+			v = new LoadInst(in_ptr_r[i*2+1], "", false, 0, bb);
+			new StoreInst(v, ptr_r[i*2+1], false, 0, bb);
+		} else {
+			snprintf(reg_name, sizeof(reg_name), "fpr_%u", i);
+			in_ptr_r[i] = get_struct_member_pointer(cpu->ptr_fp_reg, i, bb);
+			ptr_r[i] = new AllocaInst(getFloatType(width), 0, fp_alignment(width), reg_name, bb);
+			LoadInst* v = new LoadInst(in_ptr_r[i], "", false, fp_alignment(width), bb);
+			new StoreInst(v, ptr_r[i], false, fp_alignment(width), bb);
+		}
 	}
 #else
 	// just decode struct reg
@@ -523,12 +575,22 @@ spill_reg_state_helper(int count, Value **in_ptr_r, Value **ptr_r, BasicBlock *b
 }
 
 static void
-spill_fp_reg_state_helper(int count, int width, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb)
+spill_fp_reg_state_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r,
+	Value **ptr_r, BasicBlock *bb)
 {
 #ifdef OPT_LOCAL_REGISTERS
 	for (int i=0; i<count; i++) {
-		LoadInst* v = new LoadInst(ptr_r[i], "", false, (width==80?128:width)>>3, bb);
-		new StoreInst(v, in_ptr_r[i], false, (width==80?128:width)>>3, bb);
+		if ((width == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) ||
+			(width == 128 && (cpu->flags & CPU_FLAG_FP128) == 0)) {
+			LoadInst* v = new LoadInst(ptr_r[i*2+0], "", false, 0, bb);
+			new StoreInst(v, in_ptr_r[i*2+0], false, 0, bb);
+
+			v = new LoadInst(ptr_r[i*2+1], "", false, 0, bb);
+			new StoreInst(v, in_ptr_r[i*2+1], false, 0, bb);
+		} else {
+			LoadInst* v = new LoadInst(ptr_r[i], "", false, fp_alignment(width), bb);
+			new StoreInst(v, in_ptr_r[i], false, fp_alignment(width), bb);
+		}
 	}
 #endif
 }
@@ -544,10 +606,10 @@ spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 	spill_reg_state_helper(cpu->count_regs_i32, cpu->in_ptr_r32, cpu->ptr_r32, bb);
 	spill_reg_state_helper(cpu->count_regs_i64, cpu->in_ptr_r64, cpu->ptr_r64, bb);
 
-	spill_fp_reg_state_helper(cpu->count_regs_f32, 32, cpu->in_ptr_f32, cpu->ptr_f32, bb);
-	spill_fp_reg_state_helper(cpu->count_regs_f64, 64, cpu->in_ptr_f64, cpu->ptr_f64, bb);
-	spill_fp_reg_state_helper(cpu->count_regs_f80, 80, cpu->in_ptr_f80, cpu->ptr_f80, bb);
-	spill_fp_reg_state_helper(cpu->count_regs_f128, 128, cpu->in_ptr_f128, cpu->ptr_f128, bb);
+	spill_fp_reg_state_helper(cpu, cpu->count_regs_f32, 32, cpu->in_ptr_f32, cpu->ptr_f32, bb);
+	spill_fp_reg_state_helper(cpu, cpu->count_regs_f64, 64, cpu->in_ptr_f64, cpu->ptr_f64, bb);
+	spill_fp_reg_state_helper(cpu, cpu->count_regs_f80, 80, cpu->in_ptr_f80, cpu->ptr_f80, bb);
+	spill_fp_reg_state_helper(cpu, cpu->count_regs_f128, 128, cpu->in_ptr_f128, cpu->ptr_f128, bb);
 }
 
 static void

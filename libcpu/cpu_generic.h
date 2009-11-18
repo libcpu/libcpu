@@ -19,6 +19,17 @@ Value *arch_bswap(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
 Value *arch_ctlz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
 Value *arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
 
+/* FPU */
+Value *arch_cast_fp32(cpu_t *cpu, Value *v, BasicBlock *bb);
+Value *arch_cast_fp64(cpu_t *cpu, Value *v, BasicBlock *bb);
+Value *arch_cast_fp80(cpu_t *cpu, Value *v, BasicBlock *bb);
+Value *arch_cast_fp128(cpu_t *cpu, Value *v, BasicBlock *bb);
+
+Value *arch_load_fp_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb);
+void arch_store_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, BasicBlock *bb);
+
+Value *arch_sqrt(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
+
 /* host functions */
 uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 
@@ -45,11 +56,13 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define ZEXT8(v) ZEXT(8,v)
 #define ZEXT16(v) ZEXT(16,v)
 #define ZEXT32(v) ZEXT(32,v)
+#define ZEXT64(v) ZEXT(64,v)
 
 #define SEXT(s,v) new SExtInst(v, getIntegerType(s), "", bb)
 #define SEXT8(v) SEXT(8,v)
 #define SEXT16(v) SEXT(16,v)
 #define SEXT32(v) SEXT(32,v)
+#define SEXT64(v) SEXT(64,v)
 
 #define ADD(a,b) BinaryOperator::Create(Instruction::Add, a, b, "", bb)
 #define SUB(a,b) BinaryOperator::Create(Instruction::Sub, a, b, "", bb)
@@ -75,6 +88,7 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 
 /* shortcuts */
 #define COM(x) XOR(x, CONST(-1ULL))
+#define NEGs(s, x) SUB(CONST##s(0), x)
 #define NEG(x) SUB(CONST(0), x)
 
 /* floating point */
@@ -89,6 +103,10 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define FPTRUNC(s,v) new FPTruncInst(v, getFloatType(s), "", bb)
 #define FPEXT(s,v) new FPExtInst(v, getFloatType(s), "", bb)
 
+#define FPADD(a,b) ADD(a, b)
+#define FPSUB(a,b) SUB(a, b)
+#define FPMUL(a,b) MUL(a, b)
+#define FPDIV(a,b) BinaryOperator::Create(Instruction::FDiv, a, b, "", bb)
 #define FPREM(a,b) BinaryOperator::Create(Instruction::FRem, a, b, "", bb)
 
 /* condition */
@@ -101,6 +119,15 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define LET(i,v) arch_put_reg(cpu, i, v, 0, false, bb)
 #define LET32(i,v) arch_put_reg(cpu, i, v, 32, true, bb)
 #define LET_ZEXT(i,v) arch_put_reg(cpu, i, v, 1, false, bb)
+
+/* interface to the FPRs */
+#define FR(i) arch_load_fp_reg(cpu, i, 0, bb)
+#define FR32(i) arch_load_fp_reg(cpu, i, 32, bb)
+#define FR64(i) arch_load_fp_reg(cpu, i, 64, bb)
+#define FR80(i) arch_load_fp_reg(cpu, i, 80, bb)
+#define FR128(i) arch_load_fp_reg(cpu, i, 128, bb)
+
+#define LETFP(i,v) arch_store_fp_reg(cpu, i, v, 0, bb)
 
 /* interface to memory */
 #define LOAD8(i,v) arch_put_reg(cpu, i, arch_load8(cpu,v,bb), 8, false, bb)
@@ -151,3 +178,31 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 
 /* jump */
 #define JUMP arch_jump(bb, bb_target)
+
+/* bitcasts to int */
+#define IBITCASTs(s, v)  new BitCastInst(v, getIntegerType(s), "", bb)
+#define IBITCAST32(v) IBITCASTs(32, v)
+#define IBITCAST64(v) IBITCASTs(64, v)
+
+/* bitcasts between float
+ * NOTE: these functions do bitcast for integer data types
+ *       and truncation or extension for float data types,
+ *       they're defined this way as a convenience for
+ *       those architectures (like ARM, M88K) where the 
+ *       GPRs serve also as floating point registers.
+ */
+#define FPBITCASTs(s, v) arch_cast_fp##s(cpu, v, bb)
+#define FPBITCAST32(v) FPBITCASTs(32, v)
+#define FPBITCAST64(v) FPBITCASTs(64, v)
+#define FPBITCAST80(v) FPBITCASTs(80, v)
+#define FPBITCAST128(v) FPBITCASTs(128, v)
+
+/* float <-> int */
+#define FPTOSI(s, v) new FPToSIInst(v, getIntegerType(s), "", bb)
+#define SITOFP(s, v) new SIToFPInst(v, getFloatType(s), "", bb)
+#define FPTOUI(s, v) new FPToUIInst(v, getIntegerType(s), "", bb)
+#define UITOFP(s, v) new UIToFPInst(v, getFloatType(s), "", bb)
+
+/* float intrsinics */
+#define FPSQRT(v)    arch_sqrt(cpu, 64, v, bb)
+

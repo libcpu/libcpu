@@ -61,18 +61,8 @@ Value *
 arch_get_fp_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
 	Value *v;
 
-	/* R0 is always 0 (on certain RISCs) */
-	if (cpu->has_special_fr0 && !index)
-		return FPCONSTs(bits? bits : cpu->fp_reg_size, 0.0);
-
 	/* get the register */
-	v = new LoadInst(ptr_f(cpu)[index], "", false, bb);
-
-	/* optionally truncate it */
-	if (bits && cpu->fp_reg_size != bits)
-		v = FPTRUNC(bits, v);
-	
-	return v;
+	return new LoadInst(ptr_f(cpu)[index], "", false, bb);
 }
 
 // PUT REGISTER
@@ -95,14 +85,6 @@ arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, Bas
 
 void
 arch_put_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, BasicBlock *bb) {
-	/*
-	 * if the caller cares about bit size and
-	 * the size is not the register size, we'll extend.
-	 */
-	if (bits && cpu->fp_reg_size != bits) {
-		v = FPEXT(cpu->fp_reg_size, v);
-	}
-
 	/* store value, unless it's R0 (on certain RISCs) */
 	if (!cpu->has_special_fr0 || index)
 		new StoreInst(v, ptr_f(cpu)[index], bb);
@@ -293,4 +275,12 @@ arch_decode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
 	Value *n = BinaryOperator::Create(Instruction::LShr, flags, ConstantInt::get(getIntegerType(width), shift), "", bb);
 	n = new TruncInst(n, getIntegerType(1), "", bb);
 	new StoreInst(n, bit, bb);
+}
+
+// FP
+
+Value *
+arch_sqrt(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
+	Type const *ty = getFloatType(width);
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::sqrt, &ty, 1), v, "", bb);
 }

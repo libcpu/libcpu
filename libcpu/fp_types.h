@@ -20,13 +20,27 @@ typedef union _fp80_reg {
 	long double f;
 #endif
 	struct {
+#ifdef __LITTLE_ENDIAN__
 		uint64_t lo;
 		uint16_t hi;
+		uint16_t _unused_2;
+		uint32_t _unused_1;
+#else
+		uint32_t _unused_1;
+		uint16_t _unused_2;
+		uint16_t hi;
+		uint64_t lo;
+#endif
 	} i;
 } __attribute__((aligned(16))) fp80_reg_t;
 
 typedef struct _fp128_reg {
+#ifdef __LITTLE_ENDIAN__
 	uint64_t lo;
 	uint64_t hi;
+#else
+	uint64_t hi;
+	uint64_t lo;
+#endif
 } fp128_reg_t;
 

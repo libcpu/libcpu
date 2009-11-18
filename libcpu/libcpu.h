@@ -58,6 +58,11 @@ typedef enum {
 
 typedef uint8_t tagging_type_t;
 
+enum {
+	CPU_FLAG_FP80  = (1 << 15), // FP80 is natively supported.
+	CPU_FLAG_FP128 = (1 << 16)  // FP128 is natively supported.
+};
+
 typedef struct cpu {
 	cpu_arch_t arch;
 	arch_func_t f;

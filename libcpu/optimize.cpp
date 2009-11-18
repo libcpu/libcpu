@@ -6,7 +6,10 @@ optimize(cpu_t *cpu)
 	PassManager pm;
 	uint64_t flags = cpu->flags_optimize;
 
-	pm.add(new TargetData(cpu->mod));
+	std::string data_layout = cpu->exec_engine->getTargetData()->getStringRepresentation();
+	printf("Target Data Layout = %s\n", data_layout.c_str());
+	TargetData *TD = new TargetData(data_layout);
+	pm.add(TD);
 
 	//pm.add(createStripDeadPrototypesPass());
 	if (flags & (1ULL<<0))
