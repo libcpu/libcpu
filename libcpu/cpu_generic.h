@@ -38,7 +38,10 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
  * that make the LLVM interface nicer
  */
 
+#define LOAD(a) new LoadInst(a, "", false, bb)
+
 #define CONSTs(s,v) ConstantInt::get(getIntegerType(s), v)
+#define CONST1(v) CONSTs(1,v)
 #define CONST8(v) CONSTs(8,v)
 #define CONST16(v) CONSTs(16,v)
 #define CONST32(v) CONSTs(32,v)
@@ -90,6 +93,7 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define COM(x) XOR(x, CONST(-1ULL))
 #define NEGs(s, x) SUB(CONST##s(0), x)
 #define NEG(x) SUB(CONST(0), x)
+#define NOT(a) XOR(a,CONST1(1))
 
 /* floating point */
 #define FPCONSTs(s,v) ConstantFP::get(getFloatType(bits), v)

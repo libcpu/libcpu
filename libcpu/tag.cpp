@@ -11,11 +11,11 @@
 static void
 init_tagging(cpu_t *cpu)
 {
-	addr_t tagging_size, i;
+	addr_t nitems, i;
 
-	tagging_size = cpu->code_end - cpu->code_start;
-	cpu->tagging_type = (tagging_type_t*)malloc(tagging_size * sizeof(tagging_type_t));
-	for (i = 0; i < tagging_size; i++)
+	nitems = cpu->code_end - cpu->code_start;
+	cpu->tagging_type = (tagging_type_t*)malloc(nitems * sizeof(tagging_type_t));
+	for (i = 0; i < nitems; i++)
 		cpu->tagging_type[i] = TAG_TYPE_UNKNOWN;
 }
 
@@ -71,7 +71,12 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 		or_tagging_type(cpu, pc, TAG_TYPE_CODE);
 
 		bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc);
-		
+
+		if (flow_type & FLOW_TYPE_CONDITIONAL) {
+			or_tagging_type(cpu, pc, TAG_TYPE_CONDITIONAL);
+			or_tagging_type(cpu, pc+bytes, TAG_TYPE_AFTER_BRANCH);
+		}
+
 		switch (flow_type & ~FLOW_TYPE_CONDITIONAL) {
 			case FLOW_TYPE_ERR:
 			case FLOW_TYPE_RETURN:

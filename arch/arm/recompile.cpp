@@ -111,6 +111,60 @@ int arch_arm_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, Bas
 
 	printf("cond=%x, op1=%x, op2=%x, shift_bits=%x\n", cond, op1, op2, shift_bits);
 
+	if (cond == 0xF) /* condition NV: no-op */
+		return 4;
+
+	if (cond != 0xE) {
+printf("MIST %p %p\n", bb_cond, bb_next);
+		switch (cond) {
+			case 0x0: /* EQ */
+				BRANCH(true, bb_cond, bb_next, LOAD(ptr_Z));
+				break;
+			case 0x1: /* NE */
+				BRANCH(false, bb_cond, bb_next, LOAD(ptr_Z));
+				break;
+			case 0x2: /* CS */
+				BRANCH(true, bb_cond, bb_next, LOAD(ptr_C));
+				break;
+			case 0x3: /* CC */
+				BRANCH(false, bb_cond, bb_next, LOAD(ptr_C));
+				break;
+			case 0x4: /* MI */
+				BRANCH(true, bb_cond, bb_next, LOAD(ptr_N));
+				break;
+			case 0x5: /* PL */
+				BRANCH(false, bb_cond, bb_next, LOAD(ptr_N));
+				break;
+			case 0x6: /* VS */
+				BRANCH(true, bb_cond, bb_next, LOAD(ptr_V));
+				break;
+			case 0x7: /* VC */
+				BRANCH(false, bb_cond, bb_next, LOAD(ptr_V));
+				break;
+			case 0x8: /* HI */
+				BRANCH(true, bb_cond, bb_next, AND(LOAD(ptr_C),NOT(LOAD(ptr_Z))));
+				break;
+			case 0x9: /* LS */
+				BRANCH(false, bb_cond, bb_next, AND(LOAD(ptr_C),NOT(LOAD(ptr_Z))));
+				break;
+			case 0xA: /* GE */
+				BRANCH(true, bb_cond, bb_next, ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V)));
+				break;
+			case 0xB: /* LT */
+				BRANCH(false, bb_cond, bb_next, ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V)));
+				break;
+			case 0xC: /* GT */
+				BRANCH(true, bb_cond, bb_next, AND(NOT(LOAD(ptr_Z)),ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V))));
+				break;
+			case 0xD: /* LE */
+				BRANCH(false, bb_cond, bb_next, AND(NOT(LOAD(ptr_Z)),ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V))));
+				break;
+			default:
+				LOG;
+		}
+		bb = bb_cond;
+	}
+
 	switch ((instr>>20)&0xFF) {
 		case 0x1A: /* MOV */
 			if (RD==15) {
