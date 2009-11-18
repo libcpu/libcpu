@@ -13,4 +13,11 @@
 #define abs_time() gethrtime()
 #endif
 
+#ifdef linux
+#warning High precission timing currently n/a on Linux
+
+// HACK
+#define abs_time() 0
+#endif
+
 #endif  /* !__libcpu_timings_h */

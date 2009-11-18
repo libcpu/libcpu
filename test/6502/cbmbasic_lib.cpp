@@ -371,7 +371,7 @@ LOAD() {
 			A = kernal_status = KERN_ERR_MISSING_FILE_NAME;
 			return;
 		}
-#if !defined(sun) && !defined(_WIN32)
+#if !defined(sun) && !defined(_WIN32) && !defined(linux)
 		if (RAM[kernal_filename]=='$') {
 			DIR *dirp;
 			struct dirent *dp;

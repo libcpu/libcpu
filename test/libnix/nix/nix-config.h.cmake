@@ -66,4 +66,13 @@
 #cmakedefine HAVE_GETPEEREID 1
 #cmakedefine HAVE_GETPEERUCRED 1
 
+/*
+ * For Linux: define conformance mode
+ */
+#cmakedefine HAVE_FEATURES_H
+#if defined(HAVE_FEATURES_H)
+#define _XOPEN_SOURCE 500
+#define _BSD_SOURCE
+#endif
+
 #endif  /* !__nix_config_h */
