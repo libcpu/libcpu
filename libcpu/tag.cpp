@@ -14,7 +14,7 @@ init_tagging(cpu_t *cpu)
 	addr_t tagging_size, i;
 
 	tagging_size = cpu->code_end - cpu->code_start;
-	cpu->tagging_type = (tagging_type_t*)malloc(tagging_size);
+	cpu->tagging_type = (tagging_type_t*)malloc(tagging_size * sizeof(tagging_type_t));
 	for (i = 0; i < tagging_size; i++)
 		cpu->tagging_type[i] = TAG_TYPE_UNKNOWN;
 }

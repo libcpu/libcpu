@@ -56,7 +56,7 @@ typedef enum {
 	CPU_ARCH_ARM
 } cpu_arch_t;
 
-typedef uint8_t tagging_type_t;
+typedef uint16_t tagging_type_t;
 
 enum {
 	CPU_FLAG_FP80  = (1 << 15), // FP80 is natively supported.

@@ -32,6 +32,9 @@ int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 	else 
 		*flow_type = FLOW_TYPE_CONTINUE;
 
+	if (instr >> 28 != 0xE)
+		*flow_type |= FLOW_TYPE_CONDITIONAL;
+
 	return 4;
 }
 
