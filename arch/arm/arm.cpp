@@ -43,5 +43,6 @@ arch_func_t arch_func_arm = {
 	arch_arm_spill_reg_state,
 	arch_arm_tag_instr,
 	arch_arm_disasm_instr,
+	arch_arm_recompile_cond,
 	arch_arm_recompile_instr
 };

@@ -19,9 +19,9 @@
 using namespace llvm;
 
 #include "arch/6502/libcpu_6502.h"
-#include "arch/m68k/libcpu_m68k.h"
-#include "arch/mips/libcpu_mips.h"
-#include "arch/m88k/libcpu_m88k.h"
+//#include "arch/m68k/libcpu_m68k.h"
+//#include "arch/mips/libcpu_mips.h"
+//#include "arch/m88k/libcpu_m88k.h"
 #include "arch/arm/libcpu_arm.h"
 
 //////////////////////////////////////////////////////////////////////
@@ -41,6 +41,7 @@ cpu_new(cpu_arch_t arch)
 		case CPU_ARCH_6502:
 			cpu->f = arch_func_6502;
 			break;
+#if 0
 		case CPU_ARCH_M68K:
 			cpu->f = arch_func_m68k;
 			break;
@@ -50,6 +51,7 @@ cpu_new(cpu_arch_t arch)
 		case CPU_ARCH_M88K:
 			cpu->f = arch_func_m88k;
 			break;
+#endif
 		case CPU_ARCH_ARM:
 			cpu->f = arch_func_arm;
 			break;
@@ -73,7 +75,7 @@ cpu_new(cpu_arch_t arch)
 
 	//XXX there is a better way to do this?
 	std::string data_layout = cpu->exec_engine->getTargetData()->getStringRepresentation();
-	printf("Target Data Layout = %s\n", data_layout.c_str());
+	//printf("Target Data Layout = %s\n", data_layout.c_str());
 	if (data_layout.find("f80") != std::string::npos) {
 		fprintf(stderr, "INFO: FP80 supported.\n");
 		cpu->flags |= CPU_FLAG_FP80;
@@ -280,13 +282,20 @@ printf("%s:%d pc=%llx, cond=%d\n", __func__, __LINE__, pc, tag & TAG_TYPE_CONDIT
 					/* get not-taken basic block */
 					bb_next = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, next_pc, false);
 				}
-				if (tag & TAG_TYPE_CONDITIONAL) {
-					/* get taken basic block for conditional instruction */
-					bb_cond = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, true);
-				}
 			}
 
-			pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, cur_bb, bb_target, bb_cond, bb_next);
+			if (tag & TAG_TYPE_CONDITIONAL) {
+				/* emit code to evaluate the condition */
+				Value *c = cpu->f.recompile_cond(cpu, pc, cur_bb);
+printf("%s:%d pc=%llx, c=%p\n", __func__, __LINE__, pc, c);
+				/* get taken basic block for conditional instruction and create branch*/
+				bb_cond = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, true);
+				BranchInst::Create(bb_cond, bb_next, c, cur_bb);
+				/* recompile the instruction */
+				pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, bb_cond, bb_target, bb_cond, bb_next);
+			} else
+				pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, cur_bb, bb_target, bb_cond, bb_next);
+
 		} while (is_code(cpu, pc) && !(is_start_of_basicblock(cpu, pc)));
 
 		/* link with next basic block if there isn't a control flow instr. already */
@@ -335,36 +344,37 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret)
 	int bytes;
 	addr_t new_pc;
 	int flow_type;
+	BasicBlock *cur_bb = NULL, *bb_target = NULL, *bb_next = NULL, *bb_cond = NULL;
 	addr_t pc = cpu->f.get_pc(cpu, cpu->reg);
 
-	BasicBlock *cur_bb, *bb_target, *bb_next;
 	cur_bb = BasicBlock::Create(_CTX(), "instruction", cpu->func_jitmain, 0);
 
 	disasm_instr(cpu, pc);
 
 	bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc);
 
-	/* Create two "return" BBs for the branch targets */
-	if (flow_type == FLOW_TYPE_COND_BRANCH) {
-		bb_next = create_singlestep_return_basicblock(cpu, pc+bytes, bb_ret);
-		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
-	}
 	/* Create one "return" BB for the jump target */
-	if (flow_type == FLOW_TYPE_BRANCH || flow_type == FLOW_TYPE_CALL)
+	if ((flow_type & ~FLOW_TYPE_CONDITIONAL) == FLOW_TYPE_BRANCH || flow_type == FLOW_TYPE_CALL)
 		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
-#if 0
-	/* If it's a call, "store PC" (will return anyway) */
-	if (flow_type == FLOW_TYPE_CALL){
-		emit_store_pc(cpu, cur_bb, new_pc);
-}
-#endif
-	bytes = cpu->f.recompile_instr(cpu, pc, bb_ret, cur_bb, bb_target, NULL, bb_next);
+
+	if (flow_type & FLOW_TYPE_CONDITIONAL) {
+		/* emit code to evaluate the condition */
+		Value *c = cpu->f.recompile_cond(cpu, pc, cur_bb);
+		/* get taken basic block for conditional instruction and create branch*/
+		bb_cond = BasicBlock::Create(_CTX(), "cond_taken", cpu->func_jitmain, 0);
+		bb_next = create_singlestep_return_basicblock(cpu, pc+bytes, bb_ret);
+		BranchInst::Create(bb_next, bb_cond, c, cur_bb);
+		bytes = cpu->f.recompile_instr(cpu, pc, bb_ret, bb_cond, bb_target, NULL, bb_next);
+	}
+	else
+		bytes = cpu->f.recompile_instr(cpu, pc, bb_ret, cur_bb, bb_target, NULL, bb_next);
 
 	/* If it's not a branch, append "store PC & return" to basic block */
 	if (flow_type == FLOW_TYPE_CONTINUE ) {
 		emit_store_pc_return(cpu, cur_bb, pc + bytes, bb_ret);
 	}
 	return cur_bb;
+//printf("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 }
 
 static StructType *
@@ -651,7 +661,8 @@ cpu_recompile_function(cpu_t *cpu)
 	// create ret basicblock
 	BasicBlock *bb_ret = BasicBlock::Create(_CTX(), "ret", cpu->func_jitmain, 0);  
 	spill_reg_state(cpu, bb_ret);
-	ReturnInst::Create(_CTX(), ConstantInt::get(getType(Int32Ty), JIT_RETURN_FUNCNOTFOUND), bb_ret);
+	ReturnInst::Create(_CTX(), ConstantInt::get(getType(Int32Ty),
+		(cpu->flags_debug & CPU_DEBUG_SINGLESTEP)? JIT_RETURN_SINGLESTEP:JIT_RETURN_FUNCNOTFOUND), bb_ret);
 
 	BasicBlock *bb_start;
 	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP) {

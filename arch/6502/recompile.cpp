@@ -198,12 +198,7 @@ arch_6502_trap(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 	ConstantInt* v_pc = ConstantInt::get(getType(Int16Ty), pc);
 	new StoreInst(v_pc, cpu->ptr_PC, bb);
-	ReturnInst::Create(_CTX(), ConstantInt::get(getType(Int32Ty), (uint32_t)-1), bb);//XXX needs #define
-}
-
-static void
-arch_6502_branch(cpu_t *cpu, addr_t pc, Value *flag, bool flag_state, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_next) {
-	BRANCH(flag_state, bb_target, bb_next, new LoadInst(flag, "", false, bb));
+	ReturnInst::Create(_CTX(), ConstantInt::get(getType(Int32Ty), JIT_RETURN_TRAP), bb);//XXX needs #define
 }
 
 static void
@@ -385,8 +380,27 @@ arch_6502_flags_decode(Value *flags, BasicBlock *bb)
 	arch_decode_bit(flags, ptr_C, C_SHIFT, 8, bb);
 }
 
+Value *
+arch_6502_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
+	uint8_t opcode = cpu->RAM[pc];
+printf("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
+
+	switch (instraddmode[opcode].instr) {
+		case INSTR_BEQ: /* Z */		return LOAD(ptr_Z);
+		case INSTR_BNE: /* !Z */	return NOT(LOAD(ptr_Z));
+		case INSTR_BCS: /* C */		return LOAD(ptr_C);
+		case INSTR_BCC: /* !C */	return NOT(LOAD(ptr_C));
+		case INSTR_BMI: /* N */		return NOT(LOAD(ptr_N));
+		case INSTR_BPL: /* !N */	return LOAD(ptr_N);
+		case INSTR_BVS: /* V */		return NOT(LOAD(ptr_V));
+		case INSTR_BVC: /* !V */	return LOAD(ptr_V);
+		default:					return NULL; /* no condition; should not be reached */
+	}
+}
+
 int
 arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
+printf("%p %p %p %p %p\n", bb_dispatch, bb, bb_target, bb_cond, bb_next);
 	uint8_t opcode = cpu->RAM[pc];
 
 	ConstantInt* const_false = ConstantInt::get(getType(Int1Ty), 0);
@@ -421,13 +435,13 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			arch_6502_shiftrotate(cpu, pc, true, false, bb);
 			break;
 		case INSTR_BCC:
-			arch_6502_branch(cpu, pc, ptr_C, false, bb, bb_target, bb_next);
+			JUMP;
 			break;
 		case INSTR_BCS:
-			arch_6502_branch(cpu, pc, ptr_C, true, bb, bb_target, bb_next);
+			JUMP;
 			break;
 		case INSTR_BEQ:
-			arch_6502_branch(cpu, pc, ptr_Z, true, bb, bb_target, bb_next);
+			JUMP;
 			break;
 		case INSTR_BIT:
 			{
@@ -436,23 +450,23 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			break;
 			}
 		case INSTR_BMI:
-			arch_6502_branch(cpu, pc, ptr_N, true, bb, bb_target, bb_next);
+			JUMP;
 			break;
 		case INSTR_BNE:
-			arch_6502_branch(cpu, pc, ptr_Z, false, bb, bb_target, bb_next);
+			JUMP;
 			break;
 		case INSTR_BPL:
-			arch_6502_branch(cpu, pc, ptr_N, false, bb, bb_target, bb_next);
+			JUMP;
 			break;
 		case INSTR_BRK:
 			printf("warning: encountered BRK!\n");
 			arch_6502_trap(cpu, pc, bb);
 			break;
 		case INSTR_BVC:
-			arch_6502_branch(cpu, pc, ptr_V, false, bb, bb_target, bb_next);
+			JUMP;
 			break;
 		case INSTR_BVS:
-			arch_6502_branch(cpu, pc, ptr_V, true, bb, bb_target, bb_next);
+			JUMP;
 			break;
 		case INSTR_CLC:
 			new StoreInst(const_false, ptr_C, false, bb);
@@ -718,5 +732,6 @@ arch_func_t arch_func_6502 = {
 	arch_6502_spill_reg_state,
 	arch_6502_tag_instr,
 	arch_6502_disasm_instr,
+	arch_6502_recompile_cond,
 	arch_6502_recompile_instr
 };
