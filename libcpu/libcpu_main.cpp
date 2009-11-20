@@ -363,7 +363,7 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret)
 		/* get taken basic block for conditional instruction and create branch*/
 		bb_cond = BasicBlock::Create(_CTX(), "cond_taken", cpu->func_jitmain, 0);
 		bb_next = create_singlestep_return_basicblock(cpu, pc+bytes, bb_ret);
-		BranchInst::Create(bb_next, bb_cond, c, cur_bb);
+		BranchInst::Create(bb_cond, bb_next, c, cur_bb);
 		bytes = cpu->f.recompile_instr(cpu, pc, bb_ret, bb_cond, bb_target, NULL, bb_next);
 	}
 	else

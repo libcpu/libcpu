@@ -390,10 +390,10 @@ printf("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
 		case INSTR_BNE: /* !Z */	return NOT(LOAD(ptr_Z));
 		case INSTR_BCS: /* C */		return LOAD(ptr_C);
 		case INSTR_BCC: /* !C */	return NOT(LOAD(ptr_C));
-		case INSTR_BMI: /* N */		return NOT(LOAD(ptr_N));
-		case INSTR_BPL: /* !N */	return LOAD(ptr_N);
-		case INSTR_BVS: /* V */		return NOT(LOAD(ptr_V));
-		case INSTR_BVC: /* !V */	return LOAD(ptr_V);
+		case INSTR_BMI: /* N */		return LOAD(ptr_N);
+		case INSTR_BPL: /* !N */	return NOT(LOAD(ptr_N));
+		case INSTR_BVS: /* V */		return LOAD(ptr_V);
+		case INSTR_BVC: /* !V */	return NOT(LOAD(ptr_V));
 		default:					return NULL; /* no condition; should not be reached */
 	}
 }
