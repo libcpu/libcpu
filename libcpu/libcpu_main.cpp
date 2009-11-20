@@ -329,12 +329,12 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret)
 
 	disasm_instr(cpu, pc);
 
-printf("%s:%d\n", __func__, __LINE__);
+	if (!(cpu->flags & CPU_FLAG_QUIET)) printf("%s:%d\n", __func__, __LINE__);
 	bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc);
 
 	/* Create two "return" BBs for the branch targets */
 	if (flow_type == FLOW_TYPE_COND_BRANCH) {
-printf("%s:%d\n", __func__, __LINE__);
+	if (!(cpu->flags & CPU_FLAG_QUIET)) printf("%s:%d\n", __func__, __LINE__);
 		bb_next = create_singlestep_return_basicblock(cpu, pc+bytes, bb_ret);
 		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
 	}
@@ -632,6 +632,11 @@ cpu_recompile_function(cpu_t *cpu)
 	BasicBlock *label_entry = BasicBlock::Create(_CTX(), "entry", cpu->func_jitmain, 0);
 	emit_decode_reg(cpu, label_entry);
 
+	// create exit code
+	Value *exit_code = new AllocaInst(getIntegerType(32), "exit_code", label_entry);
+	// assume JIT_RETURN_FUNCNOTFOUND.
+	new StoreInst(ConstantInt::get(getType(Int32Ty), JIT_RETURN_FUNCNOTFOUND), exit_code, false, 0, label_entry);
+	
 #if 0 // bad for debugging, minimal speedup
 	/* make the RAM pointer a constant */
 	PointerType* type_pi8 = PointerType::get(IntegerType::get(8), 0);
@@ -641,7 +646,12 @@ cpu_recompile_function(cpu_t *cpu)
 	// create ret basicblock
 	BasicBlock *bb_ret = BasicBlock::Create(_CTX(), "ret", cpu->func_jitmain, 0);  
 	spill_reg_state(cpu, bb_ret);
-	ReturnInst::Create(_CTX(), ConstantInt::get(getType(Int32Ty), JIT_RETURN_FUNCNOTFOUND), bb_ret);
+	ReturnInst::Create(_CTX(), new LoadInst(exit_code, "", false, 0, bb_ret), bb_ret);
+	// create trap return basicblock
+	BasicBlock *bb_trap = BasicBlock::Create(_CTX(), "trap", cpu->func_jitmain, 0);  
+	new StoreInst(ConstantInt::get(getType(Int32Ty), JIT_RETURN_TRAP), exit_code, false, 0, bb_trap);
+	// return.
+	BranchInst::Create(bb_ret, bb_trap);
 
 	BasicBlock *bb_start;
 	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP) {
@@ -660,16 +670,16 @@ cpu_recompile_function(cpu_t *cpu)
 		cpu->mod->dump();
 
 	if (cpu->flags_optimize != CPU_OPTIMIZE_NONE) {
-		printf("*** Optimizing...");
+		if (!(cpu->flags & CPU_FLAG_QUIET)) printf("*** Optimizing...");
 		optimize(cpu);
-		printf("done.\n");
+		if (!(cpu->flags & CPU_FLAG_QUIET)) printf("done.\n");
 		if (cpu->flags_debug & CPU_DEBUG_PRINT_IR_OPTIMIZED)
 			cpu->mod->dump();
 	}
 
-	printf("*** Recompiling...");
+	if (!(cpu->flags & CPU_FLAG_QUIET)) printf("*** Recompiling...");
 	cpu->fp = cpu->exec_engine->getPointerToFunction(cpu->func_jitmain);
-	printf("done.\n");
+	if (!(cpu->flags & CPU_FLAG_QUIET)) printf("done.\n");
 }
 
 void

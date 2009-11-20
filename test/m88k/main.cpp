@@ -210,8 +210,8 @@ main(int argc, char **argv)
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP | CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);
 #else
-//	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
-	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
+	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
+//	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
 //	cpu_set_flags_optimize(cpu, 0x3eff);
 //	cpu_set_flags_optimize(cpu, 0x3eff);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);

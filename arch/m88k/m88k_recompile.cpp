@@ -30,7 +30,7 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 			*flow_type = FLOW_TYPE_RETURN;
 			break;
 
-		case M88K_OPC_JSR: // XXX is this implemented yet?
+		case M88K_OPC_JSR:
 		case M88K_OPC_JSR_N:
 			*flow_type = FLOW_TYPE_CALL;
 			break;
@@ -73,10 +73,11 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 			}
 			break;
 
-    case M88K_OPC_TB0:
-    case M88K_OPC_TB1:
-    case M88K_OPC_TBND:
-    case M88K_OPC_TCND:
+		case M88K_OPC_TB0:
+		case M88K_OPC_TB1:
+		case M88K_OPC_TBND:
+		case M88K_OPC_TCND:
+			break;
 
 		default:
 			*flow_type = FLOW_TYPE_CONTINUE;

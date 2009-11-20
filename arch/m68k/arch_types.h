@@ -17,8 +17,9 @@ typedef struct {
 			uint32_t r13;
 			uint32_t r14;
 			uint32_t r15;
+			uint32_t psr;
 		};
-		uint32_t r[16];
+		uint32_t r[17];
 	};
 	uint32_t pc;
 } reg_m68k_t;

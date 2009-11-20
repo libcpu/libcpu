@@ -9,7 +9,7 @@
 #include "nix.h"
 #include "loader.h"
 
-//#define SINGLESTEP
+#define DEBUGGER
 
 #define RAM_SIZE (64 * 1024 * 1024)
 #define STACK_TOP ((long long)(RAM+RAM_SIZE-4))
@@ -103,16 +103,18 @@ openbsd_m88k_setup_uframe(cpu_t           *cpu,
 		arglen += strlen(argv[n]) + 1; /* zero */
 	}
 
-	for (p = envp, envc = 0; *p != NULL; p++, envc++) {
-		frmlen += sizeof(m88k_uintptr_t);
+	if (envp != NULL) {
+		for (p = envp, envc = 0; *p != NULL; p++, envc++) {
+			frmlen += sizeof(m88k_uintptr_t);
 #ifdef FIX_BOGUS_HOME
-		if (strncmp(*p, "HOME=", 5) == 0)
-		  {
-			if ((*p)[strlen(*p) - 1] != '/')
-			  envlen++;
-		  }
+			if (strncmp(*p, "HOME=", 5) == 0)
+			  {
+				if ((*p)[strlen(*p) - 1] != '/')
+				  envlen++;
+			  }
 #endif
-		envlen += strlen(*p) + 1; /* zero */
+			envlen += strlen(*p) + 1; /* zero */
+		}
 	}
 
 	frmlen += sizeof(m88k_uintptr_t);
@@ -214,6 +216,7 @@ main(int ac, char **av, char **ep)
 	xec_us_syscall_if_t *us_syscall;
 	m88k_uintptr_t stack_top;
 	nix_env_t *env;
+	bool debugging = false;
 
 	if (ac < 2) {
 		fprintf(stderr, "usage: %s <executable> [args...]\n", *av);
@@ -277,17 +280,12 @@ main(int ac, char **av, char **ep)
 
 	/* Setup arguments */
 	g_uframe_log = xec_log_register("uframe");
-	openbsd_m88k_setup_uframe(cpu, mem_if, ac - 1, av + 1, ep, &stack_top);
+	openbsd_m88k_setup_uframe(cpu, mem_if, ac - 1, av + 1, NULL, &stack_top);
 
 	/* Setup and initialize the CPU */
 	cpu_set_flags_arch(cpu, CPU_M88K_IS_32BIT | CPU_M88K_IS_BE);
-#ifdef SINGLESTEP
-	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
-	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP | CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);
-#else
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);
-#endif
 	cpu_set_ram(cpu, RAM);
 
 	cpu_init(cpu);
@@ -306,16 +304,21 @@ main(int ac, char **av, char **ep)
 
 	dump_state(RAM, (m88k_grf_t*)cpu->reg);
 
-	for(;;) {
-		rc = cpu_run(cpu, debug_function);
-#ifdef SINGLESTEP
-		dump_state(RAM, (m88k_grf_t*)cpu->reg);
-		printf ("NPC=%08x\n", PC);
+#ifdef DEBUGGER
+	debugging = true;
+#endif
 
-		cpu_flush(cpu);
-		printf("*** PRESS <ENTER> TO CONTINUE ***\n");
-		getchar();
-#else
+	for (;;) {
+		if (debugging) {
+			rc = cpu_debugger(cpu);
+			if (rc < 0) {
+				debugging = false;
+				continue;
+			}
+		} else {
+			rc = cpu_run(cpu, debug_function);
+		}
+
 		switch (rc) {
 			case JIT_RETURN_NOERR: /* JIT code wants us to end execution */
 				break;
@@ -339,7 +342,6 @@ main(int ac, char **av, char **ep)
 				printf("unknown return code: %d\n", rc);
 				break;
 		}
-#endif
 	}
 
 double_break:

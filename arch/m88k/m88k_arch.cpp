@@ -88,6 +88,32 @@ arch_m88k_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 	new StoreInst(flags, cpu->ptr_PSR, false, bb);
 }
 
+static uint64_t
+arch_m88k_get_psr(cpu_t *, void *regs)
+{
+	return ((m88k_grf_t *)regs)->psr;
+}
+
+static int
+arch_m88k_get_reg(cpu_t *cpu, void *regs, unsigned reg_no, uint64_t *value)
+{
+	if (reg_no > 31)
+		return (-1);
+
+	*value = ((m88k_grf_t *)regs)->r[reg_no];
+	return (0);
+}
+
+static int
+arch_m88k_get_fp_reg(cpu_t *cpu, void *regs, unsigned reg_no, void *value)
+{
+	if (reg_no > 31)
+		return (-1);
+
+	*(fp80_reg_t *)value = ((m88k_xrf_t *)regs)->x[reg_no];
+	return (0);
+}
+
 arch_func_t arch_func_m88k = {
 	arch_m88k_init,
 	arch_m88k_get_pc,
@@ -95,5 +121,9 @@ arch_func_t arch_func_m88k = {
 	arch_m88k_spill_reg_state,
 	arch_m88k_tag_instr,
 	arch_m88k_disasm_instr,
-	arch_m88k_recompile_instr
+	arch_m88k_recompile_instr,
+	// idbg support
+	arch_m88k_get_psr,
+	arch_m88k_get_reg,
+	arch_m88k_get_fp_reg
 };

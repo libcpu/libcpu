@@ -24,27 +24,27 @@ Value* ptr_N;
 #define OPERAND_8 cpu->RAM[(pc+1)&0xFFFF]
 #define OPERAND_16 ((cpu->RAM[pc+1]&0xFFFF) | (cpu->RAM[pc+2]&0xFFFF)<<8)
 
-Value *
+static inline Value *
 arch_6502_get_op8(cpu_t *cpu, uint16_t pc, BasicBlock *bb) {
 	return ConstantInt::get(getType(Int32Ty), OPERAND_8);
 }
 
-Value *
+static inline Value *
 arch_6502_get_op16(cpu_t *cpu, uint16_t pc, BasicBlock *bb) {
 	return ConstantInt::get(getType(Int32Ty), OPERAND_16);
 }
 
-static Value *
+static inline Value *
 arch_6502_get_x(cpu_t *cpu, BasicBlock *bb) {
 	return new LoadInst(ptr_X, "", false, bb);
 }
 
-static Value *
+static inline Value *
 arch_6502_get_y(cpu_t *cpu, BasicBlock *bb) {
 	return new LoadInst(ptr_Y, "", false, bb);
 }
 
-static Value *
+static inline Value *
 arch_6502_load_ram_8(cpu_t *cpu, Value *addr, BasicBlock *bb) {
 	Value* ptr = GetElementPtrInst::Create(cpu->ptr_RAM, addr, "", bb);
 	return new LoadInst(ptr, "", false, bb);
@@ -385,7 +385,7 @@ arch_6502_flags_decode(Value *flags, BasicBlock *bb)
 	arch_decode_bit(flags, ptr_C, C_SHIFT, 8, bb);
 }
 
-int
+static int
 arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
 	uint8_t opcode = cpu->RAM[pc];
 
@@ -653,7 +653,7 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 	return length[instraddmode[opcode].addmode]+1;
 }
 
-void
+static void
 arch_6502_init(cpu_t *cpu)
 {
 	reg_6502_t *reg;
@@ -682,7 +682,7 @@ arch_6502_init(cpu_t *cpu)
 	assert(offsetof(reg_6502_t, pc) == 5);
 }
 
-void
+static void
 arch_6502_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	// declare flags
@@ -698,17 +698,36 @@ arch_6502_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 	arch_6502_flags_decode(flags, bb);
 }
 
-void
+static void
 arch_6502_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
 	Value *flags = arch_6502_flags_encode(bb);
 	new StoreInst(flags, ptr_P, false, bb);
 }
 
-addr_t
+static addr_t
 arch_6502_get_pc(cpu_t *, void *reg)
 {
 	return ((reg_6502_t*)reg)->pc;
+}
+
+static uint64_t
+arch_6502_get_psr(cpu_t *, void *reg)
+{
+	return ((reg_6502_t*)reg)->p;
+}
+
+static int
+arch_6502_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
+{
+	switch (reg_no) {
+		case 0: *value = ((reg_6502_t *)reg)->a; break;
+		case 1: *value = ((reg_6502_t *)reg)->x; break;
+		case 2: *value = ((reg_6502_t *)reg)->y; break;
+		case 3: *value = ((reg_6502_t *)reg)->s; break;
+		default: return (-1);
+	}
+	return (0);
 }
 
 arch_func_t arch_func_6502 = {
@@ -718,5 +737,9 @@ arch_func_t arch_func_6502 = {
 	arch_6502_spill_reg_state,
 	arch_6502_tag_instr,
 	arch_6502_disasm_instr,
-	arch_6502_recompile_instr
+	arch_6502_recompile_instr,
+	// idbg support
+	arch_6502_get_psr,
+	arch_6502_get_reg,
+	NULL
 };

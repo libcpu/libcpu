@@ -2,7 +2,7 @@
 #include "arm_internal.h"
 #include "cpu_generic.h"
 
-void
+static void
 arch_arm_init(cpu_t *cpu)
 {
 	cpu->reg_size = 32;
@@ -30,10 +30,26 @@ arch_arm_init(cpu_t *cpu)
 	cpu->count_regs_f128 = 0;
 }
 
-addr_t
+static addr_t
 arch_arm_get_pc(cpu_t *, void *reg)
 {
-	return ((reg_arm_t*)reg)->pc;
+	return ((reg_arm_t *)reg)->pc;
+}
+
+static uint64_t
+arch_arm_get_psr(cpu_t *, void *reg)
+{
+	return ((reg_arm_t *)reg)->cpsr;
+}
+
+static int
+arch_arm_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
+{
+	if (reg_no > 15)
+		return (-1);
+
+	*value = ((reg_arm_t *)reg)->r[reg_no];
+	return (0);
 }
 
 arch_func_t arch_func_arm = {
@@ -43,5 +59,9 @@ arch_func_t arch_func_arm = {
 	arch_arm_spill_reg_state,
 	arch_arm_tag_instr,
 	arch_arm_disasm_instr,
-	arch_arm_recompile_instr
+	arch_arm_recompile_instr,
+	// idbg support
+	arch_arm_get_psr,
+	arch_arm_get_reg,
+	NULL
 };

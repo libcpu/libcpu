@@ -36,6 +36,10 @@ typedef void        (*fp_spill_reg_state)(struct cpu *cpu, BasicBlock *bb);
 typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, int *flow_type, addr_t *new_pc);
 typedef int         (*fp_disasm_instr)(struct cpu *cpu, addr_t pc, char *line, unsigned int max_line);
 typedef int         (*fp_recompile_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next);
+// idbg support
+typedef uint64_t    (*fp_get_psr)(struct cpu *cpu, void *regs);
+typedef int         (*fp_get_reg)(struct cpu *cpu, void *regs, unsigned reg_no, uint64_t *value);
+typedef int         (*fp_get_fp_reg)(struct cpu *cpu, void *regs, unsigned reg_no, void *value);
 
 typedef struct {
 	fp_init init;
@@ -45,6 +49,10 @@ typedef struct {
 	fp_tag_instr tag_instr;
 	fp_disasm_instr disasm_instr;
 	fp_recompile_instr recompile_instr;
+	// idbg support
+	fp_get_psr get_psr;
+	fp_get_reg get_reg;
+	fp_get_fp_reg get_fp_reg;
 } arch_func_t;
 
 typedef enum {
@@ -60,7 +68,8 @@ typedef uint16_t tagging_type_t;
 
 enum {
 	CPU_FLAG_FP80  = (1 << 15), // FP80 is natively supported.
-	CPU_FLAG_FP128 = (1 << 16)  // FP128 is natively supported.
+	CPU_FLAG_FP128 = (1 << 16), // FP128 is natively supported.
+	CPU_FLAG_QUIET = (1 << 31)  // XXX !!!TEMPORARY FLAG!!! remove some debugging
 };
 
 typedef struct cpu {
@@ -163,6 +172,9 @@ void cpu_set_flags_arch(cpu_t *cpu, uint32_t f);
 void cpu_set_ram(cpu_t *cpu, uint8_t *RAM);
 void cpu_flush(cpu_t *cpu);
 void cpu_init(cpu_t *cpu);
+
+/* runs the interactive debugger */
+int cpu_debugger(cpu_t *cpu);
 
 //////////////////////////////////////////////////////////////////////
 // LLVM Helpers
