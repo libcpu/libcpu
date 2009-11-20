@@ -20,7 +20,7 @@ using namespace llvm;
 
 #include "arch/6502/libcpu_6502.h"
 //#include "arch/m68k/libcpu_m68k.h"
-//#include "arch/mips/libcpu_mips.h"
+#include "arch/mips/libcpu_mips.h"
 //#include "arch/m88k/libcpu_m88k.h"
 #include "arch/arm/libcpu_arm.h"
 
@@ -45,9 +45,11 @@ cpu_new(cpu_arch_t arch)
 		case CPU_ARCH_M68K:
 			cpu->f = arch_func_m68k;
 			break;
+#endif
 		case CPU_ARCH_MIPS:
 			cpu->f = arch_func_mips;
 			break;
+#if 0
 		case CPU_ARCH_M88K:
 			cpu->f = arch_func_m88k;
 			break;
