@@ -99,6 +99,8 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define NEGs(s, x) SUB(CONST##s(0), x)
 #define NEG(x) SUB(CONST(0), x)
 #define NOT(a) XOR(a,CONST1(1))
+#define INC(a) ADD(a,CONST(1))
+#define DEC(a) SUB(a,CONST(1))
 
 /* floating point */
 #define FPCONSTs(s,v) ConstantFP::get(getFloatType(bits), v)
@@ -181,12 +183,6 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 
 /* host */
 #define RAM32(RAM,a) RAM32BE(RAM,a)
-
-/* branch */
-#define BRANCH(f,pc1,pc2,v) arch_branch(f,pc1,pc2,v,bb)
-
-/* jump */
-#define JUMP arch_jump(bb, bb_target)
 
 /* bitcasts to int */
 #define IBITCASTs(s, v)  new BitCastInst(v, getIntegerType(s), "", bb)
