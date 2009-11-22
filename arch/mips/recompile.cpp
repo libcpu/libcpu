@@ -41,6 +41,7 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case 0x00: //INCPU_SPECIAL
 			switch(instr & 0x3F) {
 				case 0x08: //INCPUS_JR
+					//XXX is not necessarily a return!
 					*flow_type = FLOW_TYPE_RETURN | FLOW_TYPE_DELAY_SLOT;
 					break;
 				case 0x09:  //INCPUS_JALR
@@ -72,13 +73,13 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 			switch (GetRegimmInstruction) {
 				case 0x00: //INCPUR_BLTZ
 				case 0x01: //INCPUR_BGEZ
-					*new_pc = MIPS_BRANCH_TARGET | FLOW_TYPE_DELAY_SLOT;
-					*flow_type = FLOW_TYPE_COND_BRANCH;
+					*new_pc = MIPS_BRANCH_TARGET;
+					*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
 					break;
 				case 0x10: //INCPUR_BLTZAL
 				case 0x11: //INCPUR_BGEZAL
-					*new_pc = MIPS_BRANCH_TARGET | FLOW_TYPE_DELAY_SLOT;
-					*flow_type = FLOW_TYPE_CALL;
+					*new_pc = MIPS_BRANCH_TARGET;
+					*flow_type = FLOW_TYPE_CALL | FLOW_TYPE_DELAY_SLOT;
 					break;
 				case 0x02: //INCPUR_BLTZL
 				case 0x03: //INCPUR_BGEZL
@@ -265,31 +266,9 @@ arch_mips_get_sa(cpu_t *cpu, uint32_t instr, uint32_t bits, BasicBlock *bb) {
 #define SA32 arch_mips_get_sa(cpu, instr, 32, bb)
 
 //////////////////////////////////////////////////////////////////////
-
-void
-arch_mips_branch(Value *v, bool likely, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_next) {
-
-	if (likely) {
-		printf("error: \"likely\" is broken!\n");
-		exit(1);
-	}
-
-	BRANCH(true, bb_target, bb_next, v);
-}
-
-//////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
 #define LET_PC(v) new StoreInst(v, cpu->ptr_PC, bb)
-
-
-#define DELAY_SLOT arch_mips_recompile_instr(cpu, pc+4, bb_dispatch, bb, bb_target, bb_cond, bb_next)
-#define JMP_BB(b) BranchInst::Create(b, bb)
-
-#define JUMP_DELAY { DELAY_SLOT; JUMP; }
-#define JUMP_DELAY_LINK { DELAY_SLOT; LINK; JUMP; }
-#define JUMP_DELAY_LIKELY { printf("LIKELY not handled yet!\n"); exit(1); }
-#define JUMP_DELAY_LINK_LIKELY { printf("LIKELY not handled yet!\n"); exit(1); }
 
 #define LINKr(i) LET32(i, CONST((uint64_t)(sint64_t)(sint32_t)pc+8))
 
@@ -356,16 +335,12 @@ arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			case 0x08: /* INCPUS_JR */
 			{
 				LET_PC(R(RS));
-				DELAY_SLOT;
-				JMP_BB(bb_dispatch);
 				break;
 			}
 			case 0x09: /* INCPUS_JALR */
 			{
 				LET_PC(SUB(R(RS),CONST(4)));
 				LINKr(RD);
-				DELAY_SLOT;
-				JMP_BB(bb_dispatch);
 				break;
 			}
 			case 0x0C: /* INCPUS_SYSCALL */	BAD;
@@ -418,40 +393,32 @@ arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 		break;
 	case 0x01: /* INCPU_REGIMM */
 		switch (GetRegimmInstruction) {
-			case 0x00: /* INCPUR_BLTZ */	JUMP_DELAY;	break;
-			case 0x01: /* INCPUR_BGEZ */	JUMP_DELAY;	break;
-			case 0x02: /* INCPUR_BLTZL */	JUMP_DELAY_LIKELY;	break;
-			case 0x03: /* INCPUR_BGEZL */	JUMP_DELAY_LIKELY;	break;
+			case 0x00: /* INCPUR_BLTZ */	/* jump */;	break;
+			case 0x01: /* INCPUR_BGEZ */	/* jump */;	break;
+			case 0x02: /* INCPUR_BLTZL */	/* jump */;	break;
+			case 0x03: /* INCPUR_BGEZL */	/* jump */;	break;
 			case 0x08: /* INCPUR_TGEI */	BAD;
 			case 0x09: /* INCPUR_TGEIU */	BAD;
 			case 0x0A: /* INCPUR_TLTI */	BAD;
 			case 0x0B: /* INCPUR_TLTIU */	BAD;
 			case 0x0C: /* INCPUR_TEQI */	BAD;
 			case 0x0E: /* INCPUR_TNEI */	BAD;
-			case 0x10: /* INCPUR_BLTZAL */	JUMP_DELAY_LINK;	break;
-			case 0x11: /* INCPUR_BGEZAL */	JUMP_DELAY_LINK;	break;
-			case 0x12: /* INCPUR_BLTZALL */	JUMP_DELAY_LINK_LIKELY;	break;
-			case 0x13: /* INCPUR_BGEZALL */	JUMP_DELAY_LINK_LIKELY;	break;
+			case 0x10: /* INCPUR_BLTZAL */	LINK;	break;
+			case 0x11: /* INCPUR_BGEZAL */	LINK;	break;
+			case 0x12: /* INCPUR_BLTZALL */	LINK;	break;
+			case 0x13: /* INCPUR_BGEZALL */	LINK;	break;
 			default:
 				printf("INVALID %s:%d\n", __func__, __LINE__); exit(1);
 		}
 	case 0x02: /* INCPU_J */
-		{
-		DELAY_SLOT;
-		JUMP;
 		break;
-		}
 	case 0x03: /* INCPU_JAL */
-		{
 		LINK;
-		DELAY_SLOT;
-		JUMP;
 		break;
-		}
-	case 0x04: /* INCPU_BEQ */		JUMP_DELAY;	break;
-	case 0x05: /* INCPU_BNE */		JUMP_DELAY;	break;
-	case 0x06: /* INCPU_BLEZ */		JUMP_DELAY;	break;
-	case 0x07: /* INCPU_BGTZ */		JUMP_DELAY;	break;
+	case 0x04: /* INCPU_BEQ */		/* jump */;	break;
+	case 0x05: /* INCPU_BNE */		/* jump */;	break;
+	case 0x06: /* INCPU_BLEZ */		/* jump */;	break;
+	case 0x07: /* INCPU_BGTZ */		/* jump */;	break;
 	case 0x08: /* INCPU_ADDI */		LET32(RT, ADD(R32(RS), IMM32));					break; //XXX same??
 	case 0x09: /* INCPU_ADDIU */	LET32(RT, ADD(R32(RS), IMM32));					break; //XXX same??
 	case 0x0A: /* INCPU_SLTI */		LET_ZEXT(RT,ICMP_ULT(R(RS),IMM));				break; //XXX same??
@@ -533,10 +500,10 @@ arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			default:
 				printf("INVALID %s:%d\n", __func__, __LINE__); exit(1);
 		}
-	case 0x14: /* INCPU_BEQL */		JUMP_DELAY_LIKELY;			break;
-	case 0x15: /* INCPU_BNEL */		JUMP_DELAY_LIKELY;			break;
-	case 0x16: /* INCPU_BLEZL */	JUMP_DELAY_LIKELY;	break;
-	case 0x17: /* INCPU_BGTZL */	JUMP_DELAY_LIKELY;	break;
+	case 0x14: /* INCPU_BEQL */		/* jump */;			break;
+	case 0x15: /* INCPU_BNEL */		/* jump */;			break;
+	case 0x16: /* INCPU_BLEZL */	/* jump */;	break;
+	case 0x17: /* INCPU_BGTZL */	/* jump */;	break;
 	case 0x18: /* INCPU_DADDI */	LET(RT,ADD(R(RS),IMM));								break; //XXX same??
 	case 0x19: /* INCPU_DADDIU */	LET(RT,ADD(R(RS),IMM));								break; //XXX same??
 	case 0x1A: /* INCPU_LDL */		BAD;

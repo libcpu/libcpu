@@ -1154,11 +1154,5 @@ arch_mips_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 	CPUDisassembler *disassembler = new CPUDisassembler();
 	snprintf(line, max_line, "%s", disassembler->Disassemble(pc, op, false).c_str());
 
-	if (bytes == 8) {// delay slot
-		instr = INSTR(pc+4);
-		op.all = instr;
-		snprintf(line+strlen(line), max_line-strlen(line), " [%s]", disassembler->Disassemble(pc+4, op, false).c_str());
-	}
-
 	return bytes;
 }

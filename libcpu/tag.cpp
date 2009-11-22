@@ -55,7 +55,9 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 {
 	int bytes;
 	int flow_type;
-	addr_t new_pc;
+	addr_t new_pc, next_pc;
+	int dummy1;
+	addr_t dummy2;
 
 	for(;;) {
 		if (!is_inside_code_area(cpu, pc))
@@ -72,9 +74,13 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 
 		bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc);
 
+		next_pc = pc + bytes;
+		if (flow_type & FLOW_TYPE_DELAY_SLOT)		/* skip delay slot */
+			next_pc += cpu->f.tag_instr(cpu, next_pc, &dummy1, &dummy2);
+
 		if (flow_type & FLOW_TYPE_CONDITIONAL) {
 			or_tagging_type(cpu, pc, TAG_TYPE_CONDITIONAL);
-			or_tagging_type(cpu, pc+bytes, TAG_TYPE_AFTER_BRANCH);
+			or_tagging_type(cpu, next_pc, TAG_TYPE_AFTER_BRANCH);
 		}
 
 		if (flow_type & FLOW_TYPE_DELAY_SLOT)
@@ -92,19 +98,18 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 				tag_recursive(cpu, new_pc, level+1);
 				if (!(flow_type & FLOW_TYPE_CONDITIONAL))
 					return;
-				or_tagging_type(cpu, pc+bytes, TAG_TYPE_AFTER_BRANCH);
 				break;
 			case FLOW_TYPE_CALL:
 				/* tag subroutine, then continue with next instruction */
 				or_tagging_type(cpu, pc, TAG_TYPE_CALL);
 				or_tagging_type(cpu, new_pc, TAG_TYPE_SUBROUTINE);
-				or_tagging_type(cpu, pc+bytes, TAG_TYPE_AFTER_CALL);
+				or_tagging_type(cpu, next_pc, TAG_TYPE_AFTER_CALL);
 				tag_recursive(cpu, new_pc, level+1);
 				break;
 			case FLOW_TYPE_CONTINUE:
 				break; /* continue with next instruction */
 		}
-		pc += bytes;
+		pc = next_pc;
 	}
 }
 

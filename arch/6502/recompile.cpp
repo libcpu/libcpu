@@ -425,6 +425,16 @@ printf("%p %p %p %p %p\n", bb_dispatch, bb, bb_target, bb_cond, bb_next);
 
 //	printf("\naddmode = %i\n", instraddmode[opcode].addmode);
 	switch (instraddmode[opcode].instr) {
+		case INSTR_BEQ:
+		case INSTR_BNE:
+		case INSTR_BCS:
+		case INSTR_BCC:
+		case INSTR_BMI:
+		case INSTR_BPL:
+		case INSTR_BVS:
+		case INSTR_BVC:
+			break;
+
 		case INSTR_ADC:
 			arch_6502_addsub(cpu, pc, ptr_A, ptr_A, false, true, bb);
 			break;
@@ -434,39 +444,15 @@ printf("%p %p %p %p %p\n", bb_dispatch, bb, bb_target, bb_cond, bb_next);
 		case INSTR_ASL:
 			arch_6502_shiftrotate(cpu, pc, true, false, bb);
 			break;
-		case INSTR_BCC:
-			JUMP;
-			break;
-		case INSTR_BCS:
-			JUMP;
-			break;
-		case INSTR_BEQ:
-			JUMP;
-			break;
 		case INSTR_BIT:
 			{
 			Value *v1 = arch_6502_get_operand_rvalue(cpu, pc, bb);
 			arch_6502_set_nz(v1, bb);
 			break;
 			}
-		case INSTR_BMI:
-			JUMP;
-			break;
-		case INSTR_BNE:
-			JUMP;
-			break;
-		case INSTR_BPL:
-			JUMP;
-			break;
 		case INSTR_BRK:
 			printf("warning: encountered BRK!\n");
 			arch_6502_trap(cpu, pc, bb);
-			break;
-		case INSTR_BVC:
-			JUMP;
-			break;
-		case INSTR_BVS:
-			JUMP;
 			break;
 		case INSTR_CLC:
 			new StoreInst(const_false, ptr_C, false, bb);

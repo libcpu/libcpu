@@ -123,20 +123,12 @@ cpu_set_flags_arch(cpu_t *cpu, uint32_t f)
 // disassemble
 //////////////////////////////////////////////////////////////////////
 void disasm_instr(cpu_t *cpu, addr_t pc) {
-	char disassembly_line[MAX_DISASSEMBLY_LINE];
+	char disassembly_line1[MAX_DISASSEMBLY_LINE];
+	char disassembly_line2[MAX_DISASSEMBLY_LINE];
 	int bytes, i;
 
-	bytes = cpu->f.disasm_instr(cpu, pc, disassembly_line, sizeof(disassembly_line));
+	bytes = cpu->f.disasm_instr(cpu, pc, disassembly_line1, sizeof(disassembly_line1));
 
-#ifdef DUMP_OCTAL16
-	printf(".,%06o ", pc);
-	for (i=0; i<bytes; i+=2) {
-		printf("%06o ", cpu->RAM[pc+i] | cpu->RAM[pc+i+1]<<8);
-	}
-	for (i=0; i<=18-7*(bytes/2); i++) { /* TODO make this arch neutral */
-		printf(" ");
-	}
-#else
 	printf(".,%04llx ", (unsigned long long)pc);
 	for (i=0; i<bytes; i++) {
 		printf("%02X ", cpu->RAM[pc+i]);
@@ -144,8 +136,19 @@ void disasm_instr(cpu_t *cpu, addr_t pc) {
 	for (i=0; i<=18-3*bytes; i++) { /* TODO make this arch neutral */
 		printf(" ");
 	}
-#endif
-	printf("%-23s\n", disassembly_line);
+
+	/* delay slot */
+	int flow_type;
+	addr_t dummy;
+	cpu->f.tag_instr(cpu, pc, &flow_type, &dummy);
+	if (flow_type & FLOW_TYPE_DELAY_SLOT)
+		bytes = cpu->f.disasm_instr(cpu, pc + bytes, disassembly_line2, sizeof(disassembly_line2));
+
+	if (flow_type & FLOW_TYPE_DELAY_SLOT)
+		printf("%-23s [%s]\n", disassembly_line1, disassembly_line2);
+	else
+		printf("%-23s\n", disassembly_line1);
+
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -235,10 +238,11 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 			create_basicblock(pc, cpu->func_jitmain, BB_TYPE_NORMAL);
 			bbs++;
 		}
-		if (get_tagging_type(cpu, pc) & TAG_TYPE_CONDITIONAL)
+		if (get_tagging_type(cpu, pc) & TAG_TYPE_CONDITIONAL) {
 			create_basicblock(pc, cpu->func_jitmain, BB_TYPE_COND);
-		if (get_tagging_type(cpu, pc) & TAG_TYPE_DELAY_SLOT)
-			create_basicblock(pc, cpu->func_jitmain, BB_TYPE_DELAY);
+			if (get_tagging_type(cpu, pc) & TAG_TYPE_DELAY_SLOT)
+				create_basicblock(pc, cpu->func_jitmain, BB_TYPE_DELAY);
+		}
 		pc++;
 	}
 	printf("bbs: %d\n", bbs);
@@ -271,23 +275,32 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 		if (cstr[0] != BB_TYPE_NORMAL)
 			continue; // skip special blocks like entry, dispatch...
 		pc = strtol(cstr+1, (char **)NULL, 16);
-printf("basicblock: %04llx\n", (unsigned long long)pc);
-		int dummy;
+printf("basicblock: L%08llx\n", (unsigned long long)pc);
 		tagging_type_t tag;
 		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_cond = NULL, *bb_delay = NULL;
 		do {
+			int dummy1;
+			addr_t dummy2;
+
 			disasm_instr(cpu, pc);
 
 			tag = get_tagging_type(cpu, pc);
 
+			/* get next instruction */
 			addr_t new_pc, next_pc;
-			next_pc = pc + cpu->f.tag_instr(cpu, pc, &dummy, &new_pc);
+			next_pc = pc + cpu->f.tag_instr(cpu, pc, &dummy1, &new_pc);
+			if (tag & TAG_TYPE_DELAY_SLOT)		/* skip delay slot */
+				next_pc += cpu->f.tag_instr(cpu, next_pc, &dummy1, &dummy2);
 
 			/* get target basic block */
-			if (tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH)) {
+printf("%d new_pc=%llx\n", __LINE__, new_pc);
+			if (tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH|TAG_TYPE_RET)) {
+printf("%d\n", __LINE__);
 				if (new_pc == NEW_PC_NONE) { /* recompile_instr() will set PC */
+printf("%d\n", __LINE__);
 					bb_target = bb_dispatch;
 				} else {
+printf("%d\n", __LINE__);
 					bb_target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, new_pc, BB_TYPE_NORMAL);
 					if (!bb_target) { /* outside of code segment */
 						bb_target = create_basicblock(new_pc, cpu->func_jitmain, BB_TYPE_EXTERNAL);
@@ -305,11 +318,8 @@ printf("basicblock: %04llx\n", (unsigned long long)pc);
 			if ((tag & TAG_TYPE_DELAY_SLOT) && (tag & TAG_TYPE_CONDITIONAL))
 				bb_delay = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, BB_TYPE_DELAY);
 
-printf("%d\n", __LINE__);
 			if (tag & TAG_TYPE_CONDITIONAL) {
-printf("%d\n", __LINE__);
 				if (tag & TAG_TYPE_DELAY_SLOT) {
-printf("%d\n", __LINE__);
 					addr_t delay_pc;
 					// bb
 					Value *c = cpu->f.recompile_cond(cpu, pc, cur_bb);
@@ -325,34 +335,35 @@ printf("%d\n", __LINE__);
 				} else {
 printf("%d\n", __LINE__);
 					addr_t delay_pc;
+printf("%d\n", __LINE__);
 					// bb
+printf("%d\n", __LINE__);
 					Value *c = cpu->f.recompile_cond(cpu, pc, cur_bb);
+printf("%d\n", __LINE__);
 					BranchInst::Create(bb_cond, bb_next, c, cur_bb);
+printf("%d\n", __LINE__);
 					// cond
+printf("%d\n", __LINE__);
 					pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, bb_cond, bb_target, bb_cond, bb_next);
+printf("%d\n", __LINE__);
 					BranchInst::Create(bb_target, bb_cond);
+printf("%d\n", __LINE__);
 				}
 			} else {
-printf("%d\n", __LINE__);
 				if (tag & TAG_TYPE_DELAY_SLOT) {
-printf("%d\n", __LINE__);
  					// bb
 					pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, cur_bb, bb_target, bb_cond, bb_next);
 					pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, cur_bb, bb_target, bb_cond, bb_next);
-					BranchInst::Create(bb_target, bb_cond);
+					BranchInst::Create(bb_target, cur_bb);
 				} else {
-printf("%d\n", __LINE__);
 					// bb
 					pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, cur_bb, bb_target, bb_cond, bb_next);
 					if (tag & (TAG_TYPE_BRANCH | TAG_TYPE_CALL)) {
-printf("%d\n", __LINE__);
 						BranchInst::Create(bb_target, cur_bb);
 					}
 					if (tag & TAG_TYPE_RET) {
-printf("%d\n", __LINE__);
 						BranchInst::Create(bb_dispatch, cur_bb);
 					}
-printf("%d\n", __LINE__);
 				}
 			}
 
@@ -362,7 +373,9 @@ printf("%d\n", __LINE__);
 printf("%d\n", __LINE__);
 		/* link with next basic block if there isn't a control flow instr. already */
 		if (!(tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH|TAG_TYPE_RET))) {
+printf("%d\n", __LINE__);
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, BB_TYPE_NORMAL);
+printf("%d\n", __LINE__);
 			if (!target) {
 				printf("error: unknown continue $%04llx!\n", (unsigned long long)pc);
 				exit(1);
