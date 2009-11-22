@@ -399,8 +399,7 @@ printf("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
 }
 
 static int
-arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
-printf("%p %p %p %p %p\n", bb_dispatch, bb, bb_target, bb_cond, bb_next);
+arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	uint8_t opcode = cpu->RAM[pc];
 
 	ConstantInt* const_false = ConstantInt::get(getType(Int1Ty), 0);

@@ -135,14 +135,9 @@ arch_arm_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 }
 
 
-int arch_arm_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
+int arch_arm_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 printf("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
-
-	/* hack to finish basic block */
-	if (instr == 0xE1A0F00E) { /* MOV r15, r0, r14 */
-		BranchInst::Create(bb_dispatch, bb);
-	}
 
 	int cond = instr >> 28;
 	int op1 = (instr>>20)&0xFF;

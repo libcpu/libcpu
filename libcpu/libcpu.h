@@ -36,7 +36,7 @@ typedef void        (*fp_spill_reg_state)(struct cpu *cpu, BasicBlock *bb);
 typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, int *flow_type, addr_t *new_pc);
 typedef int         (*fp_disasm_instr)(struct cpu *cpu, addr_t pc, char *line, unsigned int max_line);
 typedef Value      *(*fp_recompile_cond)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
-typedef int         (*fp_recompile_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next);
+typedef int         (*fp_recompile_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
 // idbg support
 typedef uint64_t    (*fp_get_psr)(struct cpu *cpu, void *regs);
 typedef int         (*fp_get_reg)(struct cpu *cpu, void *regs, unsigned reg_no, uint64_t *value);

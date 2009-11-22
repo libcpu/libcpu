@@ -501,7 +501,7 @@ arch_m68k_recompile_cond(cpu_t *, addr_t, BasicBlock*)
 }
 
 int
-arch_m68k_recompile_instr(cpu_t *, addr_t, BasicBlock*, BasicBlock*, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next)
+arch_m68k_recompile_instr(cpu_t *, addr_t, BasicBlock *bb)
 {
 	printf("unimplemented!\n");
 	exit(1);

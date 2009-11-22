@@ -312,7 +312,7 @@ arch_mips_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 }
 
 int
-arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next)
+arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 #define BAD printf("%s:%d\n", __func__, __LINE__); exit(1);
 #define LOG printf("%s:%d\n", __func__, __LINE__);
@@ -395,8 +395,8 @@ arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 		switch (GetRegimmInstruction) {
 			case 0x00: /* INCPUR_BLTZ */	/* jump */;	break;
 			case 0x01: /* INCPUR_BGEZ */	/* jump */;	break;
-			case 0x02: /* INCPUR_BLTZL */	/* jump */;	break;
-			case 0x03: /* INCPUR_BGEZL */	/* jump */;	break;
+			case 0x02: /* INCPUR_BLTZL */	BAD; /* jump likely */;	break;
+			case 0x03: /* INCPUR_BGEZL */	BAD; /* jump likely */;	break;
 			case 0x08: /* INCPUR_TGEI */	BAD;
 			case 0x09: /* INCPUR_TGEIU */	BAD;
 			case 0x0A: /* INCPUR_TLTI */	BAD;
@@ -405,8 +405,8 @@ arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			case 0x0E: /* INCPUR_TNEI */	BAD;
 			case 0x10: /* INCPUR_BLTZAL */	LINK;	break;
 			case 0x11: /* INCPUR_BGEZAL */	LINK;	break;
-			case 0x12: /* INCPUR_BLTZALL */	LINK;	break;
-			case 0x13: /* INCPUR_BGEZALL */	LINK;	break;
+			case 0x12: /* INCPUR_BLTZALL */	LINK; BAD; /* likely */	break;
+			case 0x13: /* INCPUR_BGEZALL */	LINK; BAD; /* likely */	break;
 			default:
 				printf("INVALID %s:%d\n", __func__, __LINE__); exit(1);
 		}
@@ -500,10 +500,10 @@ arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 			default:
 				printf("INVALID %s:%d\n", __func__, __LINE__); exit(1);
 		}
-	case 0x14: /* INCPU_BEQL */		/* jump */;			break;
-	case 0x15: /* INCPU_BNEL */		/* jump */;			break;
-	case 0x16: /* INCPU_BLEZL */	/* jump */;	break;
-	case 0x17: /* INCPU_BGTZL */	/* jump */;	break;
+	case 0x14: /* INCPU_BEQL */		BAD; /* jump likely */			break;
+	case 0x15: /* INCPU_BNEL */		BAD; /* jump likely */			break;
+	case 0x16: /* INCPU_BLEZL */	BAD; /* jump likely */	break;
+	case 0x17: /* INCPU_BGTZL */	BAD; /* jump likely */	break;
 	case 0x18: /* INCPU_DADDI */	LET(RT,ADD(R(RS),IMM));								break; //XXX same??
 	case 0x19: /* INCPU_DADDIU */	LET(RT,ADD(R(RS),IMM));								break; //XXX same??
 	case 0x1A: /* INCPU_LDL */		BAD;

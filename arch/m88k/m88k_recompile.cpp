@@ -229,7 +229,7 @@ arch_m88k_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 
 static void
 arch_m88k_addsub(cpu_t *cpu, addr_t pc, m88k_reg_t dst, Value *src1, Value *src2,
-	bool sub, unsigned carry, bool overflow_trap, BasicBlock *bb_dispatch,
+	bool sub, unsigned carry, bool overflow_trap,
 	BasicBlock *bb)
 {
 	Value *result;
@@ -262,7 +262,7 @@ arch_m88k_addsub(cpu_t *cpu, addr_t pc, m88k_reg_t dst, Value *src1, Value *src2
 
 static void
 arch_m88k_shift(cpu_t *cpu, m88k_opcode_t opc, m88k_reg_t rd, Value *src1, Value *src2,
-	uint32_t width, uint32_t offset, bool ifmt, BasicBlock *bb_dispatch,
+	uint32_t width, uint32_t offset, bool ifmt,
 	BasicBlock *bb)
 {
 	uint32_t wmask = ifmt ? ((1 << width) - 1) : -1U;
@@ -330,8 +330,7 @@ arch_m88k_shift(cpu_t *cpu, m88k_opcode_t opc, m88k_reg_t rd, Value *src1, Value
  * }
  */
 static void
-arch_m88k_cmp(cpu_t *cpu, m88k_reg_t dst, Value *src1, Value *src2,
-	BasicBlock *bb_dispatch, BasicBlock *bb)
+arch_m88k_cmp(cpu_t *cpu, m88k_reg_t dst, Value *src1, Value *src2, BasicBlock *bb)
 {
 	LET32(dst,
 		SELECT(ICMP_EQ(src1, src2),
@@ -345,13 +344,12 @@ arch_m88k_cmp(cpu_t *cpu, m88k_reg_t dst, Value *src1, Value *src2,
 }
 
 static void
-arch_m88k_cmp_reg(cpu_t *cpu, m88k_reg_t dst, m88k_reg_t src1, m88k_reg_t src2,
-	BasicBlock *bb_dispatch, BasicBlock *bb)
+arch_m88k_cmp_reg(cpu_t *cpu, m88k_reg_t dst, m88k_reg_t src1, m88k_reg_t src2, BasicBlock *bb)
 {
 	if (src1 == src2)
 		LET32(dst, CONST32(0xaa4));
 	else
-		arch_m88k_cmp(cpu, dst, R32(src1), R32(src2), bb_dispatch, bb);
+		arch_m88k_cmp(cpu, dst, R32(src1), R32(src2), bb);
 }
 
 /*
@@ -359,8 +357,7 @@ arch_m88k_cmp_reg(cpu_t *cpu, m88k_reg_t dst, m88k_reg_t src1, m88k_reg_t src2,
  * emulation, this operation must be atomic.
  */
 static void
-arch_m88k_xmem(cpu_t *cpu, bool byte, m88k_reg_t rd, Value *src1, Value *src2,
-	BasicBlock *bb_dispatch, BasicBlock *bb)
+arch_m88k_xmem(cpu_t *cpu, bool byte, m88k_reg_t rd, Value *src1, Value *src2, BasicBlock *bb)
 {
 	Value *reg_value;
 	Value *mem_value;
@@ -483,9 +480,7 @@ arch_m88k_fp_op(cpu_t *cpu, unsigned op, Value *a, Value *b,
 #define FPREM(a, b) arch_m88k_fp_op(cpu, FP_OP_REM, a, b, bb)
 
 int
-arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
-	BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond,
-	BasicBlock *bb_next)
+arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 #define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0)
 #define LOG printf("%s:%d\n", __func__, __LINE__);
@@ -503,11 +498,11 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 			if (fmt == M88K_IFMT_REG)
 				arch_m88k_addsub(cpu, pc, instr.rd(), R32(instr.rs1()),
 					(opc == M88K_OPC_ADD) ? IMM : UIMM, false, instr.carry(),
-					(opc == M88K_OPC_ADD), bb_dispatch, bb);
+					(opc == M88K_OPC_ADD), bb);
 			else
 				arch_m88k_addsub(cpu, pc, instr.rd(), R32(instr.rs1()),
 					R32(instr.rs2()), false, instr.carry(),
-					(opc == M88K_OPC_ADD), bb_dispatch, bb);
+					(opc == M88K_OPC_ADD), bb);
 			break;
 
 		case M88K_OPC_SUB:
@@ -515,11 +510,11 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 			if (fmt == M88K_IFMT_REG)
 				arch_m88k_addsub(cpu, pc, instr.rd(), R32(instr.rs1()),
 					(opc == M88K_OPC_SUB) ? IMM : UIMM, true, instr.carry(),
-					(opc == M88K_OPC_SUB), bb_dispatch, bb);
+					(opc == M88K_OPC_SUB), bb);
 			else
 				arch_m88k_addsub(cpu, pc, instr.rd(), R32(instr.rs1()),
 					R32(instr.rs2()), true, instr.carry(),
-					(opc == M88K_OPC_SUB), bb_dispatch, bb);
+					(opc == M88K_OPC_SUB), bb);
 			break;
 
 		case M88K_OPC_MULS:
@@ -609,7 +604,7 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 			arch_m88k_shift(cpu, opc, instr.rd(), R32(instr.rs1()),
 				(fmt == M88K_BFMT_REG) ? NULL : R32(instr.rs2()),
 				instr.bit_width(), instr.bit_offset(),
-				(fmt == M88K_BFMT_REG), bb_dispatch, bb);
+				(fmt == M88K_BFMT_REG), bb);
 			break;
 
 		case M88K_OPC_FF0:
@@ -623,10 +618,10 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_CMP:
 			if (fmt == M88K_IFMT_REG)
 				arch_m88k_cmp(cpu, instr.rd(), R32(instr.rs1()), IMM,
-					bb_dispatch, bb);
+					bb);
 			else
 				arch_m88k_cmp_reg(cpu, instr.rd(), instr.rs1(), instr.rs2(),
-					bb_dispatch, bb);
+					bb);
 			break;
 
 		case M88K_OPC_LDA:
@@ -791,7 +786,7 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 		case M88K_OPC_XMEM:
 		case M88K_OPC_XMEM_BU:
 			arch_m88k_xmem(cpu, (opc == M88K_OPC_XMEM_BU), instr.rd(),
-				R32(instr.rs1()), R32(instr.rs2()), bb_dispatch, bb);
+				R32(instr.rs1()), R32(instr.rs2()), bb);
 			break;
 
 		case M88K_OPC_JSR:
