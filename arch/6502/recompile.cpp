@@ -535,31 +535,11 @@ printf("%p %p %p %p %p\n", bb_dispatch, bb, bb_target, bb_cond, bb_next);
 				Value *ea = ConstantInt::get(getType(Int32Ty), OPERAND_16);
 				Value *v = arch_6502_load_ram_16(cpu, false, ea, bb);
 				new StoreInst(v, cpu->ptr_PC, bb);
-				BranchInst::Create(bb_dispatch, bb);
-			} else {
-				if (bb_target) {
-					BranchInst::Create(bb_target, bb);
-				} else {
-					//printf("warning: unknown jmp at $%04X to $%04X!\n", pc, OPERAND_16);
-					ConstantInt* c = ConstantInt::get(getType(Int16Ty), OPERAND_16);
-					new StoreInst(c, cpu->ptr_PC, bb);
-					BranchInst::Create(bb_dispatch, bb);
-				}
 			}
 			break;
 		case INSTR_JSR:
-			{
 			arch_6502_push_c16(cpu, pc+2, bb);
-			if (!bb_target) {
-				//printf("warning: unknown jsr at $%04X to $%04X!\n", pc, OPERAND_16);
-				ConstantInt* c = ConstantInt::get(getType(Int16Ty), OPERAND_16);
-				new StoreInst(c, cpu->ptr_PC, bb);
-				BranchInst::Create(bb_dispatch, bb);
-			} else {
-				BranchInst::Create(bb_target, bb);
-			}
 			break;
-			}
 		case INSTR_LDA:
 			arch_6502_load_reg(cpu, pc, ptr_A, bb);
 			break;
@@ -615,7 +595,6 @@ printf("%p %p %p %p %p\n", bb_dispatch, bb, bb_target, bb_cond, bb_next);
 			lo = BinaryOperator::Create(Instruction::Add, lo, hi, "", bb);
 			lo = BinaryOperator::Create(Instruction::Add, lo, const_int16_0001, "", bb);
 			new StoreInst(lo, cpu->ptr_PC, bb);
-			BranchInst::Create(bb_dispatch, bb);
 			break;
 			}
 		case INSTR_SBC:

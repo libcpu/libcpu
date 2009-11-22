@@ -41,7 +41,11 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case 0x00: //INCPU_SPECIAL
 			switch(instr & 0x3F) {
 				case 0x08: //INCPUS_JR
-					*flow_type = FLOW_TYPE_RETURN;
+					*flow_type = FLOW_TYPE_RETURN | FLOW_TYPE_DELAY_SLOT;
+					break;
+				case 0x09:  //INCPUS_JALR
+					*new_pc = NEW_PC_NONE;
+					*flow_type = FLOW_TYPE_BRANCH | FLOW_TYPE_DELAY_SLOT;
 					break;
 				case 0x01: //IN_invalid
 				case 0x05: //IN_invalid
@@ -68,23 +72,23 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 			switch (GetRegimmInstruction) {
 				case 0x00: //INCPUR_BLTZ
 				case 0x01: //INCPUR_BGEZ
-					*new_pc = MIPS_BRANCH_TARGET;
+					*new_pc = MIPS_BRANCH_TARGET | FLOW_TYPE_DELAY_SLOT;
 					*flow_type = FLOW_TYPE_COND_BRANCH;
 					break;
 				case 0x10: //INCPUR_BLTZAL
 				case 0x11: //INCPUR_BGEZAL
-					*new_pc = MIPS_BRANCH_TARGET;
+					*new_pc = MIPS_BRANCH_TARGET | FLOW_TYPE_DELAY_SLOT;
 					*flow_type = FLOW_TYPE_CALL;
 					break;
 				case 0x02: //INCPUR_BLTZL
 				case 0x03: //INCPUR_BGEZL
 					*new_pc = MIPS_BRANCH_TARGET;
-					*flow_type = FLOW_TYPE_COND_BRANCH;
+					*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
 					break;
 				case 0x12: //INCPUR_BLTZALL
 				case 0x13: //INCPUR_BGEZALL
 					*new_pc = MIPS_BRANCH_TARGET;
-					*flow_type = FLOW_TYPE_CALL;
+					*flow_type = FLOW_TYPE_CALL | FLOW_TYPE_DELAY_SLOT;
 					break;
 				case 0x04: //IN_invalid
 				case 0x05: //IN_invalid
@@ -120,17 +124,17 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case 0x04: //INCPU_BEQ
 			if (!RS && !RT) { // special case: B
 				*new_pc = MIPS_BRANCH_TARGET;
-				*flow_type = FLOW_TYPE_BRANCH;
+				*flow_type = FLOW_TYPE_BRANCH | FLOW_TYPE_DELAY_SLOT;
 			} else {
 				*new_pc = MIPS_BRANCH_TARGET;
-				*flow_type = FLOW_TYPE_COND_BRANCH;
+				*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
 			}
 			break;
 		case 0x05: //INCPU_BNE
 		case 0x06: //INCPU_BLEZ
 		case 0x07: //INCPU_BGTZ
 			*new_pc = MIPS_BRANCH_TARGET;
-			*flow_type = FLOW_TYPE_COND_BRANCH;
+			*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
 			break;
 		case 0x10: //INCPU_COP0
 			// we don't translate any of the INCPU_COP0 branch
@@ -209,7 +213,7 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case 0x16: //INCPU_BLEZL
 		case 0x17: //INCPU_BGTZL
 			*new_pc = MIPS_BRANCH_TARGET;
-			*flow_type = FLOW_TYPE_COND_BRANCH;
+			*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
 			break;
 		case 0x12: //IN_invalid
 		case 0x13: //IN_invalid
@@ -229,10 +233,7 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 			*flow_type = FLOW_TYPE_CONTINUE;
 			break;
 	}
-	return (*flow_type == FLOW_TYPE_COND_BRANCH ||
-			*flow_type == FLOW_TYPE_BRANCH ||
-			*flow_type == FLOW_TYPE_CALL ||
-			*flow_type == FLOW_TYPE_RETURN)? 8 : 4;
+	return 4;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -285,10 +286,8 @@ arch_mips_branch(Value *v, bool likely, BasicBlock *bb, BasicBlock *bb_target, B
 #define DELAY_SLOT arch_mips_recompile_instr(cpu, pc+4, bb_dispatch, bb, bb_target, bb_cond, bb_next)
 #define JMP_BB(b) BranchInst::Create(b, bb)
 
-#define JUMP_LINK { LINK; JUMP; }
-
 #define JUMP_DELAY { DELAY_SLOT; JUMP; }
-#define JUMP_DELAY_LINK { DELAY_SLOT; JUMP_LINK; }
+#define JUMP_DELAY_LINK { DELAY_SLOT; LINK; JUMP; }
 #define JUMP_DELAY_LIKELY { printf("LIKELY not handled yet!\n"); exit(1); }
 #define JUMP_DELAY_LINK_LIKELY { printf("LIKELY not handled yet!\n"); exit(1); }
 
@@ -449,8 +448,8 @@ arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicB
 		JUMP;
 		break;
 		}
-	case 0x04: /* INCPU_BEQ */		JUMP_DELAY;		break;
-	case 0x05: /* INCPU_BNE */		JUMP_DELAY;			break;
+	case 0x04: /* INCPU_BEQ */		JUMP_DELAY;	break;
+	case 0x05: /* INCPU_BNE */		JUMP_DELAY;	break;
 	case 0x06: /* INCPU_BLEZ */		JUMP_DELAY;	break;
 	case 0x07: /* INCPU_BGTZ */		JUMP_DELAY;	break;
 	case 0x08: /* INCPU_ADDI */		LET32(RT, ADD(R32(RS), IMM32));					break; //XXX same??

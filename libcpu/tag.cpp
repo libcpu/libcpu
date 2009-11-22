@@ -77,7 +77,10 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 			or_tagging_type(cpu, pc+bytes, TAG_TYPE_AFTER_BRANCH);
 		}
 
-		switch (flow_type & ~FLOW_TYPE_CONDITIONAL) {
+		if (flow_type & FLOW_TYPE_DELAY_SLOT)
+			or_tagging_type(cpu, pc, TAG_TYPE_DELAY_SLOT);
+
+		switch (flow_type & ~FLOW_TYPE_FLAGS) {
 			case FLOW_TYPE_ERR:
 			case FLOW_TYPE_RETURN:
 				or_tagging_type(cpu, pc, TAG_TYPE_RET);

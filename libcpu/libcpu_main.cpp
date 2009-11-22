@@ -24,6 +24,8 @@ using namespace llvm;
 //#include "arch/m88k/libcpu_m88k.h"
 #include "arch/arm/libcpu_arm.h"
 
+void emit_store_pc_return(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc, BasicBlock *bb_ret);
+
 //////////////////////////////////////////////////////////////////////
 // cpu_t
 //////////////////////////////////////////////////////////////////////
@@ -149,21 +151,25 @@ void disasm_instr(cpu_t *cpu, addr_t pc) {
 //////////////////////////////////////////////////////////////////////
 // generic code
 //////////////////////////////////////////////////////////////////////
-#define LABEL_PREFIX_NORMAL 'L'
-#define LABEL_PREFIX_COND   'C'
+enum {
+	BB_TYPE_NORMAL   = 'L', /* basic block for instructions */
+	BB_TYPE_COND     = 'C', /* basic block for "taken" case of cond. execution */
+	BB_TYPE_DELAY    = 'D', /* basic block for delay slot in non-taken case of cond. exec. */
+	BB_TYPE_EXTERNAL = 'E'  /* basic block for unknown addresses; just traps */
+};
 
 static const BasicBlock *
-lookup_basicblock(Function* f, addr_t pc, bool is_cond) {
+lookup_basicblock(Function* f, addr_t pc, uint8_t bb_type) {
 	Function::const_iterator it;
 	for (it = f->getBasicBlockList().begin(); it != f->getBasicBlockList().end(); it++) {
 		const char *cstr = (*it).getNameStr().c_str();
-		if (cstr[0] == (is_cond? LABEL_PREFIX_COND:LABEL_PREFIX_NORMAL)) {
+		if (cstr[0] == bb_type) {
 			addr_t pc2 = strtol(cstr + 1, (char **)NULL, 16);
 			if (pc == pc2)
 				return it;
 		}
 	}
-	printf("error: basic block 0x%llx not found!\n", pc);
+	printf("error: basic block %c%08llx not found!\n", bb_type, pc);
 	return NULL;
 }
 
@@ -189,9 +195,10 @@ create_call(cpu_t *cpu, Value *ptr_fp, BasicBlock *bb) {
 }
 
 BasicBlock *
-create_basicblock(addr_t addr, Function *f, bool is_cond) {
+create_basicblock(addr_t addr, Function *f, uint8_t bb_type) {
 	char label[17];
-	snprintf(label, sizeof(label), "%c%08llx", (is_cond? LABEL_PREFIX_COND:LABEL_PREFIX_NORMAL), (unsigned long long)addr);
+	snprintf(label, sizeof(label), "%c%08llx", bb_type, (unsigned long long)addr);
+printf("creating basic block %s\n", label);
 	return BasicBlock::Create(_CTX(), label, f, 0);
 }
 
@@ -225,11 +232,13 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 	while (pc < cpu->code_end) {
 		//printf("%04X: %d\n", pc, get_tagging_type(cpu, pc));
 		if (is_start_of_basicblock(cpu, pc)) {
-			create_basicblock(pc, cpu->func_jitmain, false);
+			create_basicblock(pc, cpu->func_jitmain, BB_TYPE_NORMAL);
 			bbs++;
 		}
 		if (get_tagging_type(cpu, pc) & TAG_TYPE_CONDITIONAL)
-			create_basicblock(pc, cpu->func_jitmain, true);
+			create_basicblock(pc, cpu->func_jitmain, BB_TYPE_COND);
+		if (get_tagging_type(cpu, pc) & TAG_TYPE_DELAY_SLOT)
+			create_basicblock(pc, cpu->func_jitmain, BB_TYPE_DELAY);
 		pc++;
 	}
 	printf("bbs: %d\n", bbs);
@@ -243,7 +252,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 		if (needs_dispatch_entry(cpu, pc)) {
 			printf("info: adding case: %llx\n", pc);
 			ConstantInt* c = ConstantInt::get(getIntegerType(cpu->pc_width), pc);
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, false);
+			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, BB_TYPE_NORMAL);
 			if (!target) {
 				printf("error: unknown rts target $%04llx!\n", (unsigned long long)pc);
 				exit(1);
@@ -259,50 +268,101 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
 		const BasicBlock *hack = it;
 		BasicBlock *cur_bb = (BasicBlock*)hack;	/* cast away const */
 		const char *cstr = (*it).getNameStr().c_str();
-		if (cstr[0] != LABEL_PREFIX_NORMAL)
+		if (cstr[0] != BB_TYPE_NORMAL)
 			continue; // skip special blocks like entry, dispatch...
 		pc = strtol(cstr+1, (char **)NULL, 16);
 printf("basicblock: %04llx\n", (unsigned long long)pc);
 		int dummy;
 		tagging_type_t tag;
-		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_cond = NULL;
+		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_cond = NULL, *bb_delay = NULL;
 		do {
 			disasm_instr(cpu, pc);
 
 			tag = get_tagging_type(cpu, pc);
 
-printf("%s:%d pc=%llx, cond=%d\n", __func__, __LINE__, pc, tag & TAG_TYPE_CONDITIONAL);
-			/* look up some target basic blocks */
-			if (tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH|TAG_TYPE_CONDITIONAL)) {
-				addr_t new_pc, next_pc;
-				next_pc = pc + cpu->f.tag_instr(cpu, pc, &dummy, &new_pc);
-				if (tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH)) {
-					/* get target basic block */
-					bb_target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, new_pc, false);
+			addr_t new_pc, next_pc;
+			next_pc = pc + cpu->f.tag_instr(cpu, pc, &dummy, &new_pc);
+
+			/* get target basic block */
+			if (tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH)) {
+				if (new_pc == NEW_PC_NONE) { /* recompile_instr() will set PC */
+					bb_target = bb_dispatch;
+				} else {
+					bb_target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, new_pc, BB_TYPE_NORMAL);
+					if (!bb_target) { /* outside of code segment */
+						bb_target = create_basicblock(new_pc, cpu->func_jitmain, BB_TYPE_EXTERNAL);
+						emit_store_pc_return(cpu, bb_target, new_pc, bb_ret);
+					}
 				}
-				if (tag & (TAG_TYPE_BRANCH|TAG_TYPE_CONDITIONAL)) {
-					/* get not-taken basic block */
-					bb_next = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, next_pc, false);
+			}
+			/* get not-taken basic block */
+			/* get conditional basic block */
+			if (tag & TAG_TYPE_CONDITIONAL) {
+ 				bb_next = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, next_pc, BB_TYPE_NORMAL);
+				bb_cond = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, BB_TYPE_COND);
+			}
+			/* get delay basic block */
+			if ((tag & TAG_TYPE_DELAY_SLOT) && (tag & TAG_TYPE_CONDITIONAL))
+				bb_delay = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, BB_TYPE_DELAY);
+
+printf("%d\n", __LINE__);
+			if (tag & TAG_TYPE_CONDITIONAL) {
+printf("%d\n", __LINE__);
+				if (tag & TAG_TYPE_DELAY_SLOT) {
+printf("%d\n", __LINE__);
+					addr_t delay_pc;
+					// bb
+					Value *c = cpu->f.recompile_cond(cpu, pc, cur_bb);
+					BranchInst::Create(bb_cond, bb_delay, c, cur_bb);
+					// cond
+					pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, bb_cond, bb_target, bb_cond, bb_next);
+					delay_pc = pc;
+					pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, bb_cond, bb_target, bb_cond, bb_next);
+					BranchInst::Create(bb_target, bb_cond);
+					// delay
+					cpu->f.recompile_instr(cpu, delay_pc, bb_dispatch, bb_delay, bb_target, bb_cond, bb_next);
+					BranchInst::Create(bb_next, bb_delay);
+				} else {
+printf("%d\n", __LINE__);
+					addr_t delay_pc;
+					// bb
+					Value *c = cpu->f.recompile_cond(cpu, pc, cur_bb);
+					BranchInst::Create(bb_cond, bb_next, c, cur_bb);
+					// cond
+					pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, bb_cond, bb_target, bb_cond, bb_next);
+					BranchInst::Create(bb_target, bb_cond);
+				}
+			} else {
+printf("%d\n", __LINE__);
+				if (tag & TAG_TYPE_DELAY_SLOT) {
+printf("%d\n", __LINE__);
+ 					// bb
+					pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, cur_bb, bb_target, bb_cond, bb_next);
+					pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, cur_bb, bb_target, bb_cond, bb_next);
+					BranchInst::Create(bb_target, bb_cond);
+				} else {
+printf("%d\n", __LINE__);
+					// bb
+					pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, cur_bb, bb_target, bb_cond, bb_next);
+					if (tag & (TAG_TYPE_BRANCH | TAG_TYPE_CALL)) {
+printf("%d\n", __LINE__);
+						BranchInst::Create(bb_target, cur_bb);
+					}
+					if (tag & TAG_TYPE_RET) {
+printf("%d\n", __LINE__);
+						BranchInst::Create(bb_dispatch, cur_bb);
+					}
+printf("%d\n", __LINE__);
 				}
 			}
 
-			if (tag & TAG_TYPE_CONDITIONAL) {
-				/* emit code to evaluate the condition */
-				Value *c = cpu->f.recompile_cond(cpu, pc, cur_bb);
-printf("%s:%d pc=%llx, c=%p\n", __func__, __LINE__, pc, c);
-				/* get taken basic block for conditional instruction and create branch*/
-				bb_cond = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, true);
-				BranchInst::Create(bb_cond, bb_next, c, cur_bb);
-				/* recompile the instruction */
-				pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, bb_cond, bb_target, bb_cond, bb_next);
-			} else
-				pc += cpu->f.recompile_instr(cpu, pc, bb_dispatch, cur_bb, bb_target, bb_cond, bb_next);
-
+printf("%d\n", __LINE__);
 		} while (is_code(cpu, pc) && !(is_start_of_basicblock(cpu, pc)));
 
+printf("%d\n", __LINE__);
 		/* link with next basic block if there isn't a control flow instr. already */
 		if (!(tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH|TAG_TYPE_RET))) {
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, false);
+			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, BB_TYPE_NORMAL);
 			if (!target) {
 				printf("error: unknown continue $%04llx!\n", (unsigned long long)pc);
 				exit(1);
@@ -335,7 +395,7 @@ emit_store_pc_return(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc, BasicBloc
 BasicBlock *
 create_singlestep_return_basicblock(cpu_t *cpu, addr_t new_pc, BasicBlock *bb_ret)
 {
-	BasicBlock *bb_branch = create_basicblock(new_pc, cpu->func_jitmain, false);
+	BasicBlock *bb_branch = create_basicblock(new_pc, cpu->func_jitmain, BB_TYPE_NORMAL);
 	emit_store_pc_return(cpu, bb_branch, new_pc, bb_ret);
 	return bb_branch;
 }
@@ -356,7 +416,7 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret)
 	bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc);
 
 	/* Create one "return" BB for the jump target */
-	if ((flow_type & ~FLOW_TYPE_CONDITIONAL) == FLOW_TYPE_BRANCH || flow_type == FLOW_TYPE_CALL)
+	if ((flow_type & ~FLOW_TYPE_FLAGS) == FLOW_TYPE_BRANCH || flow_type == FLOW_TYPE_CALL)
 		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
 
 	if (flow_type & FLOW_TYPE_CONDITIONAL) {
