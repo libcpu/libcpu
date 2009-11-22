@@ -3,7 +3,7 @@
 
 #include "types.h"
 #include "libcpu.h"
-#include "isa.h"
+#include "6502_isa.h"
 
 const char *addmode_template[] = {
 	/*[ADDMODE_ABS]*/	"$%04X",

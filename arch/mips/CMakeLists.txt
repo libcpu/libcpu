@@ -1,7 +1,7 @@
 PROJECT(mips)
 
 ADD_LIBRARY(mips STATIC
-			disasm.cpp
-			mips.cpp
-			recompile.cpp)
+			mips_disasm.cpp
+			mips_arch.cpp
+			mips_recompile.cpp)
 

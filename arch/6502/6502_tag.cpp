@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "types.h"
-#include "isa.h"
+#include "6502_isa.h"
 #include "tag.h"
 #include "libcpu.h"
 

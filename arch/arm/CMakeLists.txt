@@ -1,7 +1,7 @@
 PROJECT(arm)
 
 ADD_LIBRARY(arm STATIC
-			disasm.cpp
-			arm.cpp
-			recompile.cpp)
+			arm_disasm.cpp
+			arm_arch.cpp
+			arm_recompile.cpp)
 

@@ -1,8 +1,8 @@
 #include "libcpu.h"
 #include "types.h"
-#include "isa.h"
+#include "6502_isa.h"
 #include "cpu_generic.h"
-#include "arch/6502/libcpu_6502.h"
+#include "libcpu_6502.h"
 
 using namespace llvm;
 

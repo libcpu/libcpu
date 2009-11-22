@@ -1,4 +1,4 @@
-#include "isa.h"
+#include "6502_isa.h"
 
 unsigned char length[] = {
 	/*[ADDMODE_ABS]*/	2,

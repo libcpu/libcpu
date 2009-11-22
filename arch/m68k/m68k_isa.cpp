@@ -1,4 +1,4 @@
-#include "isa.h"
+#include "m68k_isa.h"
 
 const char sizechar[] = { '?', 'b', 'l', 'w' };
 

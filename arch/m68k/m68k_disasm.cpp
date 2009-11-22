@@ -2,7 +2,7 @@
 //#include <stdio.h>
 //#include <string.h>
 #include "types.h"
-#include "isa.h"
+#include "m68k_isa.h"
 #include "libcpu.h"
 
 enum {

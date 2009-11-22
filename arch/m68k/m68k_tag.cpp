@@ -1,6 +1,6 @@
 #include "types.h"
 #include "tag.h"
-#include "isa.h"
+#include "m68k_isa.h"
 
 #include "m68k_internal.h"
 
