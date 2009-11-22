@@ -294,7 +294,9 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 
 			/* get target basic block */
 printf("%d new_pc=%llx\n", __LINE__, new_pc);
-			if (tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH|TAG_TYPE_RET)) {
+			if (tag & TAG_TYPE_RET)
+				bb_target = bb_dispatch;
+			if (tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH)) {
 printf("%d\n", __LINE__);
 				if (new_pc == NEW_PC_NONE) { /* recompile_instr() will set PC */
 printf("%d\n", __LINE__);
