@@ -83,7 +83,10 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 			break;
 	}
 
-	return (instr.is_delaying() ? 8 : 4);
+	if (instr.is_delaying())
+		*flow_type |= FLOW_TYPE_DELAY_SLOT;
+
+	return 4;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -448,6 +451,13 @@ arch_m88k_set_fpr(cpu_t *cpu, bool xfr, m88k_reg_t r,
 
 #define GET_FPR(x,r,t)   arch_m88k_get_fpr(cpu, x, r, t, bb)
 #define SET_FPR(x,r,t,v) arch_m88k_set_fpr(cpu, x, r, t, v, bb)
+
+Value *
+arch_m88k_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
+{
+printf("%s:%d\n", __func__, __LINE__); exit(1);
+	return CONST1(1);
+}
 
 int
 arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
