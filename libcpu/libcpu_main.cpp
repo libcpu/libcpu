@@ -283,7 +283,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 {
 	// find all instructions that need labels and create basic blocks for them
 	int bbs = 0;
-	addr_t pc, bytes;
+	addr_t pc;
 	pc = cpu->code_start;
 	while (pc < cpu->code_end) {
 		//printf("%04X: %d\n", pc, get_tag(cpu, pc));
@@ -407,7 +407,6 @@ create_singlestep_return_basicblock(cpu_t *cpu, addr_t new_pc, BasicBlock *bb_re
 static BasicBlock *
 cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 {
-	int bytes;
 	addr_t new_pc;
 	tag_t tag;
 	BasicBlock *cur_bb = NULL, *bb_target = NULL, *bb_next = NULL;
@@ -419,14 +418,13 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 
 	disasm_instr(cpu, pc);
 
-	if (!(cpu->flags & CPU_FLAG_QUIET)) printf("%s:%d\n", __func__, __LINE__);
-
+	//XXX this is duplicated a little too often
 	next_pc = pc + cpu->f.tag_instr(cpu, pc, &tag, &new_pc);
 	if (tag & TAG_DELAY_SLOT)		/* skip delay slot */
 		next_pc += cpu->f.tag_instr(cpu, next_pc, &dummy1, &dummy2);
 
 	/* get target basic block */
-	if (new_pc == NEW_PC_NONE) /* recompile_instr() will set PC */
+	if ((tag & TAG_RET) || (new_pc == NEW_PC_NONE)) /* recompile_instr() will set PC */
 		bb_target = bb_ret;
 	else
 		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
@@ -434,14 +432,13 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	if (tag & TAG_CONDITIONAL)
 		bb_next = create_singlestep_return_basicblock(cpu, next_pc, bb_ret);
 
-//	recompile_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
+	recompile_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
 
 	/* If it's not a branch, append "store PC & return" to basic block */
 	if (tag & TAG_CONTINUE ) {
-		emit_store_pc_return(cpu, cur_bb, pc + bytes, bb_ret);
+		emit_store_pc_return(cpu, cur_bb, next_pc, bb_ret);
 	}
 	return cur_bb;
-//printf("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 }
 
 static StructType *
