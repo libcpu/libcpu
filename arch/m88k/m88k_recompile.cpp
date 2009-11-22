@@ -163,35 +163,28 @@ arch_m88k_bcnd_cond(cpu_t *cpu, Value *src1, m88k_bcnd_t cond, BasicBlock *bb)
 		case M88K_BCND_5: // (rs1 & 0x7fffffff) != 0
 			return ICMP_NE(AND(src1, CONST32(0x7fffffff)),
 				CONST32(0));
-			break;
 
 		case M88K_BCND_6: // rs != 0x80000000 && rs <= 0 
 			return AND(ICMP_NE(src1, CONST32(0x80000000)),
 				ICMP_SLE(src1, CONST32(0)));
-			break;
 
 		case M88K_BCND_7: // rs != 0x80000000
 			return ICMP_NE(src1, CONST32(0x80000000));
-			break;
 
 		case M88K_BCND_8: // rs == 0x80000000
 			return ICMP_EQ(src1, CONST32(0x80000000));
-			break;
 
 		case M88K_BCND_9: // rs > 0 || rs == 0x80000000
 			return OR(ICMP_SGT(src1, CONST(0)),
 				ICMP_EQ(src1, CONST32(0x80000000)));
-			break;
 
 		case M88K_BCND_10: // (rs1 & 0x7fffffff) == 0
 			return ICMP_EQ(AND(src1, CONST32(0x7fffffff)),
 				CONST32(0));
-			break;
 
 		case M88K_BCND_11: // rs1 >= 0 || rs1 == 0x80000000
 			return OR(ICMP_SGE(src1, CONST(0)),
 				ICMP_EQ(src1, CONST32(0x80000000)));
-			break;
 
 		case M88K_BCND_NEVER:
 		case M88K_BCND_ALWAYS:
@@ -205,13 +198,13 @@ arch_m88k_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 	m88k_insn insn(INSTR(pc));
 	uint8_t bit = insn.mb();
 	switch (insn.opcode()) {
+		case M88K_OPC_BCND:
 		case M88K_OPC_BCND_N:
-			if (bit == M88K_BCND_NEVER || bit == M88K_BCND_ALWAYS)
-				return NULL;
-			else
-				return arch_m88k_bcnd_cond(cpu, R32(insn.rs1()), (m88k_bcnd_t)bit, bb);
+			return arch_m88k_bcnd_cond(cpu, R32(insn.rs1()), (m88k_bcnd_t)bit, bb);
+		case M88K_OPC_BB0:
 		case M88K_OPC_BB0_N:
 			return ICMP_EQ(AND(R32(insn.rs1()), CONST32(1 << bit)), CONST(0));
+		case M88K_OPC_BB1:
 		case M88K_OPC_BB1_N:
 			return ICMP_NE(AND(R32(insn.rs1()), CONST32(1 << bit)), CONST(0));
 		default:
