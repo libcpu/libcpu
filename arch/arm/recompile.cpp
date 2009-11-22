@@ -96,7 +96,47 @@ static uint32_t rotate2(uint32_t instr)
 
 #define shift2(o) ((o&0xFF0)?shift4(o):armregs[RM])
 
+Value *
+arch_arm_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
+	switch (*(uint32_t*)&cpu->RAM[pc] >> 28) {
+		case 0x0: /* EQ */
+			return LOAD(ptr_Z);
+		case 0x1: /* NE */
+			return NOT(LOAD(ptr_Z));
+		case 0x2: /* CS */
+			return LOAD(ptr_C);
+		case 0x3: /* CC */
+			return NOT(LOAD(ptr_C));
+		case 0x4: /* MI */
+			return LOAD(ptr_N);
+		case 0x5: /* PL */
+			return NOT(LOAD(ptr_N));
+		case 0x6: /* VS */
+			return LOAD(ptr_V);
+		case 0x7: /* VC */
+			return NOT(LOAD(ptr_V));
+		case 0x8: /* HI */
+			return AND(LOAD(ptr_C),NOT(LOAD(ptr_Z)));
+		case 0x9: /* LS */
+			return NOT(AND(LOAD(ptr_C),NOT(LOAD(ptr_Z))));
+		case 0xA: /* GE */
+			return ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V));
+		case 0xB: /* LT */
+			return NOT(ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V)));
+		case 0xC: /* GT */
+			return AND(NOT(LOAD(ptr_Z)),ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V)));
+		case 0xD: /* LE */
+			return NOT(AND(NOT(LOAD(ptr_Z)),ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V))));
+		case 0xE: /* AL */
+			return NULL; /* no condition; this should never happen */
+		case 0xF: /* NV */
+			return CONST1(0);
+	}
+}
+
+
 int arch_arm_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
+printf("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
 
 	/* hack to finish basic block */
@@ -110,6 +150,7 @@ int arch_arm_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, Bas
 	int shift_bits = (instr>>4)&0xFF;
 
 	printf("cond=%x, op1=%x, op2=%x, shift_bits=%x\n", cond, op1, op2, shift_bits);
+
 
 	switch ((instr>>20)&0xFF) {
 		case 0x1A: /* MOV */

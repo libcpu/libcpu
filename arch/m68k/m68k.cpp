@@ -58,6 +58,7 @@ arch_func_t arch_func_m68k = {
 	NULL, /* spill_reg_state */
 	arch_m68k_tag_instr,
 	arch_m68k_disasm_instr,
+	arch_m68k_recompile_cond,
 	arch_m68k_recompile_instr,
 	// idbg support
 	arch_m68k_get_psr,

@@ -9,7 +9,10 @@ enum {					/* bitfield! */
 	TAG_TYPE_CALL		  = 64, /* this instruction is a (conditional or unconditional) subroutine call */
 	TAG_TYPE_RET		  = 128,/* this instruction is a return from a subroutine */
 	TAG_TYPE_ENTRY        = 256,/* the client wants to be able to start execution at this instruction */
-	TAG_TYPE_CONDITIONAL  = 512	/* this is a conditional instr, e.g. conditional move */
+	TAG_TYPE_CONDITIONAL  = 512,/* this is a conditional instr, e.g. conditional move */
+	TAG_TYPE_DELAY_SLOT   = 1024,/* there is a delay slot following */
+	TAG_TYPE_TRAP         = 2048,/* this instruction is a software trap, e.g. system calls, soft interrupts */
+	TAG_TYPE_AFTER_TRAP   = 4096/* execution continues here after a trap reenters translation unit */
 };
 /* the tagging code assumes this fits into a byte! */
 

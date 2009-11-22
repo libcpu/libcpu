@@ -35,6 +35,7 @@ typedef void        (*fp_emit_decode_reg)(struct cpu *cpu, BasicBlock *bb);
 typedef void        (*fp_spill_reg_state)(struct cpu *cpu, BasicBlock *bb);
 typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, int *flow_type, addr_t *new_pc);
 typedef int         (*fp_disasm_instr)(struct cpu *cpu, addr_t pc, char *line, unsigned int max_line);
+typedef Value      *(*fp_recompile_cond)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
 typedef int         (*fp_recompile_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next);
 // idbg support
 typedef uint64_t    (*fp_get_psr)(struct cpu *cpu, void *regs);
@@ -48,6 +49,7 @@ typedef struct {
 	fp_spill_reg_state spill_reg_state;
 	fp_tag_instr tag_instr;
 	fp_disasm_instr disasm_instr;
+	fp_recompile_cond recompile_cond;
 	fp_recompile_instr recompile_instr;
 	// idbg support
 	fp_get_psr get_psr;
@@ -134,6 +136,7 @@ typedef struct cpu {
 enum {
 	JIT_RETURN_NOERR = 0,
 	JIT_RETURN_FUNCNOTFOUND,
+	JIT_RETURN_SINGLESTEP,
 	JIT_RETURN_TRAP
 };
 
@@ -149,7 +152,7 @@ enum {
 #define CPU_DEBUG_NONE 0x00000000
 #define CPU_DEBUG_SINGLESTEP			(1<<0)
 #define CPU_DEBUG_PRINT_IR				(1<<1)
-#define CPU_DEBUG_PRINT_IR_OPTIMIZED	(1<<1)
+#define CPU_DEBUG_PRINT_IR_OPTIMIZED	(1<<2)
 #define CPU_DEBUG_ALL 0xFFFFFFFF
 
 //////////////////////////////////////////////////////////////////////

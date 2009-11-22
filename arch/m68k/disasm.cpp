@@ -494,7 +494,14 @@ arch_m68k_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 }
 
 int
-arch_m68k_recompile_instr(cpu_t *, addr_t, llvm::BasicBlock*, llvm::BasicBlock*, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next)
+arch_m68k_recompile_cond(cpu_t *, addr_t, BasicBlock*)
+{
+	printf("unimplemented!\n");
+	exit(1);
+}
+
+int
+arch_m68k_recompile_instr(cpu_t *, addr_t, BasicBlock*, BasicBlock*, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next)
 {
 	printf("unimplemented!\n");
 	exit(1);

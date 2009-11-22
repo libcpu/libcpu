@@ -4,9 +4,13 @@ enum {
 	FLOW_TYPE_RETURN      = 2,	/* return from subroutine */
 	FLOW_TYPE_BRANCH      = 3,	/* conditional or unconditional jump/branch */
 	FLOW_TYPE_CONTINUE    = 4,	/* control will flow into the next instr */
+	FLOW_TYPE_TRAP        = 5,	/* exit code for software trap handling */
+	FLOW_TYPE_DELAY_SLOT  = 64,	/* FLAG: this instruction has a delay slot */
 	FLOW_TYPE_CONDITIONAL = 128	/* FLAG: this instruction is conditional */
 };
 #define FLOW_TYPE_COND_BRANCH (FLOW_TYPE_BRANCH|FLOW_TYPE_CONDITIONAL)
+
+#define FLOW_TYPE_FLAGS (FLOW_TYPE_DELAY_SLOT|FLOW_TYPE_CONDITIONAL)
 
 /*
  * NEW_PC_NONE states that the destination of a call is unknown.

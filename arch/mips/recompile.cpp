@@ -41,7 +41,12 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case 0x00: //INCPU_SPECIAL
 			switch(instr & 0x3F) {
 				case 0x08: //INCPUS_JR
-					*flow_type = FLOW_TYPE_RETURN;
+					//XXX is not necessarily a return!
+					*flow_type = FLOW_TYPE_RETURN | FLOW_TYPE_DELAY_SLOT;
+					break;
+				case 0x09:  //INCPUS_JALR
+					*new_pc = NEW_PC_NONE;
+					*flow_type = FLOW_TYPE_BRANCH | FLOW_TYPE_DELAY_SLOT;
 					break;
 				case 0x01: //IN_invalid
 				case 0x05: //IN_invalid
@@ -69,22 +74,22 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 				case 0x00: //INCPUR_BLTZ
 				case 0x01: //INCPUR_BGEZ
 					*new_pc = MIPS_BRANCH_TARGET;
-					*flow_type = FLOW_TYPE_COND_BRANCH;
+					*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
 					break;
 				case 0x10: //INCPUR_BLTZAL
 				case 0x11: //INCPUR_BGEZAL
 					*new_pc = MIPS_BRANCH_TARGET;
-					*flow_type = FLOW_TYPE_CALL;
+					*flow_type = FLOW_TYPE_CALL | FLOW_TYPE_DELAY_SLOT;
 					break;
 				case 0x02: //INCPUR_BLTZL
 				case 0x03: //INCPUR_BGEZL
 					*new_pc = MIPS_BRANCH_TARGET;
-					*flow_type = FLOW_TYPE_COND_BRANCH;
+					*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
 					break;
 				case 0x12: //INCPUR_BLTZALL
 				case 0x13: //INCPUR_BGEZALL
 					*new_pc = MIPS_BRANCH_TARGET;
-					*flow_type = FLOW_TYPE_CALL;
+					*flow_type = FLOW_TYPE_CALL | FLOW_TYPE_DELAY_SLOT;
 					break;
 				case 0x04: //IN_invalid
 				case 0x05: //IN_invalid
@@ -120,17 +125,17 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case 0x04: //INCPU_BEQ
 			if (!RS && !RT) { // special case: B
 				*new_pc = MIPS_BRANCH_TARGET;
-				*flow_type = FLOW_TYPE_BRANCH;
+				*flow_type = FLOW_TYPE_BRANCH | FLOW_TYPE_DELAY_SLOT;
 			} else {
 				*new_pc = MIPS_BRANCH_TARGET;
-				*flow_type = FLOW_TYPE_COND_BRANCH;
+				*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
 			}
 			break;
 		case 0x05: //INCPU_BNE
 		case 0x06: //INCPU_BLEZ
 		case 0x07: //INCPU_BGTZ
 			*new_pc = MIPS_BRANCH_TARGET;
-			*flow_type = FLOW_TYPE_COND_BRANCH;
+			*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
 			break;
 		case 0x10: //INCPU_COP0
 			// we don't translate any of the INCPU_COP0 branch
@@ -209,7 +214,7 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case 0x16: //INCPU_BLEZL
 		case 0x17: //INCPU_BGTZL
 			*new_pc = MIPS_BRANCH_TARGET;
-			*flow_type = FLOW_TYPE_COND_BRANCH;
+			*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
 			break;
 		case 0x12: //IN_invalid
 		case 0x13: //IN_invalid
@@ -229,10 +234,7 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 			*flow_type = FLOW_TYPE_CONTINUE;
 			break;
 	}
-	return (*flow_type == FLOW_TYPE_COND_BRANCH ||
-			*flow_type == FLOW_TYPE_BRANCH ||
-			*flow_type == FLOW_TYPE_CALL ||
-			*flow_type == FLOW_TYPE_RETURN)? 8 : 4;
+	return 4;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -264,40 +266,9 @@ arch_mips_get_sa(cpu_t *cpu, uint32_t instr, uint32_t bits, BasicBlock *bb) {
 #define SA32 arch_mips_get_sa(cpu, instr, 32, bb)
 
 //////////////////////////////////////////////////////////////////////
-
-void
-arch_mips_branch(Value *v, bool likely, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_next) {
-
-	if (likely) {
-		printf("error: \"likely\" is broken!\n");
-		exit(1);
-	}
-
-	BRANCH(true, bb_target, bb_next, v);
-}
-
-//////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
 #define LET_PC(v) new StoreInst(v, cpu->ptr_PC, bb)
-
-
-#define DELAY_SLOT arch_mips_recompile_instr(cpu, pc+4, bb_dispatch, bb, bb_target, bb_cond, bb_next)
-#define JMP_BB(b) BranchInst::Create(b, bb)
-
-#define BRANCH_TRUE(tag)  arch_mips_branch(tag, false, bb, bb_target, bb_next);
-#define BRANCH_TRUE_LIKELY(tag)  arch_mips_branch(tag, true, bb, bb_target, bb_next);
-
-#define BRANCH_DELAY_TRUE(test) {	\
-	Value *f = test;				\
-	DELAY_SLOT;						\
-	BRANCH_TRUE(f);					\
-}
-#define BRANCH_DELAY_TRUE_LIKELY(test) {	\
-	Value *f = test;				\
-	DELAY_SLOT;						\
-	BRANCH_TRUE_LIKELY(f);					\
-}
 
 #define LINKr(i) LET32(i, CONST((uint64_t)(sint64_t)(sint32_t)pc+8))
 
@@ -306,7 +277,43 @@ arch_mips_branch(Value *v, bool likely, BasicBlock *bb, BasicBlock *bb_target, B
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
-int arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next) {
+Value *
+arch_mips_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
+{
+	uint32_t instr = INSTR(pc);
+
+	printf("cond (%08llx) %08x\n", pc, instr);
+
+	switch(instr >> 26) {
+	case 0x01: /* INCPU_REGIMM */
+		switch (GetRegimmInstruction) {
+			case 0x00: /* INCPUR_BLTZ */	return ICMP_SLT(R(RS),CONST(0));
+			case 0x01: /* INCPUR_BGEZ */	return ICMP_SGE(R(RS),CONST(0));
+			case 0x02: /* INCPUR_BLTZL */	return ICMP_SLT(R(RS),CONST(0));
+			case 0x03: /* INCPUR_BGEZL */	return ICMP_SGE(R(RS),CONST(0));
+			case 0x10: /* INCPUR_BLTZAL */	return ICMP_SLT(R(RS),CONST(0));
+			case 0x11: /* INCPUR_BGEZAL */	return ICMP_SGE(R(RS),CONST(0));
+			case 0x12: /* INCPUR_BLTZALL */	return ICMP_SLT(R(RS),CONST(0));
+			case 0x13: /* INCPUR_BGEZALL */	return ICMP_SGE(R(RS),CONST(0));
+		}
+	case 0x04: /* INCPU_BEQ */		
+		if (!RS && !RT) // special case: B
+			return NULL; /* should never be reached */
+		else
+			return ICMP_EQ(R(RS), R(RT));
+	case 0x05: /* INCPU_BNE */		return ICMP_NE(R(RS), R(RT));
+	case 0x06: /* INCPU_BLEZ */		return ICMP_SLE(R(RS),CONST(0));
+	case 0x07: /* INCPU_BGTZ */		return ICMP_SGT(R(RS),CONST(0));
+	case 0x14: /* INCPU_BEQL */		return ICMP_EQ(R(RS), R(RT));
+	case 0x15: /* INCPU_BNEL */		return ICMP_NE(R(RS), R(RT));
+	case 0x16: /* INCPU_BLEZL */	return ICMP_SLE(R(RS), CONST(0));
+	case 0x17: /* INCPU_BGTZL */	return ICMP_SGT(R(RS), CONST(0));
+	}
+}
+
+int
+arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next)
+{
 #define BAD printf("%s:%d\n", __func__, __LINE__); exit(1);
 #define LOG printf("%s:%d\n", __func__, __LINE__);
 
@@ -328,16 +335,12 @@ int arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, Ba
 			case 0x08: /* INCPUS_JR */
 			{
 				LET_PC(R(RS));
-				DELAY_SLOT;
-				JMP_BB(bb_dispatch);
 				break;
 			}
 			case 0x09: /* INCPUS_JALR */
 			{
 				LET_PC(SUB(R(RS),CONST(4)));
 				LINKr(RD);
-				DELAY_SLOT;
-				JMP_BB(bb_dispatch);
 				break;
 			}
 			case 0x0C: /* INCPUS_SYSCALL */	BAD;
@@ -390,47 +393,32 @@ int arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, Ba
 		break;
 	case 0x01: /* INCPU_REGIMM */
 		switch (GetRegimmInstruction) {
-			case 0x00: /* INCPUR_BLTZ */	BRANCH_DELAY_TRUE(ICMP_SLT(R(RS),CONST(0)));	break;
-			case 0x01: /* INCPUR_BGEZ */	BRANCH_DELAY_TRUE(ICMP_SGE(R(RS),CONST(0)));	break;
-			case 0x02: /* INCPUR_BLTZL */	BRANCH_DELAY_TRUE_LIKELY(ICMP_SLT(R(RS),CONST(0)));	break;
-			case 0x03: /* INCPUR_BGEZL */	BRANCH_DELAY_TRUE_LIKELY(ICMP_SGE(R(RS),CONST(0)));	break;
+			case 0x00: /* INCPUR_BLTZ */	/* jump */;	break;
+			case 0x01: /* INCPUR_BGEZ */	/* jump */;	break;
+			case 0x02: /* INCPUR_BLTZL */	/* jump */;	break;
+			case 0x03: /* INCPUR_BGEZL */	/* jump */;	break;
 			case 0x08: /* INCPUR_TGEI */	BAD;
 			case 0x09: /* INCPUR_TGEIU */	BAD;
 			case 0x0A: /* INCPUR_TLTI */	BAD;
 			case 0x0B: /* INCPUR_TLTIU */	BAD;
 			case 0x0C: /* INCPUR_TEQI */	BAD;
 			case 0x0E: /* INCPUR_TNEI */	BAD;
-			case 0x10: /* INCPUR_BLTZAL */	LINK; BRANCH_DELAY_TRUE(ICMP_SLT(R(RS),CONST(0)));	break;
-			case 0x11: /* INCPUR_BGEZAL */	LINK; BRANCH_DELAY_TRUE(ICMP_SGE(R(RS),CONST(0)));	break;
-			case 0x12: /* INCPUR_BLTZALL */	LINK; BRANCH_DELAY_TRUE_LIKELY(ICMP_SLT(R(RS),CONST(0)));	break;
-			case 0x13: /* INCPUR_BGEZALL */	LINK; BRANCH_DELAY_TRUE_LIKELY(ICMP_SGE(R(RS),CONST(0)));	break;
+			case 0x10: /* INCPUR_BLTZAL */	LINK;	break;
+			case 0x11: /* INCPUR_BGEZAL */	LINK;	break;
+			case 0x12: /* INCPUR_BLTZALL */	LINK;	break;
+			case 0x13: /* INCPUR_BGEZALL */	LINK;	break;
 			default:
 				printf("INVALID %s:%d\n", __func__, __LINE__); exit(1);
 		}
 	case 0x02: /* INCPU_J */
-		{
-		DELAY_SLOT;
-		JUMP;
 		break;
-		}
 	case 0x03: /* INCPU_JAL */
-		{
 		LINK;
-		DELAY_SLOT;
-		JUMP;
 		break;
-		}
-	case 0x04: /* INCPU_BEQ */		
-		if (!RS && !RT) { // special case: B
-			DELAY_SLOT;
-			JUMP;
-		} else {
-			BRANCH_DELAY_TRUE(ICMP_EQ(R(RS), R(RT)));
-		}
-		break;
-	case 0x05: /* INCPU_BNE */		BRANCH_DELAY_TRUE(ICMP_NE(R(RS), R(RT)));			break;
-	case 0x06: /* INCPU_BLEZ */		BRANCH_DELAY_TRUE(ICMP_SLE(R(RS),CONST(0)));	break;
-	case 0x07: /* INCPU_BGTZ */		BRANCH_DELAY_TRUE(ICMP_SGT(R(RS),CONST(0)));	break;
+	case 0x04: /* INCPU_BEQ */		/* jump */;	break;
+	case 0x05: /* INCPU_BNE */		/* jump */;	break;
+	case 0x06: /* INCPU_BLEZ */		/* jump */;	break;
+	case 0x07: /* INCPU_BGTZ */		/* jump */;	break;
 	case 0x08: /* INCPU_ADDI */		LET32(RT, ADD(R32(RS), IMM32));					break; //XXX same??
 	case 0x09: /* INCPU_ADDIU */	LET32(RT, ADD(R32(RS), IMM32));					break; //XXX same??
 	case 0x0A: /* INCPU_SLTI */		LET_ZEXT(RT,ICMP_ULT(R(RS),IMM));				break; //XXX same??
@@ -512,10 +500,10 @@ int arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch, Ba
 			default:
 				printf("INVALID %s:%d\n", __func__, __LINE__); exit(1);
 		}
-	case 0x14: /* INCPU_BEQL */		BRANCH_DELAY_TRUE_LIKELY(ICMP_EQ(R(RS), R(RT)));			break;
-	case 0x15: /* INCPU_BNEL */		BRANCH_DELAY_TRUE_LIKELY(ICMP_NE(R(RS), R(RT)));			break;
-	case 0x16: /* INCPU_BLEZL */	BRANCH_DELAY_TRUE_LIKELY(ICMP_SLE(R(RS), CONST(0)));	break;
-	case 0x17: /* INCPU_BGTZL */	BRANCH_DELAY_TRUE_LIKELY(ICMP_SGT(R(RS), CONST(0)));	break;
+	case 0x14: /* INCPU_BEQL */		/* jump */;			break;
+	case 0x15: /* INCPU_BNEL */		/* jump */;			break;
+	case 0x16: /* INCPU_BLEZL */	/* jump */;	break;
+	case 0x17: /* INCPU_BGTZL */	/* jump */;	break;
 	case 0x18: /* INCPU_DADDI */	LET(RT,ADD(R(RS),IMM));								break; //XXX same??
 	case 0x19: /* INCPU_DADDIU */	LET(RT,ADD(R(RS),IMM));								break; //XXX same??
 	case 0x1A: /* INCPU_LDL */		BAD;

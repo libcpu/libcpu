@@ -77,14 +77,16 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 		case M88K_OPC_TB1:
 		case M88K_OPC_TBND:
 		case M88K_OPC_TCND:
-			break;
 
 		default:
 			*flow_type = FLOW_TYPE_CONTINUE;
 			break;
 	}
 
-	return (instr.is_delaying() ? 8 : 4);
+	if (instr.is_delaying())
+		*flow_type |= FLOW_TYPE_DELAY_SLOT;
+
+	return 4;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -125,7 +127,6 @@ arch_m88k_get_imm(cpu_t *cpu, m88k_insn const &instr, uint32_t bits,
 
 #define LET_PC(v)		new StoreInst(v, cpu->ptr_PC, bb)
 
-#define DELAY_SLOT 		arch_m88k_recompile_instr(cpu, pc+4, bb_dispatch, bb, bb_target, bb_cond, bb_next)
 #define JMP_BB(b) 		BranchInst::Create(b, bb)
 
 #define LINKr(i, d)		LET(i, CONST((uint64_t)(sint64_t)(sint32_t)pc+(4<<(d))))
@@ -139,26 +140,78 @@ arch_m88k_get_imm(cpu_t *cpu, m88k_insn const &instr, uint32_t bits,
 
 //////////////////////////////////////////////////////////////////////
 
-void
-arch_m88k_branch(cpu_t *cpu, addr_t pc, Value *cond, bool delay,
-	bool if_cond, BasicBlock *bb, BasicBlock *bb_target, BasicBlock *bb_next)
+static Value *
+arch_m88k_bcnd_cond(cpu_t *cpu, Value *src1, m88k_bcnd_t cond, BasicBlock *bb)
 {
-	BRANCH(if_cond, bb_target, bb_next, cond);
+	switch (cond) {
+		case M88K_BCND_EQ0: return ICMP_EQ(src1, CONST32(0));
+		case M88K_BCND_NE0: return ICMP_NE(src1, CONST32(0));
+		case M88K_BCND_GT0: return ICMP_SGT(src1, CONST32(0));
+		case M88K_BCND_LT0: return ICMP_SLT(src1, CONST32(0));
+		case M88K_BCND_LE0: return ICMP_SLE(src1, CONST32(0));
+		case M88K_BCND_GE0: return ICMP_SGE(src1, CONST32(0));
+		case M88K_BCND_4: // rs1 != 0x80000000 && rs1 < 0
+			return AND(ICMP_NE(src1, CONST32(0x80000000)),
+				ICMP_SLT(src1, CONST32(0)));
+
+		case M88K_BCND_5: // (rs1 & 0x7fffffff) != 0
+			return ICMP_NE(AND(src1, CONST32(0x7fffffff)),
+				CONST32(0));
+			break;
+
+		case M88K_BCND_6: // rs != 0x80000000 && rs <= 0 
+			return AND(ICMP_NE(src1, CONST32(0x80000000)),
+				ICMP_SLE(src1, CONST32(0)));
+			break;
+
+		case M88K_BCND_7: // rs != 0x80000000
+			return ICMP_NE(src1, CONST32(0x80000000));
+			break;
+
+		case M88K_BCND_8: // rs == 0x80000000
+			return ICMP_EQ(src1, CONST32(0x80000000));
+			break;
+
+		case M88K_BCND_9: // rs > 0 || rs == 0x80000000
+			return OR(ICMP_SGT(src1, CONST(0)),
+				ICMP_EQ(src1, CONST32(0x80000000)));
+			break;
+
+		case M88K_BCND_10: // (rs1 & 0x7fffffff) == 0
+			return ICMP_EQ(AND(src1, CONST32(0x7fffffff)),
+				CONST32(0));
+			break;
+
+		case M88K_BCND_11: // rs1 >= 0 || rs1 == 0x80000000
+			return OR(ICMP_SGE(src1, CONST(0)),
+				ICMP_EQ(src1, CONST32(0x80000000)));
+			break;
+
+		case M88K_BCND_NEVER:
+		case M88K_BCND_ALWAYS:
+			return NULL;
+	}
 }
 
-//////////////////////////////////////////////////////////////////////
-
-#define BRANCH_BIT(set, reg, bit, delay) do {							\
-	Value *v = ICMP_EQ(AND(R32(reg), CONST32(1 << (bit))), CONST(0));	\
-	if (delay) DELAY_SLOT;												\
-	arch_m88k_branch(cpu, pc, v, delay, !set, bb, bb_target, bb_next);	\
-} while(0)
-
-#define BRANCH_COND(cond, delay) do {									\
-	Value *v = (cond);													\
-	if (delay) DELAY_SLOT;												\
-	arch_m88k_branch(cpu, pc, v, delay, true, bb, bb_target, bb_next);	\
-} while(0)
+Value *
+arch_m88k_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
+{
+	m88k_insn insn(INSTR(pc));
+	uint8_t bit = insn.mb();
+	switch (insn.opcode()) {
+		case M88K_OPC_BCND_N:
+			if (bit == M88K_BCND_NEVER || bit == M88K_BCND_ALWAYS)
+				return NULL;
+			else
+				return arch_m88k_bcnd_cond(cpu, R32(insn.rs1()), (m88k_bcnd_t)bit, bb);
+		case M88K_OPC_BB0_N:
+			return ICMP_EQ(AND(R32(insn.rs1()), CONST32(1 << bit)), CONST(0));
+		case M88K_OPC_BB1_N:
+			return ICMP_NE(AND(R32(insn.rs1()), CONST32(1 << bit)), CONST(0));
+		default:
+			return NULL;
+	}
+}
 
 //////////////////////////////////////////////////////////////////////
 
@@ -320,86 +373,6 @@ arch_m88k_xmem(cpu_t *cpu, bool byte, m88k_reg_t rd, Value *src1, Value *src2,
 		STORE8(reg_value, address);
 	else
 		STORE32(reg_value, address);
-}
-
-static void
-arch_m88k_branch_cond(cpu_t *cpu, addr_t pc, Value *src1, m88k_bcnd_t cond,
-	bool delay, BasicBlock *bb_dispatch, BasicBlock *bb, BasicBlock *bb_target,
-	BasicBlock *bb_cond, BasicBlock *bb_next)
-{
-	m88k_insn instr = INSTR(pc);
-
-	switch(cond) {
-		case M88K_BCND_NEVER:
-			break;
-
-		case M88K_BCND_EQ0: // rs1 == 0
-			BRANCH_COND(ICMP_EQ(src1, CONST32(0)), delay);
-			break;
-
-		case M88K_BCND_NE0: // rs1 != 0
-			BRANCH_COND(ICMP_NE(src1, CONST32(0)), delay);
-			break;
-
-		case M88K_BCND_ALWAYS:
-			if (delay) DELAY_SLOT;
-			JUMP;
-			break;
-
-		case M88K_BCND_GT0: // rs1 > 0
-			BRANCH_COND(ICMP_SGT(src1, CONST32(0)), delay);
-			break;
-
-		case M88K_BCND_LT0: // rs1 < 0
-			BRANCH_COND(ICMP_SLT(src1, CONST32(0)), delay);
-			break;
-
-		case M88K_BCND_LE0: // rs1 <= 0
-			BRANCH_COND(ICMP_SLE(src1, CONST32(0)), delay);
-			break;
-
-		case M88K_BCND_GE0: // rs1 >= 0
-			BRANCH_COND(ICMP_SGE(src1, CONST32(0)), delay);
-			break;
-
-		case M88K_BCND_4: // rs1 != 0x80000000 && rs1 < 0
-			BRANCH_COND(AND(ICMP_NE(src1, CONST32(0x80000000)),
-				ICMP_SLT(src1, CONST32(0))), delay);
-			break;
-
-		case M88K_BCND_5: // (rs1 & 0x7fffffff) != 0
-			BRANCH_COND(ICMP_NE(AND(src1, CONST32(0x7fffffff)),
-				CONST32(0)), delay);
-			break;
-
-		case M88K_BCND_6: // rs != 0x80000000 && rs <= 0 
-			BRANCH_COND(AND(ICMP_NE(src1, CONST32(0x80000000)),
-				ICMP_SLE(src1, CONST32(0))), delay);
-			break;
-
-		case M88K_BCND_7: // rs != 0x80000000
-			BRANCH_COND(ICMP_NE(src1, CONST32(0x80000000)), delay);
-			break;
-
-		case M88K_BCND_8: // rs == 0x80000000
-			BRANCH_COND(ICMP_EQ(src1, CONST32(0x80000000)), delay);
-			break;
-
-		case M88K_BCND_9: // rs > 0 || rs == 0x80000000
-			BRANCH_COND(OR(ICMP_SGT(src1, CONST(0)),
-				ICMP_EQ(src1, CONST32(0x80000000))), delay);
-			break;
-
-		case M88K_BCND_10: // (rs1 & 0x7fffffff) == 0
-			BRANCH_COND(ICMP_EQ(AND(src1, CONST32(0x7fffffff)),
-				CONST32(0)), delay);
-			break;
-
-		case M88K_BCND_11: // rs1 >= 0 || rs1 == 0x80000000
-			BRANCH_COND(OR(ICMP_SGE(src1, CONST(0)),
-				ICMP_EQ(src1, CONST32(0x80000000))), delay);
-			break;
-	}
 }
 
 static Value *
@@ -761,32 +734,22 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 			LINK(0);
 		case M88K_OPC_JMP:
 			LET_PC(R(instr.rs2()));
-			JMP_BB(bb_dispatch);
 			break;
 
 		case M88K_OPC_JSR_N:
 			LINK(1);
 		case M88K_OPC_JMP_N:
 			LET_PC(R(instr.rs2()));
-			DELAY_SLOT;
-			JMP_BB(bb_dispatch);
-			break;
-
-			LET_PC(R(instr.rs2()));
-			JMP_BB(bb_dispatch);
 			break;
 
 		case M88K_OPC_BSR:
 			LINK(0);
 		case M88K_OPC_BR:
-			JUMP;
 			break;
 
 		case M88K_OPC_BSR_N:
 			LINK(1);
 		case M88K_OPC_BR_N:
-			DELAY_SLOT;
-			JUMP;
 			break;
  
 			// jump pc + disp IF !(rS & (1 << bit))
@@ -795,16 +758,9 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb_dispatch,
 			// jump pc + disp IF (rS & (1 << bit))
 		case M88K_OPC_BB1:
 		case M88K_OPC_BB1_N:
-			BRANCH_BIT((opc > M88K_OPC_BB0_N), instr.rs1(), instr.mb(),
-				instr.is_delaying());
-			break;
-
 			// jump pc + disp IF rS <cc> 0
 		case M88K_OPC_BCND:
 		case M88K_OPC_BCND_N:
-			arch_m88k_branch_cond(cpu, pc, R32(instr.rs1()),
-				static_cast <m88k_bcnd_t> (instr.mb()),
-				instr.is_delaying(), bb_dispatch, bb, bb_target, bb_cond, bb_next);
 			break;
 
 		case M88K_OPC_TB0:

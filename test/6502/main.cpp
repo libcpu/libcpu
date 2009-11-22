@@ -59,7 +59,9 @@ static void
 debug_function(uint8_t *RAM, void *r) {
 	reg_6502_t *reg = (reg_6502_t*)r;
 	printf("DEBUG: $%04X: A=$%02X X=$%02X Y=$%02X S=$%02X P=$%02X %02X/%02X\n", reg->pc, reg->a, reg->x, reg->y, reg->s, reg->p, RAM[0x33], RAM[0x34]);
-	{ int i; for (i=0x01F0; i<0x0200; i++) printf("%02X ", RAM[i]); printf("\n"); }
+//	{ int i; for (i=0x01F0; i<0x0200; i++) printf("%02X ", RAM[i]); printf("\n"); }
+	{ int i; for (i=0xB5FF; i<0xB60F; i++) printf("%02X ", RAM[i]); printf("\n"); }
+//	{ int i; for (i=0xE447; i<0xE457; i++) printf("%02X ", RAM[i]); printf("\n"); }
 }
 
 extern int
@@ -86,6 +88,9 @@ main(int argc, char **argv) {
 	cpu = cpu_new(CPU_ARCH_6502);
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
+	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR);
+//	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP);
+//	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP | CPU_DEBUG_PRINT_IR);
 	cpu_set_flags_arch(cpu, 
 		CPU_6502_BRK_TRAP |
 		CPU_6502_XXX_TRAP |
@@ -144,6 +149,8 @@ main(int argc, char **argv) {
 	PC = cpu->code_entry;
 	S = 0xFF;
 
+	int step = 0;
+
 	for(;;) {
 		breakpoint();
 		int ret = cpu_run(cpu, debug_function);
@@ -152,7 +159,14 @@ main(int argc, char **argv) {
 			case JIT_RETURN_NOERR: /* JIT code wants us to end execution */
 				break;
 			case JIT_RETURN_FUNCNOTFOUND:
+			case JIT_RETURN_SINGLESTEP:
 //				printf("LIB: $%04X: A=$%02X X=$%02X Y=$%02X S=$%02X P=$%02X\n", pc, a, x, y, s, p);
+
+				if (ret == JIT_RETURN_SINGLESTEP) {
+					debug_function(cpu->RAM, (reg_6502_t*)cpu->reg);
+					printf("::STEP:: %d\n", step++);
+					cpu_flush(cpu);
+				}
 
 				if (kernal_dispatch(RAM, &PC, &A, &X, &Y, &S, &P)) {
 					// the runtime could handle it, so do an RTS
@@ -168,16 +182,20 @@ main(int argc, char **argv) {
 					continue;
 				}
 
-				// bad :(
-				printf("%s: error: $%04X not found!\n", __func__, PC);
-				int i;
-				printf("PC: ");
-				for (i=0; i<16; i++)
-					printf("%02X ", RAM[PC+i]);
-				printf("\n");
-				exit(1);
+				if (ret != JIT_RETURN_SINGLESTEP) {
+					// bad :(
+					printf("%s: error: $%04X not found!\n", __func__, PC);
+					int i;
+					printf("PC: ");
+					for (i=0; i<16; i++)
+						printf("%02X ", RAM[PC+i]);
+					printf("\n");
+					exit(1);
+				}
+				break;
 			default:
 				printf("unknown return code: %d\n", ret);
+				return 1;
 		}
 	}
 

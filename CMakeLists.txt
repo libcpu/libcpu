@@ -13,9 +13,9 @@ SET(CMAKE_BUILD_TYPE "Debug")
 # Add here the architecture you want to support.
 # 
 SET(GUEST_ARCHITECTURES 6502 m68k m88k mips arm)
-IF(APPLE)
-  SET(GUEST_EXTRA_TESTS next68k)
-ENDIF(APPLE)
+#IF(APPLE)
+#  SET(GUEST_EXTRA_TESTS next68k)
+#ENDIF(APPLE)
 
 #
 # Build Universal image.

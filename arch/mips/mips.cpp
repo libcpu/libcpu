@@ -61,5 +61,6 @@ arch_func_t arch_func_mips = {
 	NULL, /* spill_reg_state */
 	arch_mips_tag_instr,
 	arch_mips_disasm_instr,
+	arch_mips_recompile_cond,
 	arch_mips_recompile_instr
 };

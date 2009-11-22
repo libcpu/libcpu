@@ -11,11 +11,11 @@
 static void
 init_tagging(cpu_t *cpu)
 {
-	addr_t tagging_size, i;
+	addr_t nitems, i;
 
-	tagging_size = cpu->code_end - cpu->code_start;
-	cpu->tagging_type = (tagging_type_t*)malloc(tagging_size * sizeof(tagging_type_t));
-	for (i = 0; i < tagging_size; i++)
+	nitems = cpu->code_end - cpu->code_start;
+	cpu->tagging_type = (tagging_type_t*)malloc(nitems * sizeof(tagging_type_t));
+	for (i = 0; i < nitems; i++)
 		cpu->tagging_type[i] = TAG_TYPE_UNKNOWN;
 }
 
@@ -55,7 +55,9 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 {
 	int bytes;
 	int flow_type;
-	addr_t new_pc;
+	addr_t new_pc, next_pc;
+	int dummy1;
+	addr_t dummy2;
 
 	for(;;) {
 		if (!is_inside_code_area(cpu, pc))
@@ -71,8 +73,20 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 		or_tagging_type(cpu, pc, TAG_TYPE_CODE);
 
 		bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc);
-		
-		switch (flow_type & ~FLOW_TYPE_CONDITIONAL) {
+
+		next_pc = pc + bytes;
+		if (flow_type & FLOW_TYPE_DELAY_SLOT)		/* skip delay slot */
+			next_pc += cpu->f.tag_instr(cpu, next_pc, &dummy1, &dummy2);
+
+		if (flow_type & FLOW_TYPE_CONDITIONAL) {
+			or_tagging_type(cpu, pc, TAG_TYPE_CONDITIONAL);
+			or_tagging_type(cpu, next_pc, TAG_TYPE_AFTER_BRANCH);
+		}
+
+		if (flow_type & FLOW_TYPE_DELAY_SLOT)
+			or_tagging_type(cpu, pc, TAG_TYPE_DELAY_SLOT);
+
+		switch (flow_type & ~FLOW_TYPE_FLAGS) {
 			case FLOW_TYPE_ERR:
 			case FLOW_TYPE_RETURN:
 				or_tagging_type(cpu, pc, TAG_TYPE_RET);
@@ -84,14 +98,18 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 				tag_recursive(cpu, new_pc, level+1);
 				if (!(flow_type & FLOW_TYPE_CONDITIONAL))
 					return;
-				or_tagging_type(cpu, pc+bytes, TAG_TYPE_AFTER_BRANCH);
 				break;
 			case FLOW_TYPE_CALL:
 				/* tag subroutine, then continue with next instruction */
 				or_tagging_type(cpu, pc, TAG_TYPE_CALL);
 				or_tagging_type(cpu, new_pc, TAG_TYPE_SUBROUTINE);
-				or_tagging_type(cpu, pc+bytes, TAG_TYPE_AFTER_CALL);
+				or_tagging_type(cpu, next_pc, TAG_TYPE_AFTER_CALL);
 				tag_recursive(cpu, new_pc, level+1);
+				break;
+			case FLOW_TYPE_TRAP:
+				/* code ends here and continues at the next instruction */
+				or_tagging_type(cpu, pc, TAG_TYPE_TRAP);
+				or_tagging_type(cpu, next_pc, TAG_TYPE_AFTER_TRAP);
 				break;
 			case FLOW_TYPE_CONTINUE:
 				break; /* continue with next instruction */
@@ -99,7 +117,7 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 				assert(0 && "Specified FLOW_TYPE_xxx not handled.");
 				break;
 		}
-		pc += bytes;
+		pc = next_pc;
 	}
 }
 

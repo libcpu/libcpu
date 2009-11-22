@@ -243,6 +243,14 @@ arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
 
 void
 arch_branch(bool flag_state, BasicBlock *target1, BasicBlock *target2, Value *v, BasicBlock *bb) {
+	if (!target1) {
+		printf("target1 is NULL\n");
+		exit(1);
+	}
+	if (!target2) {
+		printf("target2 is NULL\n");
+		exit(1);
+	}
 	if (flag_state)
 		BranchInst::Create(target1, target2, v, bb);
 	else

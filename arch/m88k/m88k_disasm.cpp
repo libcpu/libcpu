@@ -401,14 +401,6 @@ arch_m88k_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 		return (bytes);
 	}
 
-	delaying = m88k_insn(INSTR(pc)).is_delaying();
-	if (delaying) {
-		pc += 4;
-
-		strbuf_append(&strbuf, " [");
-		m88k_disassemble(&strbuf, pc, INSTR(pc));
-		strbuf_append_char(&strbuf, ']');
-	}
 	strbuf_terminate(&strbuf);
 
 	return (bytes);
