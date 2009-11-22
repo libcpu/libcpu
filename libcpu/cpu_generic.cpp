@@ -140,11 +140,7 @@ arch_gep32(cpu_t *cpu, Value *a, BasicBlock *bb) {
 Value *
 arch_load32_aligned(cpu_t *cpu, Value *a, BasicBlock *bb) {
 	a = arch_gep32(cpu, a, bb);
-#ifdef __LITTLE_ENDIAN__
-	bool swap = !cpu->is_little_endian;
-#else
-	bool swap = cpu->is_little_endian;
-#endif
+	bool swap = (cpu->exec_engine->getTargetData()->isLittleEndian () ^ cpu->is_little_endian);
 	if(swap)
 		return SWAP32(new LoadInst(a, "", false, bb));
 	else
@@ -155,11 +151,7 @@ arch_load32_aligned(cpu_t *cpu, Value *a, BasicBlock *bb) {
 void
 arch_store32_aligned(cpu_t *cpu, Value *v, Value *a, BasicBlock *bb) {
 	a = arch_gep32(cpu, a, bb);
-#ifdef __LITTLE_ENDIAN__
-	bool swap = !cpu->is_little_endian;
-#else
-	bool swap = cpu->is_little_endian;
-#endif
+	bool swap = (cpu->exec_engine->getTargetData()->isLittleEndian () ^ cpu->is_little_endian);
 	new StoreInst(swap ? SWAP32(v) : v, a, bb);
 }
 
@@ -291,4 +283,20 @@ Value *
 arch_sqrt(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
 	Type const *ty = getFloatType(width);
 	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::sqrt, &ty, 1), v, "", bb);
+}
+
+// Invoke debug_function
+
+void
+arch_debug_me(cpu_t *cpu, BasicBlock *bb)
+{
+	if (cpu->ptr_func_debug == NULL)
+		return;
+
+	Type const *intptr_type = cpu->exec_engine->getTargetData()->getIntPtrType(_CTX());
+	Constant *v_cpu = ConstantInt::get(intptr_type, (uintptr_t)cpu);
+	Value *v_cpu_ptr = ConstantExpr::getIntToPtr(v_cpu, PointerType::getUnqual(intptr_type));
+
+	// XXX synchronize cpu context!
+	CallInst::Create(cpu->ptr_func_debug, v_cpu_ptr, "", bb);
 }

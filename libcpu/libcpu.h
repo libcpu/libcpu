@@ -162,7 +162,7 @@ enum {
  * type of the debug callback; second parameter is
  * pointer to CPU specific register struct
  */
-typedef void (*debug_function_t)(uint8_t*, void*);
+typedef void (*debug_function_t)(cpu_t*);
 
 //////////////////////////////////////////////////////////////////////
 
@@ -177,7 +177,7 @@ void cpu_flush(cpu_t *cpu);
 void cpu_init(cpu_t *cpu);
 
 /* runs the interactive debugger */
-int cpu_debugger(cpu_t *cpu);
+int cpu_debugger(cpu_t *cpu, debug_function_t debug_function);
 
 //////////////////////////////////////////////////////////////////////
 // LLVM Helpers

@@ -56,10 +56,8 @@ asm("nop");
 }
 
 static void
-debug_function(uint8_t *RAM, void *r) {
-//	reg_arm_t *reg = (reg_arm_t*)r;
-//	printf("DEBUG: $%04X: A=$%02X X=$%02X Y=$%02X S=$%02X P=$%02X %02X/%02X\n", reg->pc, reg->a, reg->x, reg->y, reg->s, reg->p, RAM[0x33], RAM[0x34]);
-//	{ int i; for (i=0x01F0; i<0x0200; i++) printf("%02X ", RAM[i]); printf("\n"); }
+debug_function(cpu_t *cpu) {
+	fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
 }
 
 //////////////////////////////////////////////////////////////////////

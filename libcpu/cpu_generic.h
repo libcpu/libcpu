@@ -30,6 +30,8 @@ void arch_store_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, Basi
 
 Value *arch_sqrt(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
 
+void arch_debug_me(cpu_t *cpu, BasicBlock *bb);
+
 /* host functions */
 uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 
@@ -209,4 +211,7 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 
 /* float intrsinics */
 #define FPSQRT(v)    arch_sqrt(cpu, 64, v, bb)
+
+/* debugging */
+#define DEBUG_ME()   arch_debug_me(cpu, bb)
 

@@ -39,6 +39,7 @@
  *   f = x,o,t,d,u,c
  * s - step
  * . - step and display modified registers.
+ * > - non interactive step and display modified registers.
  * c/q - continue execution (detach)
  *
  * --NYI--
@@ -73,6 +74,8 @@ typedef struct _idbg {
 	uint64_t saved_psr;
 	uint64_t *saved_regs;
 	fp128_reg_t *saved_fp_regs;
+
+	debug_function_t debug_function;
 } idbg_t;
 
 enum {
@@ -584,9 +587,10 @@ fp_reg_size_to_type(cpu_t *cpu)
 }
 
 static void
-idbg_init(cpu_t *cpu, idbg_t *ctx)
+idbg_init(cpu_t *cpu, debug_function_t debug_func, idbg_t *ctx)
 {
 	ctx->cpu = cpu;
+	ctx->debug_function = debug_func;
 
 	ctx->reg_format = reg_size_to_type(cpu);
 	ctx->fp_reg_format = fp_reg_size_to_type(cpu);
@@ -635,7 +639,7 @@ idbg_init(cpu_t *cpu, idbg_t *ctx)
 	ctx->old_debug_flags = cpu->flags_debug;
 
 	cpu->flags = ctx->old_flags | CPU_FLAG_QUIET;
-	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
+	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP);
 }
 
@@ -732,7 +736,7 @@ idbg_diff_registers(idbg_t *ctx)
 static int
 idbg_step(idbg_t *ctx)
 {
-	int rc = cpu_run(ctx->cpu, NULL);
+	int rc = cpu_run(ctx->cpu, ctx->debug_function);
 	cpu_flush(ctx->cpu);
 	return rc;
 }
@@ -810,10 +814,9 @@ idbg_examine(idbg_t *ctx, addr_t address, size_t count,
 			if (n != 0)
 				fprintf(stdout, "\n");
 			idbg_print_address(ctx, address);
-			fprintf(stdout, ":\t");
-		} else if (n > 0) {
-			fprintf(stdout, "\t");
+			fprintf(stdout, ":");
 		}
+		fprintf(stdout, "\t");
 
 		ssize_t bytes = idbg_examine_one(ctx, address, format, mode);
 		if (bytes < 0) {
@@ -965,7 +968,7 @@ idbg_help(char const *cmd)
 							"          The optional parameter 'm' specifies how the integer\n"
 							"          data should be displayed, valid values are:\n"
 							"            x - hexadecimal, o - octal, d - decimal (signed)\n"
-							"            u - decimal (unsigned), c - characater\n"
+							"            u - decimal (unsigned), c - characater, t - binary\n"
 							"Examples: To disassemble 10 instructions at the current pc:\n\n"
 							"            x/10i $pc\n\n"
 							"          To display the first 5 strings at address 0x1000:\n\n"
@@ -981,7 +984,7 @@ idbg_help(char const *cmd)
 							"Desc:     The optional parameter 'm' specifies how the integer\n"
 							"          data should be displayed, valid values are:\n"
 							"            x - hexadecimal, o - octal, d - decimal (signed)\n"
-							"            u - decimal (unsigned), c - character\n"
+							"            u - decimal (unsigned), c - character, t - binary\n"
 							"Examples: To print the Processor Status Register in binary:\n"
 							"            p/t $psr\n\n");
 			break;
@@ -990,6 +993,15 @@ idbg_help(char const *cmd)
 			fprintf(stderr, "Syntax:   .\n"
 			                "Synopsis: Single step with register changes tracking.\n"
 							"Desc:     The register file is saved prior to the single\n"
+							"          step and changes are printed as a result.\n");
+			break;
+
+		case '>':
+			fprintf(stderr, "Syntax:   >\n"
+			                "Synopsis: Non-interactive single step with register\n"
+							"          changes tracking.\n"
+							"Desc:     The execution continues single stepping automatically.\n"
+							"          The register file is saved prior to the single\n"
 							"          step and changes are printed as a result.\n");
 			break;
 
@@ -1007,13 +1019,13 @@ idbg_help(char const *cmd)
 		default:
 			fprintf(stderr, "Syntax:   ? <command>\n");
 			fprintf(stderr, "Synopsis: Shows the help for specified command.\n\n");
-			fprintf(stderr, "Available commands: c, p, q, s, x, . (dot)\n");
+			fprintf(stderr, "Available commands: c, p, q, s, x, . (dot), >\n");
 			return;
 	}
 }
 
 int
-cpu_debugger(cpu_t *cpu)
+cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 {
 	idbg_t   ctx;
 	unsigned format;
@@ -1023,15 +1035,20 @@ cpu_debugger(cpu_t *cpu)
 	addr_t   last_address = 0;
 	ssize_t  last_count = 0;
 	int      rc = 0;
+	bool     interactive = true;
 
-
-	idbg_init(cpu, &ctx);
+	idbg_init(cpu, debug_function, &ctx);
 
 	idbg_input_init();
 	format = ctx.reg_format;
 	mode = M_HEX;
 	for (;;) {
-		char const *p = idbg_input_read("idbg% ");
+		char const *p;
+		
+		if (interactive)
+			p = idbg_input_read("idbg% ");
+		else
+			last_count = 2;
 
 		if (p == NULL || ((*p == 'c' || *p == 'q') && *(p + 1) == 0)) {
 			rc = -1;
@@ -1045,12 +1062,19 @@ cpu_debugger(cpu_t *cpu)
 			idbg_help(p + 1);
 		} else if (last_command == 1 || *p == 's') {
 			rc = idbg_step(&ctx);
-			//XXX check rc
+			if (rc != JIT_RETURN_SINGLESTEP)
+				return rc;
 			last_command = 1;
 		} else if (last_command == 2 || *p == '.') {
 			rc = idbg_step_diff(&ctx);
-			//XXX check rc
+			if (rc != JIT_RETURN_SINGLESTEP)
+				return rc;
 			last_command = 2;
+		} else if (*p == '>') {
+			last_command = 2;
+			interactive = false;
+			p = "";
+			continue;
 		} else if (*p == 'p') {
 			union {
 				uint64_t value;

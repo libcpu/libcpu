@@ -424,7 +424,7 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 
 	/* Create two "return" BBs for the branch targets */
 	if (flow_type == FLOW_TYPE_COND_BRANCH) {
-	if (!(cpu->flags & CPU_FLAG_QUIET)) printf("%s:%d\n", __func__, __LINE__);
+    	if (!(cpu->flags & CPU_FLAG_QUIET)) printf("%s:%d\n", __func__, __LINE__);
 		bb_next = create_singlestep_return_basicblock(cpu, pc+bytes, bb_ret);
 		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
 	}
@@ -518,11 +518,11 @@ cpu_create_function(cpu_t *cpu, const char *name)
 	PointerType *type_pstruct_fp_reg_t = PointerType::get(type_struct_fp_reg_t, 0);
 	// - uint8_t *
 	PointerType *type_pi8 = PointerType::get(getIntegerType(8), 0);
-	// - (*f)(uint8_t *, reg_t *, fp_reg_t *) [debug_function() function pointer]
+	// - intptr *
+	PointerType *type_intptr = PointerType::get(cpu->exec_engine->getTargetData()->getIntPtrType(_CTX()), 0);
+	// - (*f)(cpu_t *) [debug_function() function pointer]
 	std::vector<const Type*>type_func_callout_args;
-	type_func_callout_args.push_back(type_pi8);				/* uint8_t *RAM */
-	type_func_callout_args.push_back(type_pstruct_reg_t);	/* reg_t *reg */
-	type_func_callout_args.push_back(type_pstruct_fp_reg_t);	/* fp_reg_t *fp_reg */
+	type_func_callout_args.push_back(type_intptr);	/* intptr *cpu */
 	FunctionType *type_func_callout = FunctionType::get(
 		getType(VoidTy),	/* Result */
 		type_func_callout_args,	/* Params */
