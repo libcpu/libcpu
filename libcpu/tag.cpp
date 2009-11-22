@@ -1,5 +1,4 @@
 #include "libcpu.h"
-#include "tag_generic.h"
 #include "tag.h"
 
 /*
@@ -14,9 +13,9 @@ init_tagging(cpu_t *cpu)
 	addr_t nitems, i;
 
 	nitems = cpu->code_end - cpu->code_start;
-	cpu->tagging_type = (tagging_type_t*)malloc(nitems * sizeof(tagging_type_t));
+	cpu->tag = (tag_t*)malloc(nitems * sizeof(tag_t));
 	for (i = 0; i < nitems; i++)
-		cpu->tagging_type[i] = TAG_TYPE_UNKNOWN;
+		cpu->tag[i] = TAG_UNKNOWN;
 }
 
 static bool
@@ -26,26 +25,26 @@ is_inside_code_area(cpu_t *cpu, addr_t a)
 }
 
 static void
-or_tagging_type(cpu_t *cpu, addr_t a, tagging_type_t t)
+or_tag(cpu_t *cpu, addr_t a, tag_t t)
 {
 	if (is_inside_code_area(cpu, a))
-		cpu->tagging_type[a - cpu->code_start] |= t;
+		cpu->tag[a - cpu->code_start] |= t;
 }
 
 /* access functions */
-tagging_type_t
-get_tagging_type(cpu_t *cpu, addr_t a)
+tag_t
+get_tag(cpu_t *cpu, addr_t a)
 {
 	if (is_inside_code_area(cpu, a))
-		return cpu->tagging_type[a - cpu->code_start];
+		return cpu->tag[a - cpu->code_start];
 	else
-		return TAG_TYPE_UNKNOWN;
+		return TAG_UNKNOWN;
 }
 
 bool
 is_code(cpu_t *cpu, addr_t a)
 {
-	return !!(get_tagging_type(cpu, a) & TAG_TYPE_CODE);
+	return !!(get_tag(cpu, a) & TAG_CODE);
 }
 
 extern void disasm_instr(cpu_t *cpu, addr_t pc);
@@ -54,9 +53,9 @@ static void
 tag_recursive(cpu_t *cpu, addr_t pc, int level)
 {
 	int bytes;
-	int flow_type;
+	tag_t tag;
 	addr_t new_pc, next_pc;
-	int dummy1;
+	tag_t dummy1;
 	addr_t dummy2;
 
 	for(;;) {
@@ -70,53 +69,37 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 		disasm_instr(cpu, pc);
 #endif
 
-		or_tagging_type(cpu, pc, TAG_TYPE_CODE);
+		bytes = cpu->f.tag_instr(cpu, pc, &tag, &new_pc);
+		or_tag(cpu, pc, tag | TAG_CODE);
 
-		bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc);
-
+		/* calculate address of next instruction */
 		next_pc = pc + bytes;
-		if (flow_type & FLOW_TYPE_DELAY_SLOT)		/* skip delay slot */
+		if (tag & TAG_DELAY_SLOT)	/* skip delay slot */
 			next_pc += cpu->f.tag_instr(cpu, next_pc, &dummy1, &dummy2);
 
-		if (flow_type & FLOW_TYPE_CONDITIONAL) {
-			or_tagging_type(cpu, pc, TAG_TYPE_CONDITIONAL);
-			or_tagging_type(cpu, next_pc, TAG_TYPE_AFTER_BRANCH);
+		if (tag & TAG_CONDITIONAL)
+			or_tag(cpu, next_pc, TAG_AFTER_COND);
+
+		if (tag & TAG_TRAP)	/* code ends here and continues at the next instruction */
+			or_tag(cpu, next_pc, TAG_AFTER_TRAP);
+
+		if (tag & TAG_CALL) {
+			/* tag subroutine, then continue with next instruction */
+			or_tag(cpu, new_pc, TAG_SUBROUTINE);
+			or_tag(cpu, next_pc, TAG_AFTER_CALL);
+			tag_recursive(cpu, new_pc, level+1);
 		}
 
-		if (flow_type & FLOW_TYPE_DELAY_SLOT)
-			or_tagging_type(cpu, pc, TAG_TYPE_DELAY_SLOT);
-
-		switch (flow_type & ~FLOW_TYPE_FLAGS) {
-			case FLOW_TYPE_ERR:
-			case FLOW_TYPE_RETURN:
-				or_tagging_type(cpu, pc, TAG_TYPE_RET);
-				/* execution ends here, the follwing location is not reached */
+		if (tag & TAG_BRANCH) {
+			or_tag(cpu, new_pc, TAG_BRANCH_TARGET);
+			tag_recursive(cpu, new_pc, level+1);
+			if (!(tag & TAG_CONDITIONAL))
 				return;
-			case FLOW_TYPE_BRANCH:
-				or_tagging_type(cpu, pc, TAG_TYPE_BRANCH);
-				or_tagging_type(cpu, new_pc, TAG_TYPE_BRANCH_TARGET);
-				tag_recursive(cpu, new_pc, level+1);
-				if (!(flow_type & FLOW_TYPE_CONDITIONAL))
-					return;
-				break;
-			case FLOW_TYPE_CALL:
-				/* tag subroutine, then continue with next instruction */
-				or_tagging_type(cpu, pc, TAG_TYPE_CALL);
-				or_tagging_type(cpu, new_pc, TAG_TYPE_SUBROUTINE);
-				or_tagging_type(cpu, next_pc, TAG_TYPE_AFTER_CALL);
-				tag_recursive(cpu, new_pc, level+1);
-				break;
-			case FLOW_TYPE_TRAP:
-				/* code ends here and continues at the next instruction */
-				or_tagging_type(cpu, pc, TAG_TYPE_TRAP);
-				or_tagging_type(cpu, next_pc, TAG_TYPE_AFTER_TRAP);
-				break;
-			case FLOW_TYPE_CONTINUE:
-				break; /* continue with next instruction */
-			default:
-				assert(0 && "Specified FLOW_TYPE_xxx not handled.");
-				break;
 		}
+
+		if (tag & TAG_RET)	/* execution ends here, the follwing location is not reached */
+			return;
+
 		pc = next_pc;
 	}
 }
@@ -129,14 +112,14 @@ cpu_tag(cpu_t *cpu, addr_t pc)
 		return;
 
 	/* initialize data structure on demand */
-	if (!cpu->tagging_type)
+	if (!cpu->tag)
 		init_tagging(cpu);
 
 #if VERBOSE
 	printf("starting tagging at $%02llx\n", (unsigned long long)pc);
 #endif
 
-	or_tagging_type(cpu, pc, TAG_TYPE_ENTRY); /* client wants to enter the guest code here */
+	or_tag(cpu, pc, TAG_ENTRY); /* client wants to enter the guest code here */
 	tag_recursive(cpu, pc, 0);
 }
 

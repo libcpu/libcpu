@@ -10,10 +10,9 @@
 
 /* project global headers */
 #include "libcpu.h"
-#include "tag_generic.h"
+#include "tag.h"
 #include "disasm.h"
 #include "arch.h"
-#include "tag.h"
 #include "optimize.h"
 
 using namespace llvm;
@@ -64,7 +63,7 @@ cpu_new(cpu_arch_t arch)
 	cpu->code_start = 0;
 	cpu->code_end = 0;
 	cpu->code_entry = 0;
-	cpu->tagging_type = NULL;
+	cpu->tag = NULL;
 
 	cpu->fp = NULL;
 	cpu->reg = NULL;
@@ -134,13 +133,13 @@ void disasm_instr(cpu_t *cpu, addr_t pc) {
 	}
 
 	/* delay slot */
-	int flow_type;
+	tag_t tag;
 	addr_t dummy;
-	cpu->f.tag_instr(cpu, pc, &flow_type, &dummy);
-	if (flow_type & FLOW_TYPE_DELAY_SLOT)
+	cpu->f.tag_instr(cpu, pc, &tag, &dummy);
+	if (tag & TAG_DELAY_SLOT)
 		bytes = cpu->f.disasm_instr(cpu, pc + bytes, disassembly_line2, sizeof(disassembly_line2));
 
-	if (flow_type & FLOW_TYPE_DELAY_SLOT)
+	if (tag & TAG_DELAY_SLOT)
 		printf("%-23s [%s]\n", disassembly_line1, disassembly_line2);
 	else
 		printf("%-23s\n", disassembly_line1);
@@ -204,27 +203,26 @@ printf("creating basic block %s\n", label);
 static bool
 is_start_of_basicblock(cpu_t *cpu, addr_t a)
 {
-	return !!(get_tagging_type(cpu, a) &
-		(TAG_TYPE_BRANCH_TARGET |	/* someone jumps/branches here */
-		 TAG_TYPE_SUBROUTINE |		/* someone calls this */
-		 TAG_TYPE_AFTER_CALL |		/* instruction after a call */
-		 TAG_TYPE_AFTER_BRANCH |	/* instruction after a branch */
-		 TAG_TYPE_AFTER_TRAP |		/* instruction after a trap */
-		 TAG_TYPE_ENTRY));			/* client wants to enter guest code here */
+	return !!(get_tag(cpu, a) &
+		(TAG_BRANCH_TARGET |	/* someone jumps/branches here */
+		 TAG_SUBROUTINE |		/* someone calls this */
+		 TAG_AFTER_CALL |		/* instruction after a call */
+		 TAG_AFTER_COND |	/* instruction after a branch */
+		 TAG_AFTER_TRAP |		/* instruction after a trap */
+		 TAG_ENTRY));			/* client wants to enter guest code here */
 }
 
 static bool
 needs_dispatch_entry(cpu_t *cpu, addr_t a)
 {
-	return !!(get_tagging_type(cpu, a) &
-		(TAG_TYPE_ENTRY |			/* client wants to enter guest code here */
-		 TAG_TYPE_AFTER_CALL |		/* instruction after a call */
-		 TAG_TYPE_AFTER_TRAP));		/* instruction after a call */
+	return !!(get_tag(cpu, a) &
+		(TAG_ENTRY |			/* client wants to enter guest code here */
+		 TAG_AFTER_CALL |		/* instruction after a call */
+		 TAG_AFTER_TRAP));		/* instruction after a call */
 }
 
 static void
-recompile_instr(cpu_t *cpu, addr_t pc, tagging_type_t tag,
-	BasicBlock *bb_dispatch,
+recompile_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 	BasicBlock *bb_target,
 	BasicBlock *bb_next,
 	BasicBlock *bb_trap,
@@ -234,13 +232,13 @@ recompile_instr(cpu_t *cpu, addr_t pc, tagging_type_t tag,
 	BasicBlock *bb_delay;
 
 	/* create internal basic blocks if needed */
-	if (tag & TAG_TYPE_CONDITIONAL)
+	if (tag & TAG_CONDITIONAL)
 		bb_cond = create_basicblock(pc, cpu->func_jitmain, BB_TYPE_COND);
-	if ((tag & TAG_TYPE_DELAY_SLOT) && (tag & TAG_TYPE_CONDITIONAL))
+	if ((tag & TAG_DELAY_SLOT) && (tag & TAG_CONDITIONAL))
 		bb_delay = create_basicblock(pc, cpu->func_jitmain, BB_TYPE_DELAY);
 
-	if (tag & TAG_TYPE_CONDITIONAL) {
-		if (tag & TAG_TYPE_DELAY_SLOT) {
+	if (tag & TAG_CONDITIONAL) {
+		if (tag & TAG_DELAY_SLOT) {
 			addr_t delay_pc;
 			// bb
 			Value *c = cpu->f.recompile_cond(cpu, pc, cur_bb);
@@ -263,7 +261,7 @@ recompile_instr(cpu_t *cpu, addr_t pc, tagging_type_t tag,
 			BranchInst::Create(bb_target, bb_cond);
 		}
 	} else {
-		if (tag & TAG_TYPE_DELAY_SLOT) {
+		if (tag & TAG_DELAY_SLOT) {
 			// bb
 			pc += cpu->f.recompile_instr(cpu, pc, cur_bb);
 			pc += cpu->f.recompile_instr(cpu, pc, cur_bb);
@@ -271,11 +269,11 @@ recompile_instr(cpu_t *cpu, addr_t pc, tagging_type_t tag,
 		} else {
 			// bb
 			pc += cpu->f.recompile_instr(cpu, pc, cur_bb);
-			if (tag & (TAG_TYPE_BRANCH | TAG_TYPE_CALL))
+			if (tag & (TAG_BRANCH | TAG_CALL))
 				BranchInst::Create(bb_target, cur_bb);
-			if (tag & TAG_TYPE_RET)
-				BranchInst::Create(bb_dispatch, cur_bb);
-			if (tag & TAG_TYPE_TRAP)
+			if (tag & TAG_RET)
+				BranchInst::Create(bb_target, cur_bb);
+			if (tag & TAG_TRAP)
 				BranchInst::Create(bb_trap, cur_bb);
 		}
 	}
@@ -288,7 +286,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	addr_t pc, bytes;
 	pc = cpu->code_start;
 	while (pc < cpu->code_end) {
-		//printf("%04X: %d\n", pc, get_tagging_type(cpu, pc));
+		//printf("%04X: %d\n", pc, get_tag(cpu, pc));
 		if (is_start_of_basicblock(cpu, pc)) {
 			create_basicblock(pc, cpu->func_jitmain, BB_TYPE_NORMAL);
 			bbs++;
@@ -326,26 +324,26 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 			continue; // skip special blocks like entry, dispatch...
 		pc = strtol(cstr+1, (char **)NULL, 16);
 printf("basicblock: L%08llx\n", (unsigned long long)pc);
-		tagging_type_t tag;
+		tag_t tag;
 		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_cond = NULL, *bb_delay = NULL;
 		do {
-			int dummy1;
+			tag_t dummy1;
 			addr_t dummy2;
 
 			disasm_instr(cpu, pc);
 
-			tag = get_tagging_type(cpu, pc);
+			tag = get_tag(cpu, pc);
 
 			/* get address of the following instruction */
 			addr_t new_pc, next_pc;
 			next_pc = pc + cpu->f.tag_instr(cpu, pc, &dummy1, &new_pc);
-			if (tag & TAG_TYPE_DELAY_SLOT)		/* skip delay slot */
+			if (tag & TAG_DELAY_SLOT)		/* skip delay slot */
 				next_pc += cpu->f.tag_instr(cpu, next_pc, &dummy1, &dummy2);
 
 			/* get target basic block */
-			if (tag & TAG_TYPE_RET)
+			if (tag & TAG_RET)
 				bb_target = bb_dispatch;
-			if (tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH)) {
+			if (tag & (TAG_CALL|TAG_BRANCH)) {
 				if (new_pc == NEW_PC_NONE) { /* recompile_instr() will set PC */
 					bb_target = bb_dispatch;
 				} else {
@@ -356,25 +354,25 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 					}
 				}
 			}
-			/* get not-taken & conditional basic block */
-			if (tag & TAG_TYPE_CONDITIONAL)
+			/* get not-taken basic block */
+			if (tag & TAG_CONDITIONAL)
  				bb_next = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, next_pc, BB_TYPE_NORMAL);
 
-			recompile_instr(cpu, pc, tag, bb_dispatch, bb_target, bb_next, bb_trap, cur_bb);
+			recompile_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
 
 			pc = next_pc;
 
 		} while (is_code(cpu, pc) && !(is_start_of_basicblock(cpu, pc)));
 
 		/* link with next basic block if there isn't a control flow instr. already */
-		if (!(tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH|TAG_TYPE_RET|TAG_TYPE_TRAP))) {
+		if (!(tag & (TAG_CALL|TAG_BRANCH|TAG_RET|TAG_TRAP))) {
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, BB_TYPE_NORMAL);
 			if (!target) {
 				printf("error: unknown continue $%04llx!\n", (unsigned long long)pc);
 				exit(1);
 			}
 			printf("info: linking continue $%04llx!\n", (unsigned long long)pc);
-			if (tag & TAG_TYPE_CONDITIONAL)
+			if (tag & TAG_CONDITIONAL)
 				BranchInst::Create(target, (BasicBlock*)bb_cond);
 			else
 				BranchInst::Create(target, (BasicBlock*)cur_bb);
@@ -411,9 +409,11 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 {
 	int bytes;
 	addr_t new_pc;
-	int flow_type;
-	BasicBlock *cur_bb = NULL, *bb_target = NULL, *bb_next = NULL, *bb_cond = NULL;
-	addr_t pc = cpu->f.get_pc(cpu, cpu->reg);
+	tag_t tag;
+	BasicBlock *cur_bb = NULL, *bb_target = NULL, *bb_next = NULL;
+	addr_t next_pc, pc = cpu->f.get_pc(cpu, cpu->reg);
+	tag_t dummy1;
+	addr_t dummy2;
 
 	cur_bb = BasicBlock::Create(_CTX(), "instruction", cpu->func_jitmain, 0);
 
@@ -421,32 +421,23 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 
 	if (!(cpu->flags & CPU_FLAG_QUIET)) printf("%s:%d\n", __func__, __LINE__);
 
-	bytes = cpu->f.tag_instr(cpu, pc, &flow_type, &new_pc);
+	next_pc = pc + cpu->f.tag_instr(cpu, pc, &tag, &new_pc);
+	if (tag & TAG_DELAY_SLOT)		/* skip delay slot */
+		next_pc += cpu->f.tag_instr(cpu, next_pc, &dummy1, &dummy2);
 
-	/* Create two "return" BBs for the branch targets */
-	if (flow_type == FLOW_TYPE_COND_BRANCH) {
-    	if (!(cpu->flags & CPU_FLAG_QUIET)) printf("%s:%d\n", __func__, __LINE__);
-		bb_next = create_singlestep_return_basicblock(cpu, pc+bytes, bb_ret);
+	/* get target basic block */
+	if (new_pc == NEW_PC_NONE) /* recompile_instr() will set PC */
+		bb_target = bb_ret;
+	else
 		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
-	}
-	/* Create one "return" BB for the jump target */
-	if ((flow_type & ~FLOW_TYPE_FLAGS) == FLOW_TYPE_BRANCH || flow_type == FLOW_TYPE_CALL)
-		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
+	/* get not-taken & conditional basic block */
+	if (tag & TAG_CONDITIONAL)
+		bb_next = create_singlestep_return_basicblock(cpu, next_pc, bb_ret);
 
-	if (flow_type & FLOW_TYPE_CONDITIONAL) {
-		/* emit code to evaluate the condition */
-		Value *c = cpu->f.recompile_cond(cpu, pc, cur_bb);
-		/* get taken basic block for conditional instruction and create branch*/
-		bb_cond = BasicBlock::Create(_CTX(), "cond_taken", cpu->func_jitmain, 0);
-		bb_next = create_singlestep_return_basicblock(cpu, pc+bytes, bb_ret);
-		BranchInst::Create(bb_cond, bb_next, c, cur_bb);
-//		bytes = cpu->f.recompile_instr(cpu, pc, bb_ret, bb_cond, bb_target, NULL, bb_next);
-	}
-//	else
-//		bytes = cpu->f.recompile_instr(cpu, pc, bb_ret, cur_bb, bb_target, NULL, bb_next);
+//	recompile_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
 
 	/* If it's not a branch, append "store PC & return" to basic block */
-	if (flow_type == FLOW_TYPE_CONTINUE ) {
+	if (tag & TAG_CONTINUE ) {
 		emit_store_pc_return(cpu, cur_bb, pc + bytes, bb_ret);
 	}
 	return cur_bb;

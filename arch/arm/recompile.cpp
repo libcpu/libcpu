@@ -1,7 +1,7 @@
 #include "libcpu.h"
 #include "cpu_generic.h"
 #include "arm_internal.h"
-#include "tag_generic.h"
+#include "tag.h"
 
 using namespace llvm;
 
@@ -22,18 +22,18 @@ static Value* ptr_I;
 // tagging
 //////////////////////////////////////////////////////////////////////
 
-int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
+int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, tag_t *flow_type, addr_t *new_pc) {
 	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
 
 	if (instr == 0xE1A0F00E) /* MOV r15, r0, r14 */
-		*flow_type = FLOW_TYPE_RETURN;
+		*flow_type = TAG_RET;
 //	else if (instr >> 24 < 0x0E)
-//		*flow_type = FLOW_TYPE_BRANCH;
+//		*flow_type = TAG_BRANCH;
 	else 
-		*flow_type = FLOW_TYPE_CONTINUE;
+		*flow_type = TAG_CONTINUE;
 
 	if (instr >> 28 != 0xE)
-		*flow_type |= FLOW_TYPE_CONDITIONAL;
+		*flow_type |= TAG_CONDITIONAL;
 
 	return 4;
 }

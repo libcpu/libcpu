@@ -33,7 +33,7 @@ typedef StructType *(*fp_get_struct_reg)(struct cpu *cpu);
 typedef addr_t      (*fp_get_pc)(struct cpu *cpu, void *regs);
 typedef void        (*fp_emit_decode_reg)(struct cpu *cpu, BasicBlock *bb);
 typedef void        (*fp_spill_reg_state)(struct cpu *cpu, BasicBlock *bb);
-typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, int *flow_type, addr_t *new_pc);
+typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, tag_t *flow_type, addr_t *new_pc);
 typedef int         (*fp_disasm_instr)(struct cpu *cpu, addr_t pc, char *line, unsigned int max_line);
 typedef Value      *(*fp_recompile_cond)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
 typedef int         (*fp_recompile_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
@@ -66,8 +66,6 @@ typedef enum {
 	CPU_ARCH_ARM
 } cpu_arch_t;
 
-typedef uint16_t tagging_type_t;
-
 enum {
 	CPU_FLAG_FP80  = (1 << 15), // FP80 is natively supported.
 	CPU_FLAG_FP128 = (1 << 16), // FP128 is natively supported.
@@ -95,7 +93,7 @@ typedef struct cpu {
 	uint32_t flags_debug;
 	uint32_t flags_arch;
 	uint32_t flags;
-	tagging_type_t *tagging_type; /* array of flags, one per byte of code */
+	tag_t *tag; /* array of flags, one per byte of code */
 	Module *mod;
 	Function *func_jitmain;
 	ExecutionEngine *exec_engine;

@@ -17,37 +17,37 @@ extern Value* m88k_ptr_C; // Carry
 // tagging
 //////////////////////////////////////////////////////////////////////
 
-#include "tag_generic.h"
+#include "tag.h"
 
-int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
+int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, tag_t *flow_type, addr_t *new_pc)
 {
 	m88k_insn instr = INSTR(pc);
 
 	switch (instr.opcode()) {
 		case M88K_OPC_ILLEGAL:
-			*flow_type = FLOW_TYPE_ERR;
+			*flow_type = TAG_TRAP;
 			break;
 
 		case M88K_OPC_JMP:
 		case M88K_OPC_JMP_N:
-			*flow_type = FLOW_TYPE_RETURN;
+			*flow_type = TAG_RET;
 			break;
 
 		case M88K_OPC_JSR:
 		case M88K_OPC_JSR_N:
-			*flow_type = FLOW_TYPE_CALL;
+			*flow_type = TAG_CALL;
 			break;
 
 		case M88K_OPC_BR:
 		case M88K_OPC_BR_N:
 			*new_pc = pc + (instr.branch26() << 2);
-			*flow_type = FLOW_TYPE_BRANCH;
+			*flow_type = TAG_BRANCH;
 			break;
 
 		case M88K_OPC_BSR:
 		case M88K_OPC_BSR_N:
 			*new_pc = pc + (instr.branch26() << 2);
-			*flow_type = FLOW_TYPE_CALL;
+			*flow_type = TAG_CALL;
 			break;
 
 		case M88K_OPC_BB0:
@@ -55,19 +55,19 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 		case M88K_OPC_BB1:
 		case M88K_OPC_BB1_N:
 			*new_pc = pc + (instr.branch16() << 2);
-			*flow_type = FLOW_TYPE_COND_BRANCH;
+			*flow_type = TAG_COND_BRANCH;
 			break;
 
 		case M88K_OPC_BCND:
 		case M88K_OPC_BCND_N:
 			if (instr.mb() == M88K_BCND_NEVER)
-				*flow_type = FLOW_TYPE_CONTINUE;
+				*flow_type = TAG_CONTINUE;
 			else {
 				*new_pc = pc + (instr.branch16() << 2);
 				if (instr.mb() == M88K_BCND_ALWAYS)
-					*flow_type = FLOW_TYPE_BRANCH;
+					*flow_type = TAG_BRANCH;
 				else
-					*flow_type = FLOW_TYPE_COND_BRANCH;
+					*flow_type = TAG_COND_BRANCH;
 			}
 			break;
 
@@ -75,16 +75,16 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc)
 		case M88K_OPC_TB1:
 		case M88K_OPC_TBND:
 		case M88K_OPC_TCND:
-			*flow_type = FLOW_TYPE_TRAP; //XXX COND_TRAP
+			*flow_type = TAG_TRAP; //XXX COND_TRAP
 			break;
 
 		default:
-			*flow_type = FLOW_TYPE_CONTINUE;
+			*flow_type = TAG_CONTINUE;
 			break;
 	}
 
 	if (instr.is_delaying())
-		*flow_type |= FLOW_TYPE_DELAY_SLOT;
+		*flow_type |= TAG_DELAY_SLOT;
 
 	return 4;
 }

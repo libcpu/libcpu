@@ -33,8 +33,8 @@ using namespace llvm;
 // tagging
 //////////////////////////////////////////////////////////////////////
 
-#include "tag_generic.h"
-int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
+#include "tag.h"
+int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, tag_t *flow_type, addr_t *new_pc) {
 	uint32_t instr = INSTR(pc);
 
 	switch(instr >> 26) {
@@ -42,11 +42,11 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 			switch(instr & 0x3F) {
 				case 0x08: //INCPUS_JR
 					//XXX is not necessarily a return!
-					*flow_type = FLOW_TYPE_RETURN | FLOW_TYPE_DELAY_SLOT;
+					*flow_type = TAG_RET | TAG_DELAY_SLOT;
 					break;
 				case 0x09:  //INCPUS_JALR
 					*new_pc = NEW_PC_NONE;
-					*flow_type = FLOW_TYPE_BRANCH | FLOW_TYPE_DELAY_SLOT;
+					*flow_type = TAG_BRANCH | TAG_DELAY_SLOT;
 					break;
 				case 0x01: //IN_invalid
 				case 0x05: //IN_invalid
@@ -62,10 +62,10 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 				case 0x37: //IN_invalid
 				case 0x39: //IN_invalid
 				case 0x3D: //IN_invalid
-					*flow_type = FLOW_TYPE_ERR;
+					*flow_type = TAG_TRAP;
 					break;
 				default:
-					*flow_type = FLOW_TYPE_CONTINUE;
+					*flow_type = TAG_CONTINUE;
 					break;
 			}
 			break;
@@ -74,22 +74,22 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 				case 0x00: //INCPUR_BLTZ
 				case 0x01: //INCPUR_BGEZ
 					*new_pc = MIPS_BRANCH_TARGET;
-					*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
+					*flow_type = TAG_COND_BRANCH | TAG_DELAY_SLOT;
 					break;
 				case 0x10: //INCPUR_BLTZAL
 				case 0x11: //INCPUR_BGEZAL
 					*new_pc = MIPS_BRANCH_TARGET;
-					*flow_type = FLOW_TYPE_CALL | FLOW_TYPE_DELAY_SLOT;
+					*flow_type = TAG_CALL | TAG_DELAY_SLOT;
 					break;
 				case 0x02: //INCPUR_BLTZL
 				case 0x03: //INCPUR_BGEZL
 					*new_pc = MIPS_BRANCH_TARGET;
-					*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
+					*flow_type = TAG_COND_BRANCH | TAG_DELAY_SLOT;
 					break;
 				case 0x12: //INCPUR_BLTZALL
 				case 0x13: //INCPUR_BGEZALL
 					*new_pc = MIPS_BRANCH_TARGET;
-					*flow_type = FLOW_TYPE_CALL | FLOW_TYPE_DELAY_SLOT;
+					*flow_type = TAG_CALL | TAG_DELAY_SLOT;
 					break;
 				case 0x04: //IN_invalid
 				case 0x05: //IN_invalid
@@ -109,37 +109,37 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 				case 0x1D: //IN_invalid
 				case 0x1E: //IN_invalid
 				case 0x1F: //IN_invalid
-					*flow_type = FLOW_TYPE_ERR;
+					*flow_type = TAG_TRAP;
 					break;
 				default:
-					*flow_type = FLOW_TYPE_CONTINUE;
+					*flow_type = TAG_CONTINUE;
 					break;
 			}
 		case 0x02: //INCPU_J
 			*new_pc = (pc & 0xF0000000) | (GetTarget << 2);
-			*flow_type = FLOW_TYPE_COND_BRANCH;
+			*flow_type = TAG_COND_BRANCH;
 		case 0x03: //INCPU_JAL
 			*new_pc = (pc & 0xF0000000) | (GetTarget << 2);
-			*flow_type = FLOW_TYPE_CALL;
+			*flow_type = TAG_CALL;
 			break;
 		case 0x04: //INCPU_BEQ
 			if (!RS && !RT) { // special case: B
 				*new_pc = MIPS_BRANCH_TARGET;
-				*flow_type = FLOW_TYPE_BRANCH | FLOW_TYPE_DELAY_SLOT;
+				*flow_type = TAG_BRANCH | TAG_DELAY_SLOT;
 			} else {
 				*new_pc = MIPS_BRANCH_TARGET;
-				*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
+				*flow_type = TAG_COND_BRANCH | TAG_DELAY_SLOT;
 			}
 			break;
 		case 0x05: //INCPU_BNE
 		case 0x06: //INCPU_BLEZ
 		case 0x07: //INCPU_BGTZ
 			*new_pc = MIPS_BRANCH_TARGET;
-			*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
+			*flow_type = TAG_COND_BRANCH | TAG_DELAY_SLOT;
 			break;
 		case 0x10: //INCPU_COP0
 			// we don't translate any of the INCPU_COP0 branch
-			*flow_type = FLOW_TYPE_ERR;
+			*flow_type = TAG_TRAP;
 			break;
 		case 0x11: //INCPU_COP1
 			switch(GetFMT) {
@@ -152,7 +152,7 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 				case 0x0D: //IN_invalid
 				case 0x0E: //IN_invalid
 				case 0x0F: //IN_invalid
-					*flow_type = FLOW_TYPE_ERR;
+					*flow_type = TAG_TRAP;
 					break;
 				case 0x10: //INCOP1_S
 					switch(GetCOP1FloatInstruction) {
@@ -185,10 +185,10 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 								case 0x2D: //IN_invalid
 								case 0x2E: //IN_invalid
 								case 0x2F: //IN_invalid
-									*flow_type = FLOW_TYPE_ERR;
+									*flow_type = TAG_TRAP;
 									break;
 								default:
-									*flow_type = FLOW_TYPE_CONTINUE;
+									*flow_type = TAG_CONTINUE;
 									break;
 							}
 				case 0x12: //IN_invalid
@@ -203,10 +203,10 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 				case 0x1D: //IN_invalid
 				case 0x1E: //IN_invalid
 				case 0x1F: //IN_invalid
-					*flow_type = FLOW_TYPE_ERR;
+					*flow_type = TAG_TRAP;
 					break;
 				default:
-					*flow_type = FLOW_TYPE_CONTINUE;
+					*flow_type = TAG_CONTINUE;
 					break;
 			}
 		case 0x14: //INCPU_BEQL
@@ -214,7 +214,7 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case 0x16: //INCPU_BLEZL
 		case 0x17: //INCPU_BGTZL
 			*new_pc = MIPS_BRANCH_TARGET;
-			*flow_type = FLOW_TYPE_COND_BRANCH | FLOW_TYPE_DELAY_SLOT;
+			*flow_type = TAG_COND_BRANCH | TAG_DELAY_SLOT;
 			break;
 		case 0x12: //IN_invalid
 		case 0x13: //IN_invalid
@@ -228,10 +228,10 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, int *flow_type, addr_t *new_pc) {
 		case 0x3A: //IN_invalid
 		case 0x3B: //IN_invalid
 		case 0x3E: //IN_invalid
-			*flow_type = FLOW_TYPE_ERR;
+			*flow_type = TAG_TRAP;
 			break;
 		default:
-			*flow_type = FLOW_TYPE_CONTINUE;
+			*flow_type = TAG_CONTINUE;
 			break;
 	}
 	return 4;
@@ -538,7 +538,7 @@ arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 		printf("INVALID %s:%d\n", __func__, __LINE__); exit(1);
 	}
 
-	int dummy1;
+	tag_t dummy1;
 	addr_t dummy2;
 	return arch_mips_tag_instr(cpu, pc, &dummy1, &dummy2);
 }
