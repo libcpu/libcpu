@@ -1,4 +1,4 @@
-//#define BENCHMARK_FIB
+#define BENCHMARK_FIB
 //#define SINGLESTEP
 
 #ifdef BENCHMARK_FIB
@@ -364,7 +364,7 @@ double_break:
 
 	printf("done!\n");
 	
-	dump_state(RAM, (m88k_grf_t*)cpu->reg);
+	dump_state(RAM, (m88k_grf_t*)cpu->reg, NULL);
 
 	printf("RUN2..."); fflush(stdout);
 	t3 = abs_time();

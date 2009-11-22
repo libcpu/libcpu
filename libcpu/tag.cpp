@@ -106,8 +106,16 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 				or_tagging_type(cpu, next_pc, TAG_TYPE_AFTER_CALL);
 				tag_recursive(cpu, new_pc, level+1);
 				break;
+			case FLOW_TYPE_TRAP:
+				/* code ends here and continues at the next instruction */
+				or_tagging_type(cpu, pc, TAG_TYPE_TRAP);
+				or_tagging_type(cpu, next_pc, TAG_TYPE_AFTER_TRAP);
+				break;
 			case FLOW_TYPE_CONTINUE:
 				break; /* continue with next instruction */
+			default:
+				assert(0 && "Specified FLOW_TYPE_xxx not handled.");
+				break;
 		}
 		pc = next_pc;
 	}

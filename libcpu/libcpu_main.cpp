@@ -209,6 +209,7 @@ is_start_of_basicblock(cpu_t *cpu, addr_t a)
 		 TAG_TYPE_SUBROUTINE |		/* someone calls this */
 		 TAG_TYPE_AFTER_CALL |		/* instruction after a call */
 		 TAG_TYPE_AFTER_BRANCH |	/* instruction after a branch */
+		 TAG_TYPE_AFTER_TRAP |		/* instruction after a trap */
 		 TAG_TYPE_ENTRY));			/* client wants to enter guest code here */
 }
 
@@ -217,11 +218,12 @@ needs_dispatch_entry(cpu_t *cpu, addr_t a)
 {
 	return !!(get_tagging_type(cpu, a) &
 		(TAG_TYPE_ENTRY |			/* client wants to enter guest code here */
-		 TAG_TYPE_AFTER_CALL));		/* instruction after a call */
+		 TAG_TYPE_AFTER_CALL |		/* instruction after a call */
+		 TAG_TYPE_AFTER_TRAP));		/* instruction after a call */
 }
 
 static void
-recompile_instr(cpu_t *cpu, addr_t pc, tagging_type_t tag, BasicBlock *bb_dispatch, BasicBlock *cur_bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next, BasicBlock *bb_delay)
+recompile_instr(cpu_t *cpu, addr_t pc, tagging_type_t tag, BasicBlock *bb_dispatch, BasicBlock *cur_bb, BasicBlock *bb_target, BasicBlock *bb_cond, BasicBlock *bb_next, BasicBlock *bb_delay, BasicBlock *bb_trap)
 {
 	if (tag & TAG_TYPE_CONDITIONAL) {
 		if (tag & TAG_TYPE_DELAY_SLOT) {
@@ -261,11 +263,14 @@ recompile_instr(cpu_t *cpu, addr_t pc, tagging_type_t tag, BasicBlock *bb_dispat
 			if (tag & TAG_TYPE_RET) {
 				BranchInst::Create(bb_dispatch, cur_bb);
 			}
+			if (tag & TAG_TYPE_TRAP) {
+				BranchInst::Create(bb_trap, cur_bb);
+			}
 		}
 	}
 }
 static BasicBlock *
-cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret)
+cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 {
 	// find all instructions that need labels and create basic blocks for them
 	int bbs = 0;
@@ -354,14 +359,14 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 			if ((tag & TAG_TYPE_DELAY_SLOT) && (tag & TAG_TYPE_CONDITIONAL))
 				bb_delay = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, BB_TYPE_DELAY);
 
-			recompile_instr(cpu, pc, tag, bb_dispatch, cur_bb, bb_target, bb_cond, bb_next, bb_delay);
+			recompile_instr(cpu, pc, tag, bb_dispatch, cur_bb, bb_target, bb_cond, bb_next, bb_delay, bb_trap);
 
 			pc = next_pc;
 
 		} while (is_code(cpu, pc) && !(is_start_of_basicblock(cpu, pc)));
 
 		/* link with next basic block if there isn't a control flow instr. already */
-		if (!(tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH|TAG_TYPE_RET))) {
+		if (!(tag & (TAG_TYPE_CALL|TAG_TYPE_BRANCH|TAG_TYPE_RET|TAG_TYPE_TRAP))) {
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, BB_TYPE_NORMAL);
 			if (!target) {
 				printf("error: unknown continue $%04llx!\n", (unsigned long long)pc);
@@ -401,7 +406,7 @@ create_singlestep_return_basicblock(cpu_t *cpu, addr_t new_pc, BasicBlock *bb_re
 }
 
 static BasicBlock *
-cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret)
+cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 {
 	int bytes;
 	addr_t new_pc;
@@ -553,7 +558,7 @@ get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
 	ConstantInt* const_0 = ConstantInt::get(getType(Int32Ty), 0);
 	ConstantInt* const_index = ConstantInt::get(getType(Int32Ty), index);
 
-	std::vector<Value*> ptr_11_indices;
+	SmallVector<Value*, 2> ptr_11_indices;
 	ptr_11_indices.push_back(const_0);
 	ptr_11_indices.push_back(const_index);
 	return (Value*) GetElementPtrInst::Create(s, ptr_11_indices.begin(), ptr_11_indices.end(), "", bb);
@@ -714,6 +719,13 @@ cpu_recompile_function(cpu_t *cpu)
 	BasicBlock *label_entry = BasicBlock::Create(_CTX(), "entry", cpu->func_jitmain, 0);
 	emit_decode_reg(cpu, label_entry);
 
+	// create exit code
+	Value *exit_code = new AllocaInst(getIntegerType(32), "exit_code", label_entry);
+	// assume JIT_RETURN_FUNCNOTFOUND or JIT_RETURN_SINGLESTEP if in in single step.
+	new StoreInst(ConstantInt::get(getType(Int32Ty),
+					(cpu->flags_debug & CPU_DEBUG_SINGLESTEP) ? JIT_RETURN_SINGLESTEP :
+					JIT_RETURN_FUNCNOTFOUND), exit_code, false, 0, label_entry);
+
 #if 0 // bad for debugging, minimal speedup
 	/* make the RAM pointer a constant */
 	PointerType* type_pi8 = PointerType::get(IntegerType::get(8), 0);
@@ -723,14 +735,17 @@ cpu_recompile_function(cpu_t *cpu)
 	// create ret basicblock
 	BasicBlock *bb_ret = BasicBlock::Create(_CTX(), "ret", cpu->func_jitmain, 0);  
 	spill_reg_state(cpu, bb_ret);
-	ReturnInst::Create(_CTX(), ConstantInt::get(getType(Int32Ty),
-		(cpu->flags_debug & CPU_DEBUG_SINGLESTEP)? JIT_RETURN_SINGLESTEP:JIT_RETURN_FUNCNOTFOUND), bb_ret);
+	ReturnInst::Create(_CTX(), new LoadInst(exit_code, "", false, 0, bb_ret), bb_ret);
+	// create trap return basicblock
+	BasicBlock *bb_trap = BasicBlock::Create(_CTX(), "trap", cpu->func_jitmain, 0);  
+	new StoreInst(ConstantInt::get(getType(Int32Ty), JIT_RETURN_TRAP), exit_code, false, 0, bb_trap);
+	BranchInst::Create(bb_ret, bb_trap);
 
 	BasicBlock *bb_start;
 	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP) {
-		bb_start = cpu_recompile_singlestep(cpu, bb_ret);
+		bb_start = cpu_recompile_singlestep(cpu, bb_ret, bb_trap);
 	} else {
-		bb_start = cpu_recompile(cpu, bb_ret);
+		bb_start = cpu_recompile(cpu, bb_ret, bb_trap);
 	}
 
 	// entry basicblock
