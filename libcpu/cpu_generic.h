@@ -2,7 +2,7 @@
 
 /* emitter functions */
 Value *arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb);
-void arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, BasicBlock *bb);
+Value *arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, BasicBlock *bb);
 Value *arch_load32_aligned(cpu_t *cpu, Value *a, BasicBlock *bb);
 void arch_store32_aligned(cpu_t *cpu, Value *v, Value *a, BasicBlock *bb);
 Value *arch_load8(cpu_t *cpu, Value *addr, BasicBlock *bb);
@@ -50,6 +50,9 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define CONST64(v) CONSTs(64,v)
 
 #define CONST(v) CONSTs(cpu->reg_size,v)
+
+#define TRUE CONST1(1)
+#define FALSE CONST1(0)
 
 #define TRUNC(s,v) new TruncInst(v, getIntegerType(s), "", bb)
 #define TRUNC1(v) TRUNC(1,v)

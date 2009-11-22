@@ -130,7 +130,7 @@ arch_arm_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		case 0xE: /* AL */
 			return NULL; /* no condition; this should never happen */
 		case 0xF: /* NV */
-			return CONST1(0);
+			return FALSE;
 	}
 }
 

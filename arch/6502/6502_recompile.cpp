@@ -14,15 +14,25 @@ Value* ptr_D;
 Value* ptr_V;
 Value* ptr_N;
 
-#define ptr_A cpu->ptr_r8[0]
-#define ptr_X cpu->ptr_r8[1]
-#define ptr_Y cpu->ptr_r8[2]
-#define ptr_S cpu->ptr_r8[3]
-#define ptr_P cpu->ptr_r8[4]
+#define A 0
+#define X 1
+#define Y 2
+#define S 3
+#define P 4
+#define ptr_A cpu->ptr_r8[A]
+#define ptr_X cpu->ptr_r8[X]
+#define ptr_Y cpu->ptr_r8[Y]
+#define ptr_S cpu->ptr_r8[S]
+#define ptr_P cpu->ptr_r8[P]
 
 #define OPCODE cpu->RAM[pc]
 #define OPERAND_8 cpu->RAM[(pc+1)&0xFFFF]
 #define OPERAND_16 ((cpu->RAM[pc+1]&0xFFFF) | (cpu->RAM[pc+2]&0xFFFF)<<8)
+
+#define SET_NZ(a) arch_6502_set_nz(a, bb)
+#define OPERAND arch_6502_get_operand_rvalue(cpu, pc, bb)
+#define LOPERAND arch_6502_get_operand_lvalue(cpu, pc, bb)
+#define LET1(a,b) new StoreInst(b, a, false, bb)
 
 static inline Value *
 arch_6502_get_op8(cpu_t *cpu, uint16_t pc, BasicBlock *bb) {
@@ -424,124 +434,40 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 
 //	printf("\naddmode = %i\n", instraddmode[opcode].addmode);
 	switch (instraddmode[opcode].instr) {
-		case INSTR_BEQ:
-		case INSTR_BNE:
-		case INSTR_BCS:
-		case INSTR_BCC:
-		case INSTR_BMI:
-		case INSTR_BPL:
-		case INSTR_BVS:
-		case INSTR_BVC:
+		/* flags */
+		case INSTR_CLC:	LET1(ptr_C, FALSE);				break;
+		case INSTR_CLD:	LET1(ptr_D, FALSE);				break;
+		case INSTR_CLI:	LET1(ptr_I, FALSE);				break;
+		case INSTR_CLV:	LET1(ptr_V, FALSE);				break;
+		case INSTR_SEC:	LET1(ptr_C, TRUE);				break;
+		case INSTR_SED:	LET1(ptr_D, TRUE);				break;
+		case INSTR_SEI:	LET1(ptr_I, TRUE);				break;
+
+		/* register transfer */
+		case INSTR_TAX:	SET_NZ(LET(X,R(A)));			break;
+		case INSTR_TAY:	SET_NZ(LET(Y,R(A)));			break;
+		case INSTR_TXA:	SET_NZ(LET(A,R(X)));			break;
+		case INSTR_TYA:	SET_NZ(LET(A,R(Y)));			break;
+		case INSTR_TSX:	SET_NZ(LET(X,R(S)));			break;
+		case INSTR_TXS:	SET_NZ(LET(S,R(X)));			break;
+
+		/* load */
+		case INSTR_LDA:	SET_NZ(LET(A,OPERAND));			break;
+		case INSTR_LDX:	SET_NZ(LET(X,OPERAND));			break;
+		case INSTR_LDY:	SET_NZ(LET(Y,OPERAND));			break;
+
+		/* store */
+		case INSTR_STA:
+			arch_6502_store_reg(cpu, pc, ptr_A, bb);
+			break;
+		case INSTR_STX:
+			arch_6502_store_reg(cpu, pc, ptr_X, bb);
+			break;
+		case INSTR_STY:
+			arch_6502_store_reg(cpu, pc, ptr_Y, bb);
 			break;
 
-		case INSTR_ADC:
-			arch_6502_addsub(cpu, pc, ptr_A, ptr_A, false, true, bb);
-			break;
-		case INSTR_AND:
-			arch_6502_log(cpu, pc, Instruction::And, bb);
-			break;
-		case INSTR_ASL:
-			arch_6502_shiftrotate(cpu, pc, true, false, bb);
-			break;
-		case INSTR_BIT:
-			{
-			Value *v1 = arch_6502_get_operand_rvalue(cpu, pc, bb);
-			arch_6502_set_nz(v1, bb);
-			break;
-			}
-		case INSTR_BRK:
-			printf("warning: encountered BRK!\n");
-			arch_6502_trap(cpu, pc, bb);
-			break;
-		case INSTR_CLC:
-			new StoreInst(const_false, ptr_C, false, bb);
-			break;
-		case INSTR_CLD:
-			new StoreInst(const_false, ptr_D, false, bb);
-			break;
-		case INSTR_CLI:
-			new StoreInst(const_false, ptr_I, false, bb);
-			break;
-		case INSTR_CLV:
-			new StoreInst(const_false, ptr_V, false, bb);
-			break;
-		case INSTR_CMP:
-			arch_6502_addsub(cpu, pc, ptr_A, NULL, true, false, bb);
-			break;
-		case INSTR_CPX:
-			arch_6502_addsub(cpu, pc, ptr_X, NULL, true, false, bb);
-			break;
-		case INSTR_CPY:
-			arch_6502_addsub(cpu, pc, ptr_Y, NULL, true, false, bb);
-			break;
-		case INSTR_DEC:
-			arch_6502_rmw(cpu, pc, Instruction::Sub, const_int8_0001, bb);
-			break;
-		case INSTR_DEX:
-			{
-			Value *v = arch_6502_get_x(cpu, bb);
-			v = BinaryOperator::Create(Instruction::Sub, v, const_int8_0001, "", bb);
-			new StoreInst(v, ptr_X, bb);
-			arch_6502_set_nz(v, bb);
-			break;
-			}
-		case INSTR_DEY:
-			{
-			Value *v = arch_6502_get_y(cpu, bb);
-			v = BinaryOperator::Create(Instruction::Sub, v, const_int8_0001, "", bb);
-			new StoreInst(v, ptr_Y, bb);
-			arch_6502_set_nz(v, bb);
-			break;
-			}
-		case INSTR_EOR:
-			arch_6502_log(cpu, pc, Instruction::Xor, bb);
-			break;
-		case INSTR_INC:
-			arch_6502_rmw(cpu, pc, Instruction::Add, const_int8_0001, bb);
-			break;
-		case INSTR_INX:
-			{
-			Value *v = arch_6502_get_x(cpu, bb);
-			v = BinaryOperator::Create(Instruction::Add, v, const_int8_0001, "", bb);
-			new StoreInst(v, ptr_X, bb);
-			arch_6502_set_nz(v, bb);
-			break;
-			}
-		case INSTR_INY:
-			{
-			Value *v = arch_6502_get_y(cpu, bb);
-			v = BinaryOperator::Create(Instruction::Add, v, const_int8_0001, "", bb);
-			new StoreInst(v, ptr_Y, bb);
-			arch_6502_set_nz(v, bb);
-			break;
-			}
-		case INSTR_JMP:
-			if (instraddmode[opcode].addmode == ADDMODE_IND) {
-				Value *ea = ConstantInt::get(getType(Int32Ty), OPERAND_16);
-				Value *v = arch_6502_load_ram_16(cpu, false, ea, bb);
-				new StoreInst(v, cpu->ptr_PC, bb);
-			}
-			break;
-		case INSTR_JSR:
-			arch_6502_push_c16(cpu, pc+2, bb);
-			break;
-		case INSTR_LDA:
-			arch_6502_load_reg(cpu, pc, ptr_A, bb);
-			break;
-		case INSTR_LDX:
-			arch_6502_load_reg(cpu, pc, ptr_X, bb);
-			break;
-		case INSTR_LDY:
-			arch_6502_load_reg(cpu, pc, ptr_Y, bb);
-			break;
-		case INSTR_LSR:
-			arch_6502_shiftrotate(cpu, pc, false, false, bb);
-			break;
-		case INSTR_NOP:
-			break;
-		case INSTR_ORA:
-			arch_6502_log(cpu, pc, Instruction::Or, bb);
-			break;
+		/* stack */
 		case INSTR_PHA:
 			arch_6502_push(cpu, new LoadInst(ptr_A, "", false, bb), bb);
 			break;
@@ -558,15 +484,66 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		case INSTR_PLP:
 			arch_6502_flags_decode(arch_6502_pull(cpu, bb), bb);
 			break;
+
+		/* shift */
+		case INSTR_ASL:
+			arch_6502_shiftrotate(cpu, pc, true, false, bb);
+			break;
+		case INSTR_LSR:
+			arch_6502_shiftrotate(cpu, pc, false, false, bb);
+			break;
 		case INSTR_ROL:
 			arch_6502_shiftrotate(cpu, pc, true, true, bb);
 			break;
 		case INSTR_ROR:
 			arch_6502_shiftrotate(cpu, pc, false, true, bb);
 			break;
-		case INSTR_RTI:
-			printf("error: encountered RTI!\n");
-			arch_6502_trap(cpu, pc, bb);
+
+		/* bit logic */
+		case INSTR_AND:	SET_NZ(LET(A,AND(R(A),OPERAND)));			break;
+		case INSTR_ORA:	SET_NZ(LET(A,OR(R(A),OPERAND)));			break;
+		case INSTR_EOR:	SET_NZ(LET(A,XOR(R(A),OPERAND)));			break;
+		case INSTR_BIT:	SET_NZ(OPERAND);							break;
+
+		/* arithmetic */
+		case INSTR_ADC:
+			arch_6502_addsub(cpu, pc, ptr_A, ptr_A, false, true, bb);
+			break;
+		case INSTR_SBC:
+			arch_6502_addsub(cpu, pc, ptr_A, ptr_A, true, true, bb);
+			break;
+		case INSTR_CMP:
+			arch_6502_addsub(cpu, pc, ptr_A, NULL, true, false, bb);
+			break;
+		case INSTR_CPX:
+			arch_6502_addsub(cpu, pc, ptr_X, NULL, true, false, bb);
+			break;
+		case INSTR_CPY:
+			arch_6502_addsub(cpu, pc, ptr_Y, NULL, true, false, bb);
+			break;
+
+		/* increment/decrement */
+		case INSTR_DEC:
+			arch_6502_rmw(cpu, pc, Instruction::Sub, const_int8_0001, bb);
+			break;
+		case INSTR_DEX:	SET_NZ(LET(X,SUB(R(X),CONST(1))));			break;
+		case INSTR_DEY:	SET_NZ(LET(Y,SUB(R(Y),CONST(1))));			break;
+		case INSTR_INX:	SET_NZ(LET(X,ADD(R(X),CONST(1))));			break;
+		case INSTR_INY:	SET_NZ(LET(Y,ADD(R(Y),CONST(1))));			break;
+		case INSTR_INC:
+			arch_6502_rmw(cpu, pc, Instruction::Add, const_int8_0001, bb);
+			break;
+
+		/* control flow */
+		case INSTR_JMP:
+			if (instraddmode[opcode].addmode == ADDMODE_IND) {
+				Value *ea = ConstantInt::get(getType(Int32Ty), OPERAND_16);
+				Value *v = arch_6502_load_ram_16(cpu, false, ea, bb);
+				new StoreInst(v, cpu->ptr_PC, bb);
+			}
+			break;
+		case INSTR_JSR:
+			arch_6502_push_c16(cpu, pc+2, bb);
 			break;
 		case INSTR_RTS:
 			{
@@ -582,44 +559,28 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 			new StoreInst(lo, cpu->ptr_PC, bb);
 			break;
 			}
-		case INSTR_SBC:
-			arch_6502_addsub(cpu, pc, ptr_A, ptr_A, true, true, bb);
+		case INSTR_RTI:
+			printf("error: encountered RTI!\n");
+			arch_6502_trap(cpu, pc, bb);
 			break;
-		case INSTR_SEC:
-			new StoreInst(const_true, ptr_C, false, bb);
+
+		/* branch */
+		case INSTR_BEQ:
+		case INSTR_BNE:
+		case INSTR_BCS:
+		case INSTR_BCC:
+		case INSTR_BMI:
+		case INSTR_BPL:
+		case INSTR_BVS:
+		case INSTR_BVC:
 			break;
-		case INSTR_SED:
-			new StoreInst(const_true, ptr_D, false, bb);
+
+		/* other */
+		case INSTR_BRK:
+			printf("warning: encountered BRK!\n");
+			arch_6502_trap(cpu, pc, bb);
 			break;
-		case INSTR_SEI:
-			new StoreInst(const_true, ptr_I, false, bb);
-			break;
-		case INSTR_STA:
-			arch_6502_store_reg(cpu, pc, ptr_A, bb);
-			break;
-		case INSTR_STX:
-			arch_6502_store_reg(cpu, pc, ptr_X, bb);
-			break;
-		case INSTR_STY:
-			arch_6502_store_reg(cpu, pc, ptr_Y, bb);
-			break;
-		case INSTR_TAX:
-			arch_6502_copy_reg(ptr_A, ptr_X, bb);
-			break;
-		case INSTR_TAY:
-			arch_6502_copy_reg(ptr_A, ptr_Y, bb);
-			break;
-		case INSTR_TSX:
-			arch_6502_copy_reg(ptr_S, ptr_X, bb);
-			break;
-		case INSTR_TXA:
-			arch_6502_copy_reg(ptr_X, ptr_A, bb);
-			break;
-		case INSTR_TXS:
-			arch_6502_copy_reg(ptr_X, ptr_S, bb);
-			break;
-		case INSTR_TYA:
-			arch_6502_copy_reg(ptr_Y, ptr_A, bb);
+		case INSTR_NOP:
 			break;
 		case INSTR_XXX:
 			printf("warning: encountered XXX!\n");
@@ -649,6 +610,7 @@ arch_6502_init(cpu_t *cpu)
 	cpu->count_regs_i16 = 0;
 	cpu->count_regs_i32 = 0;
 	cpu->count_regs_i64 = 0;
+	cpu->reg_size = 8;
 
 	cpu->is_little_endian = true;
 	cpu->fp_reg = NULL;

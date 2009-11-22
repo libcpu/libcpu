@@ -66,7 +66,7 @@ arch_get_fp_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
 }
 
 // PUT REGISTER
-void
+Value *
 arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, BasicBlock *bb) {
 	/*
 	 * if the caller cares about bit size and
@@ -81,6 +81,8 @@ arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, Bas
 	/* store value, unless it's R0 (on certain RISCs) */
 	if (!cpu->has_special_r0 || index)
 		new StoreInst(v, ptr_r(cpu)[index], bb);
+
+	return v;
 }
 
 void
