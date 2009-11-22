@@ -33,7 +33,7 @@ typedef StructType *(*fp_get_struct_reg)(struct cpu *cpu);
 typedef addr_t      (*fp_get_pc)(struct cpu *cpu, void *regs);
 typedef void        (*fp_emit_decode_reg)(struct cpu *cpu, BasicBlock *bb);
 typedef void        (*fp_spill_reg_state)(struct cpu *cpu, BasicBlock *bb);
-typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, tag_t *flow_type, addr_t *new_pc);
+typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, tag_t *tag, addr_t *new_pc);
 typedef int         (*fp_disasm_instr)(struct cpu *cpu, addr_t pc, char *line, unsigned int max_line);
 typedef Value      *(*fp_recompile_cond)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
 typedef int         (*fp_recompile_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb);

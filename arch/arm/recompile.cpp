@@ -22,18 +22,18 @@ static Value* ptr_I;
 // tagging
 //////////////////////////////////////////////////////////////////////
 
-int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, tag_t *flow_type, addr_t *new_pc) {
+int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc) {
 	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
 
 	if (instr == 0xE1A0F00E) /* MOV r15, r0, r14 */
-		*flow_type = TAG_RET;
+		*tag = TAG_RET;
 //	else if (instr >> 24 < 0x0E)
-//		*flow_type = TAG_BRANCH;
+//		*tag = TAG_BRANCH;
 	else 
-		*flow_type = TAG_CONTINUE;
+		*tag = TAG_CONTINUE;
 
 	if (instr >> 28 != 0xE)
-		*flow_type |= TAG_CONDITIONAL;
+		*tag |= TAG_CONDITIONAL;
 
 	return 4;
 }

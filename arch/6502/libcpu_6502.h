@@ -8,7 +8,7 @@
 #define CPU_6502_D_IGNORE   (1<<4)
 #define CPU_6502_V_IGNORE   (1<<5)
 
-extern int         arch_6502_tag_instr(cpu_t *cpu, addr_t pc, tag_t *flow_type, addr_t *new_pc);
+extern int         arch_6502_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc);
 extern int         arch_6502_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line);
 extern Value      *arch_6502_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb);
 
