@@ -898,5 +898,5 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 			break;
 	}
 
-	return instr.is_delaying() ? 8 : 4;
+	return 4;
 }
