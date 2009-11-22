@@ -4,6 +4,7 @@
 
 #include "obsd41/openbsd41.h"
 #include "xec-us-syscall-if.h"
+#include "xec-us-syscall.h"
 #include "xec-byte-order.h"
 #include "xec-debug.h"
 #include "nix.h"
@@ -20,27 +21,46 @@
 
 static uint8_t *RAM;
 
-
 /* XEC Mem If */
 static xec_haddr_t
 run88_mem_gtoh(xec_mem_if_t *self, xec_gaddr_t addr, xec_mem_flg_t *mf)
 {
+	*mf = 0;
+#if 0
 	if (addr >= RAM_SIZE) {
 		*mf = XEC_MEM_VADDR | XEC_MEM_INVALID | XEC_MEM_NOT_PRESENT;
 		return 0;
 	}
-
+#endif
 	return (xec_haddr_t)((uintptr_t)RAM + addr);
 }
 
 static xec_gaddr_t
 run88_mem_htog(xec_mem_if_t *self, xec_haddr_t addr, xec_mem_flg_t *mf)
 {
+	*mf = 0;
 	return (xec_gaddr_t)((uintptr_t)addr - (uintptr_t)RAM);
 }
 
+static xec_gaddr_t
+run88_mem_gmap(xec_mem_if_t *self, xec_haddr_t addr, size_t len, unsigned flags)
+{
+	uintptr_t dist;
+
+	if (len >= 0x1000000)
+		return (xec_gaddr_t)(-1);
+
+	dist = addr - (xec_haddr_t)RAM;
+	fprintf(stderr, "GMAP: %llx || %p -> %llx\n",
+		(unsigned long long)addr, RAM, (unsigned long long)dist);
+	if (dist >= RAM_SIZE && dist < 4ULL * 1024 * 1024 * 1024)
+		return (dist);
+
+	return (xec_gaddr_t)(-1);
+}
+
 static xec_mem_if_vtbl_t const run88_mem_if_vtbl = {
-	NULL,
+	run88_mem_gmap,
 
 	run88_mem_htog,
 	run88_mem_gtoh,
@@ -183,8 +203,9 @@ openbsd_m88k_setup_uframe(cpu_t           *cpu,
 }
 
 static void
-debug_function(uint8_t *RAM, void *r)
+debug_function(cpu_t *cpu)
 {
+	fprintf(stderr, "%s:%u [trap %u]\n", __FILE__, __LINE__, ((m88k_grf_t*)cpu->reg)->r[13]);
 }
 
 static void
@@ -245,18 +266,6 @@ main(int ac, char **av, char **ep)
 	/* Create XEC bridge mem-if */
 	mem_if = run88_new_mem_if();
 
-	/* Create XEC monitor */
-	guest_info.name = "m88k";
-	guest_info.endian = XEC_ENDIAN_BIG;
-	guest_info.byte_size = 8;
-	guest_info.word_size = 32;
-	guest_info.page_size = 4096;
-	monitor = xec_monitor_create(&guest_info, mem_if, NULL, NULL);
-	if (monitor == NULL) {
-		fprintf(stderr, "error: failed createc xec monitor.\n");
-		exit(EXIT_FAILURE);
-	}
-
 	/* Create the XEC US Syscall */
 	us_syscall = obsd41_us_syscall_create(mem_if);
 	if (us_syscall == NULL) {
@@ -284,11 +293,23 @@ main(int ac, char **av, char **ep)
 
 	/* Setup and initialize the CPU */
 	cpu_set_flags_arch(cpu, CPU_M88K_IS_32BIT | CPU_M88K_IS_BE);
-	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
+	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);
 	cpu_set_ram(cpu, RAM);
 
 	cpu_init(cpu);
+
+	/* Create XEC bridge monitor */
+	guest_info.name = "m88k";
+	guest_info.endian = XEC_ENDIAN_BIG;
+	guest_info.byte_size = 8;
+	guest_info.word_size = 32;
+	guest_info.page_size = 4096;
+	monitor = xec_monitor_create(&guest_info, mem_if, cpu->reg, NULL);
+	if (monitor == NULL) {
+		fprintf(stderr, "error: failed createc xec monitor.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* Setup registers for execution */
 	PC = g_ahdr.entry;
@@ -310,7 +331,7 @@ main(int ac, char **av, char **ep)
 
 	for (;;) {
 		if (debugging) {
-			rc = cpu_debugger(cpu);
+			rc = cpu_debugger(cpu, debug_function);
 			if (rc < 0) {
 				debugging = false;
 				continue;
@@ -336,6 +357,12 @@ main(int ac, char **av, char **ep)
 					printf("%02X ", RAM[PC+i]);
 				printf("\n");
 				exit(EXIT_FAILURE);
+				break;
+
+			case JIT_RETURN_TRAP:
+				printf("TRAP %u / %u!\n", ((m88k_grf_t *)cpu->reg)->trapno,
+					((m88k_grf_t *)cpu->reg)->r13);
+				xec_us_syscall_dispatch(us_syscall, monitor);
 				break;
 
 			default:

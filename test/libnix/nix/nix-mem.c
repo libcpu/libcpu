@@ -43,8 +43,8 @@ nix_mmap(xec_gaddr_t gaddr, size_t len, int prot, int flags, int fd,
 	xec_mem_if_t *mem = nix_env_get_memory (env);
 	unsigned      xf  = 0;
 
-	XEC_LOG(g_nix_log, XEC_LOG_DEBUG, 0, "addr=%llx, len=%08x, prot=%x, flags=%x, fd=%d, offset=%lld", 
-		 (uintmax_t)gaddr, (unsigned)len, prot, flags, fd, offset);
+	XEC_LOG(g_nix_log, XEC_LOG_DEBUG, 0, "addr=%llx, len=%08zx, prot=%x, flags=%x, fd=%d, offset=%lld", 
+		 (uint64_t)(uintmax_t)gaddr, len, prot, flags, fd, offset);
 
 	if (prot & NIX_PROT_READ)
 		xf |= XEC_MMAP_READ;
@@ -67,6 +67,10 @@ nix_mmap(xec_gaddr_t gaddr, size_t len, int prot, int flags, int fd,
 	ga = xec_mem_gmap(mem, ha, len, xf);
 
 	XEC_LOG(g_nix_log, XEC_LOG_DEBUG, 0, "mmap()'ed %d bytes at 0x%x w/ flags 0x%x\n", len, ga, flags);
+
+	if (ga == (xec_gaddr_t)(-1)) {
+    nix_env_set_errno (env, ENOMEM);
+  }
 
 	return (ga);
 }

@@ -4,7 +4,8 @@
 #include "cpu_generic.h"
 #include "arch_types.h"
 
-#define ptr_PSR ptr_r32[32]
+#define ptr_PSR    ptr_r32[32]
+#define ptr_TRAPNO ptr_r32[33]
 
 Value *m88k_ptr_C;
 
@@ -27,12 +28,13 @@ arch_m88k_init(cpu_t *cpu)
 	}
 	reg->sxip = 0;
 	reg->psr = 0;
+	reg->trapno = 0;
 
 	cpu->reg = reg;
 	cpu->pc_width = 32;
 	cpu->count_regs_i8 = 0;
 	cpu->count_regs_i16 = 0;
-	cpu->count_regs_i32 = 32 + 1;
+	cpu->count_regs_i32 = 32 + 2;
 	cpu->count_regs_i64 = 0;
 
 	cpu->fp_reg = fp_reg;

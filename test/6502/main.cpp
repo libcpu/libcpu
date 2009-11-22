@@ -57,11 +57,11 @@ asm("nop");
 
 static void
 debug_function(cpu_t *cpu) {
-	reg_6502_t *reg = (reg_6502_t*)r;
-	printf("DEBUG: $%04X: A=$%02X X=$%02X Y=$%02X S=$%02X P=$%02X %02X/%02X\n", reg->pc, reg->a, reg->x, reg->y, reg->s, reg->p, RAM[0x33], RAM[0x34]);
-//	{ int i; for (i=0x01F0; i<0x0200; i++) printf("%02X ", RAM[i]); printf("\n"); }
-	{ int i; for (i=0xB5FF; i<0xB60F; i++) printf("%02X ", RAM[i]); printf("\n"); }
-//	{ int i; for (i=0xE447; i<0xE457; i++) printf("%02X ", RAM[i]); printf("\n"); }
+	reg_6502_t *reg = (reg_6502_t*)cpu->reg;
+	printf("DEBUG: $%04X: A=$%02X X=$%02X Y=$%02X S=$%02X P=$%02X %02X/%02X\n", reg->pc, reg->a, reg->x, reg->y, reg->s, reg->p, cpu->RAM[0x33], cpu->RAM[0x34]);
+//	{ int i; for (i=0x01F0; i<0x0200; i++) printf("%02X ", cpu->RAM[i]); printf("\n"); }
+	{ int i; for (i=0xB5FF; i<0xB60F; i++) printf("%02X ", cpu->RAM[i]); printf("\n"); }
+//	{ int i; for (i=0xE447; i<0xE457; i++) printf("%02X ", cpu->RAM[i]); printf("\n"); }
 }
 
 extern int
@@ -163,7 +163,7 @@ main(int argc, char **argv) {
 //				printf("LIB: $%04X: A=$%02X X=$%02X Y=$%02X S=$%02X P=$%02X\n", pc, a, x, y, s, p);
 
 				if (ret == JIT_RETURN_SINGLESTEP) {
-					debug_function(cpu->RAM, (reg_6502_t*)cpu->reg);
+					debug_function(cpu);
 					printf("::STEP:: %d\n", step++);
 					cpu_flush(cpu);
 				}

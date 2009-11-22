@@ -18,7 +18,7 @@
 //   $r2 - gpr src2 register
 //   $i  - unsigned immediate
 //   $s  - small unsigned immediate
-//   $p  - pc
+//   $p  - pc or vec9 for traps
 //   $b  - branch bits
 //   $m  - branch comparison code
 //   $w  - width
@@ -47,7 +47,7 @@ static char const * const m88k_insn_formats[] = {
 
 static char const *m88k_insn_2args_format = "$rd, $r2";
 static char const *m88k_insn_tbnd_args_format = "$r1, $r2";
-static char const *m88k_insn_tbnd_iargs_format = "$r1, $i";
+static char const *m88k_insn_tbnd_iargs_format = "$r1, $p";
 static char const *m88k_insn_x2args_format = "$xd, $x2";
 static char const *m88k_insn_xrargs_format = "$xd, $r2";
 static char const *m88k_insn_jmp_format = "$r2";
@@ -273,6 +273,8 @@ static int m88k_disassemble(strbuf_t *strbuf, m88k_address_t pc,
 	switch (insn.opcode()) {
 		case M88K_OPC_JMP:
 		case M88K_OPC_JMP_N:
+		case M88K_OPC_JSR:
+		case M88K_OPC_JSR_N:
 			format = m88k_insn_jmp_format;
 			break;
 
@@ -338,12 +340,22 @@ static int m88k_disassemble(strbuf_t *strbuf, m88k_address_t pc,
 					break;
 
 				case 'p':
-					if (insn.format() != M88K_BRFMT_OFF)
-						pc += insn.branch16() << 2;
-					else
-						pc += insn.branch26() << 2;
-
-					if (strbuf_append_format(strbuf, "0x%08x", pc, insn.branch16() << 2))
+					uint32_t v32;
+					switch (insn.opcode()) {
+						case M88K_OPC_TB0:
+						case M88K_OPC_TB1:
+						case M88K_OPC_TBND:
+						case M88K_OPC_TCND:
+							v32 = insn.vec9();
+							break;
+						default:
+							if (insn.format() != M88K_BRFMT_OFF)
+								v32 = pc + (insn.branch16() << 2);
+							else
+								v32 = pc + (insn.branch26() << 2);
+							break;
+					}
+					if (strbuf_append_format(strbuf, "0x%x", v32))
 					  return (-1);
 					break;
 

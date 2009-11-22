@@ -227,10 +227,12 @@ typedef struct _m88k_grf {
 			uint32_t r29;
 			uint32_t r30;
 			uint32_t r31;
+
+			uint32_t psr;
+			uint32_t trapno;
 		};
-		uint32_t r[32];
+		uint32_t r[32 + 2];
 	};
-	uint32_t psr;
 	uint32_t sxip; /* Execution IP */
 } m88k_grf_t;
 

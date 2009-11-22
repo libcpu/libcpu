@@ -323,7 +323,13 @@ public: // Load/Store
 		return ((m_insn & 0x80) != 0);
 	}
 
-public:
+public: // Traps
+	inline uint32_t vec9() const
+	{
+		return (m_insn & 0x1ff);
+	}
+
+public: // Floating Point Format
 	inline uint32_t td() const
 	{
 		switch(opcode()) {
