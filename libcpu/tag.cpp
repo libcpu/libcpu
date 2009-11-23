@@ -69,14 +69,8 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 		disasm_instr(cpu, pc);
 #endif
 
-		addr_t dummy3;
-		bytes = cpu->f.tag_instr(cpu, pc, &tag, &new_pc, &dummy3);
+		bytes = cpu->f.tag_instr(cpu, pc, &tag, &new_pc, &next_pc);
 		or_tag(cpu, pc, tag | TAG_CODE);
-
-		/* calculate address of next instruction */
-		next_pc = pc + bytes;
-		if (tag & TAG_DELAY_SLOT)	/* skip delay slot */
-			next_pc += cpu->f.tag_instr(cpu, next_pc, &dummy1, &dummy2, &dummy3);
 
 		if (tag & TAG_CONDITIONAL)
 			or_tag(cpu, next_pc, TAG_AFTER_COND);
