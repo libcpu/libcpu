@@ -134,8 +134,8 @@ void disasm_instr(cpu_t *cpu, addr_t pc) {
 
 	/* delay slot */
 	tag_t tag;
-	addr_t dummy;
-	cpu->f.tag_instr(cpu, pc, &tag, &dummy);
+	addr_t dummy, dummy2;
+	cpu->f.tag_instr(cpu, pc, &tag, &dummy, &dummy2);
 	if (tag & TAG_DELAY_SLOT)
 		bytes = cpu->f.disasm_instr(cpu, pc + bytes, disassembly_line2, sizeof(disassembly_line2));
 
@@ -336,9 +336,7 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 
 			/* get address of the following instruction */
 			addr_t new_pc, next_pc;
-			next_pc = pc + cpu->f.tag_instr(cpu, pc, &dummy1, &new_pc);
-			if (tag & TAG_DELAY_SLOT)		/* skip delay slot */
-				next_pc += cpu->f.tag_instr(cpu, next_pc, &dummy1, &dummy2);
+			cpu->f.tag_instr(cpu, pc, &dummy1, &new_pc, &next_pc);
 
 			/* get target basic block */
 			if (tag & TAG_RET)
@@ -418,10 +416,7 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 
 	disasm_instr(cpu, pc);
 
-	//XXX this is duplicated a little too often
-	next_pc = pc + cpu->f.tag_instr(cpu, pc, &tag, &new_pc);
-	if (tag & TAG_DELAY_SLOT)		/* skip delay slot */
-		next_pc += cpu->f.tag_instr(cpu, next_pc, &dummy1, &dummy2);
+	cpu->f.tag_instr(cpu, pc, &tag, &new_pc, &next_pc);
 
 	/* get target basic block */
 	if ((tag & TAG_RET) || (new_pc == NEW_PC_NONE)) /* recompile_instr() will set PC */

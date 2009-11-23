@@ -22,7 +22,7 @@ static Value* ptr_I;
 // tagging
 //////////////////////////////////////////////////////////////////////
 
-int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc) {
+int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc) {
 	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
 
 	if (instr == 0xE1A0F00E) /* MOV r15, r0, r14 */
@@ -35,6 +35,7 @@ int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc) {
 	if (instr >> 28 != 0xE)
 		*tag |= TAG_CONDITIONAL;
 
+	*next_pc = pc + 4;
 	return 4;
 }
 

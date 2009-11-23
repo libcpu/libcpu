@@ -5,7 +5,7 @@
 #include "m68k_internal.h"
 
 int
-arch_m68k_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc) {
+arch_m68k_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc) {
 	uint16_t opcode = cpu->RAM[pc]<<8 | cpu->RAM[pc+1];
 	int32_t disp;
 
@@ -26,6 +26,8 @@ arch_m68k_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc) {
 	}
 //printf("opcode = %x, tag = %d\n", opcode, *tag);
 
-	return arch_m68k_instr_length(cpu, pc);
+	int bytes = arch_m68k_instr_length(cpu, pc);
+	*next_pc = pc + bytes;
+	return bytes;
 }
 

@@ -6,7 +6,7 @@
 #include "libcpu.h"
 
 int
-arch_6502_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc) {
+arch_6502_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc) {
 	uint8_t opcode = cpu->RAM[pc];
 
 	switch (instraddmode[opcode].instr) {
@@ -44,6 +44,7 @@ arch_6502_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc) {
 			*tag = TAG_CONTINUE;
 			break;
 	}
+	*next_pc = pc + length[instraddmode[opcode].addmode] + 1;
 	return length[instraddmode[opcode].addmode] + 1;
 }
 

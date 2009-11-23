@@ -19,7 +19,7 @@ extern Value* m88k_ptr_C; // Carry
 
 #include "tag.h"
 
-int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc)
+int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc)
 {
 	m88k_insn instr = INSTR(pc);
 
@@ -83,8 +83,12 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc)
 			break;
 	}
 
-	if (instr.is_delaying())
+	if (instr.is_delaying()) {
 		*tag |= TAG_DELAY_SLOT;
+		*next_pc = pc + 8;
+	} else {
+		*next_pc = pc + 4;
+	}
 
 	return 4;
 }

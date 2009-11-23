@@ -34,7 +34,7 @@ using namespace llvm;
 //////////////////////////////////////////////////////////////////////
 
 #include "tag.h"
-int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc) {
+int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc) {
 	uint32_t instr = INSTR(pc);
 
 	switch(instr >> 26) {
@@ -234,6 +234,10 @@ int arch_mips_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc) {
 			*tag = TAG_CONTINUE;
 			break;
 	}
+	if (*tag & TAG_DELAY_SLOT)
+		*next_pc = pc + 8;
+	else
+		*next_pc = pc + 4;
 	return 4;
 }
 
@@ -539,8 +543,8 @@ arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 	}
 
 	tag_t dummy1;
-	addr_t dummy2;
-	return arch_mips_tag_instr(cpu, pc, &dummy1, &dummy2);
+	addr_t dummy2, dummy3;
+	return arch_mips_tag_instr(cpu, pc, &dummy1, &dummy2, &dummy3);
 }
 
 

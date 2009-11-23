@@ -1144,8 +1144,8 @@ int
 arch_mips_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line) {
 
 	tag_t dummy1;
-	addr_t dummy2;
-	int bytes = arch_mips_tag_instr(cpu, pc, &dummy1, &dummy2);
+	addr_t dummy2, dummy3;
+	int bytes = arch_mips_tag_instr(cpu, pc, &dummy1, &dummy2, &dummy3);
 
 	uint32_t instr = INSTR(pc);
 	TOpcode op;
