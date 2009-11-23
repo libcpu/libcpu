@@ -19,6 +19,30 @@ extern Value* m88k_ptr_C; // Carry
 
 #include "tag.h"
 
+static bool
+arch_m88k_fix_return_pc(m88k_insn const &insn, addr_t *next_pc)
+{
+	if (insn.rd() != 1 || insn.rs1() != 1 || insn.format() != M88K_IFMT_REG)
+		return false;
+
+	//assert(insn.rs1() == 1 && "only r1 as source is supported");
+	//assert(insn.format() == M88K_IFMT_REG && "only immediate format is supported");
+
+	switch (insn.opcode()) {
+		case M88K_OPC_ADD:
+		case M88K_OPC_ADDU:
+			*next_pc += insn.immediate();
+			return true;
+		case M88K_OPC_SUB:
+		case M88K_OPC_SUBU:
+			*next_pc -= insn.immediate();
+			return true;
+		default:
+			//assert(0 && "the opcode alters r1 but it is not handled");
+			return false;
+	}
+}
+
 int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc)
 {
 	m88k_insn instr = INSTR(pc);
@@ -86,6 +110,20 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_
 	if (instr.is_delaying()) {
 		*tag |= TAG_DELAY_SLOT;
 		*next_pc = pc + 8;
+
+		//
+		// In case of subroutine call, check
+		// the instruction in the delay slot
+		// modifes the return addess.
+		//
+		switch (instr.opcode()) {
+			case M88K_OPC_BSR_N:
+			case M88K_OPC_JSR_N:
+				arch_m88k_fix_return_pc(INSTR(pc+4), next_pc);
+				break;
+			default:
+				break;
+		}
 	} else {
 		*next_pc = pc + 4;
 	}
