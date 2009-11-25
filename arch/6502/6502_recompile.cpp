@@ -27,7 +27,7 @@ Value* ptr_N;
 
 #define OPCODE cpu->RAM[pc]
 #define OPERAND_8 cpu->RAM[(pc+1)&0xFFFF]
-#define OPERAND_16 ((cpu->RAM[pc+1]&0xFFFF) | (cpu->RAM[pc+2]&0xFFFF)<<8)
+#define OPERAND_16 ((cpu->RAM[(pc+1)&0xFFFF] | (cpu->RAM[(pc+2)&0xFFFF]<<8))&0xFFFF)
 
 #define SET_NZ(a) { Value *t = a; LET1(ptr_Z, ICMP_EQ(t, CONST8(0))); LET1(ptr_N, ICMP_SLT(t, CONST8(0))); }
 
@@ -42,7 +42,17 @@ Value* ptr_N;
 #define PUSH(v) { STORE(v, TOS); LET(S,DEC(R(S))); }
 #define PULL (LET(S,INC(R(S))), LOAD(TOS))
 #define PUSH16(v) { PUSH(CONST8(v >> 8)); PUSH(CONST8(v & 0xFF)); }
-#define PULL16 ADD(SHL(ZEXT16(PULL),CONST16(8)), ZEXT16(PULL))
+// Because of a GCC evaluation order problem, the PULL16
+// macro needs to be expanded.
+#define PULL16 arch_6502_pull16(cpu, bb)
+
+static inline Value *
+arch_6502_pull16(cpu_t *cpu, BasicBlock *bb)
+{
+	Value *lo = PULL;
+	Value *hi = PULL;
+	return (ADD(ZEXT16(lo), SHL(ZEXT16(hi), CONST16(8))));
+}
 
 static inline Value *
 arch_6502_load_ram_8(cpu_t *cpu, Value *addr, BasicBlock *bb) {
