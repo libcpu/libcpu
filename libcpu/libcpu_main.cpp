@@ -23,8 +23,6 @@ using namespace llvm;
 #include "arch/m88k/libcpu_m88k.h"
 #include "arch/arm/libcpu_arm.h"
 
-void emit_store_pc_return(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc, BasicBlock *bb_ret);
-
 //////////////////////////////////////////////////////////////////////
 // cpu_t
 //////////////////////////////////////////////////////////////////////
@@ -185,6 +183,23 @@ printf("creating basic block %s\n", label);
 	return BasicBlock::Create(_CTX(), label, f, 0);
 }
 
+//////////////////////////////////////////////////////////////////////
+// recompile one instruction
+//////////////////////////////////////////////////////////////////////
+void
+emit_store_pc(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc)
+{
+	Value *v_pc = ConstantInt::get(getIntegerType(cpu->pc_width), new_pc);
+	new StoreInst(v_pc, cpu->ptr_PC, bb_branch);
+}
+
+void
+emit_store_pc_return(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc, BasicBlock *bb_ret)
+{
+	emit_store_pc(cpu, bb_branch, new_pc);
+	BranchInst::Create(bb_ret, bb_branch);
+}
+
 /*
  * returns the basic block where code execution continues, or
  * NULL if the instruction always branches away
@@ -252,6 +267,9 @@ recompile_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 		return NULL;
 }
 
+//////////////////////////////////////////////////////////////////////
+// buik recompile
+//////////////////////////////////////////////////////////////////////
 static const BasicBlock *
 lookup_basicblock(Function* f, addr_t pc, uint8_t bb_type) {
 	Function::const_iterator it;
@@ -366,20 +384,9 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 	return bb_dispatch;
 }
 
-void
-emit_store_pc(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc)
-{
-	Value *v_pc = ConstantInt::get(getIntegerType(cpu->pc_width), new_pc);
-	new StoreInst(v_pc, cpu->ptr_PC, bb_branch);
-}
-
-void
-emit_store_pc_return(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc, BasicBlock *bb_ret)
-{
-	emit_store_pc(cpu, bb_branch, new_pc);
-	BranchInst::Create(bb_ret, bb_branch);
-}
-
+//////////////////////////////////////////////////////////////////////
+// single stepping
+//////////////////////////////////////////////////////////////////////
 BasicBlock *
 create_singlestep_return_basicblock(cpu_t *cpu, addr_t new_pc, BasicBlock *bb_ret)
 {
@@ -422,6 +429,9 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	return cur_bb;
 }
 
+//////////////////////////////////////////////////////////////////////
+// 
+//////////////////////////////////////////////////////////////////////
 static StructType *
 get_struct_reg(cpu_t *cpu) {
 	std::vector<const Type*>type_struct_reg_t_fields;
@@ -531,6 +541,9 @@ cpu_create_function(cpu_t *cpu, const char *name)
 	return func;
 }
 
+//////////////////////////////////////////////////////////////////////
+// 
+//////////////////////////////////////////////////////////////////////
 static Value *
 get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
 	ConstantInt* const_0 = ConstantInt::get(getType(Int32Ty), 0);
