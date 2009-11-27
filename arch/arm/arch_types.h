@@ -16,12 +16,10 @@ typedef struct {
 			uint32_t r12;
 			uint32_t r13;
 			uint32_t r14;
-			union {
-				uint32_t r15;
-				uint32_t pc;
-			};
+			uint32_t r15; /* would be PC, but we store PC externally, so this is unused */
 			uint32_t cpsr;
 		};
 		uint32_t r[17];
 	};
+	uint32_t pc;
 } reg_arm_t;

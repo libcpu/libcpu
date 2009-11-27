@@ -2,6 +2,10 @@
 
 #include "arch/arm/libcpu_arm.h"
 
+#define START_NO 1000000000
+//#define START_NO 10
+#define RET_MAGIC 0x4D495354
+
 //////////////////////////////////////////////////////////////////////
 // command line parsing helpers
 //////////////////////////////////////////////////////////////////////
@@ -73,7 +77,10 @@ main(int argc, char **argv) {
 
 	cpu = cpu_new(CPU_ARCH_ARM);
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
+//	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR);
+//	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP);
+//	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP | CPU_DEBUG_PRINT_IR);
 //	cpu_set_flags_arch(cpu, 
 //		CPU_6502_BRK_TRAP |
 //		CPU_6502_XXX_TRAP |
@@ -126,20 +133,35 @@ main(int argc, char **argv) {
 #define R (((reg_arm_t*)cpu->reg)->r)
 
 	PC = cpu->code_entry;
+	R[0] = START_NO; // parameter
+	R[14] = RET_MAGIC; // link register
+
+	int step = 0;
+	int i;
 
 	for(;;) {
 		breakpoint();
 		int ret = cpu_run(cpu, debug_function);
 		//printf("ret = %d\n", ret);
+
+		if (PC == RET_MAGIC-4)
+			break;
+
 		switch (ret) {
 			case JIT_RETURN_NOERR: /* JIT code wants us to end execution */
 				break;
+			case JIT_RETURN_SINGLESTEP:
+				printf("%04X: ", PC);
+				for (i=0; i<16; i++)
+					printf("R%d=%x ", i, R[i]);
+				printf("\n");
+				debug_function(cpu);
+				printf("::STEP:: %d\n", step++);
+				cpu_flush(cpu);
+				break;
 			case JIT_RETURN_FUNCNOTFOUND:
-//				printf("LIB: $%04X: A=$%02X X=$%02X Y=$%02X S=$%02X P=$%02X\n", pc, a, x, y, s, p);
-
 				// bad :(
 				printf("%s: error: $%04X not found!\n", __func__, PC);
-				int i;
 				printf("PC: ");
 				for (i=0; i<16; i++)
 					printf("%02X ", RAM[PC+i]);
@@ -149,6 +171,8 @@ main(int argc, char **argv) {
 				printf("unknown return code: %d\n", ret);
 		}
 	}
+
+	printf("Result: %d\n", R[0]);
 
 	printf("done.\n");
 

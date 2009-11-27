@@ -15,29 +15,10 @@ static Value* ptr_I;
 
 #define ptr_CPSR cpu->ptr_r32[16]
 
-#define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0);
-#define LOG do { printf("%s:%d\n", __func__, __LINE__); } while(0);
+#define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0)
+#define LOG do { printf("%s:%d\n", __func__, __LINE__); } while(0)
 
-//////////////////////////////////////////////////////////////////////
-// tagging
-//////////////////////////////////////////////////////////////////////
-
-int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc) {
-	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
-
-	if (instr == 0xE1A0F00E) /* MOV r15, r0, r14 */
-		*tag = TAG_RET;
-//	else if (instr >> 24 < 0x0E)
-//		*tag = TAG_BRANCH;
-	else 
-		*tag = TAG_CONTINUE;
-
-	if (instr >> 28 != 0xE)
-		*tag |= TAG_CONDITIONAL;
-
-	*next_pc = pc + 4;
-	return 4;
-}
+#define ARM_BRANCH_TARGET ((((int)BITS(0,23) << 8) >> 6) + pc + 8)
 
 #define RD ((instr >> 12) & 0xF)
 #define RN ((instr >> 16) & 0xF)
@@ -48,6 +29,31 @@ int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t
 #define S BIT(20)
 
 #define GETADDR(r) ((r==15)?(armregs[15]&r15mask):armregs[r])
+
+//////////////////////////////////////////////////////////////////////
+// tagging
+//////////////////////////////////////////////////////////////////////
+
+int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc) {
+	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
+
+	if (instr == 0xE1A0F00E) /* MOV r15, r0, r14 */
+		*tag = TAG_RET;
+	else if (BITS(24,27) == 10) { /* branch */
+		*new_pc = ARM_BRANCH_TARGET;
+		*tag = TAG_BRANCH;
+	} else if (BITS(24,27) == 11) { /* branch and link */
+		*new_pc = ARM_BRANCH_TARGET;
+		*tag = TAG_CALL;
+	} else 
+		*tag = TAG_CONTINUE;
+
+	if (instr >> 28 != 0xE)
+		*tag |= TAG_CONDITIONAL;
+
+	*next_pc = pc + 4;
+	return 4;
+}
 
 static inline unsigned shift4(unsigned opcode)
 {
@@ -159,6 +165,14 @@ setsub(cpu_t *cpu, Value *op1, Value *op2, BasicBlock *bb)
 	return;
 }
 
+#define LET1(a,b) new StoreInst(b, a, false, bb)
+
+#define SET_NZ(a) { Value *t = a; LET1(ptr_Z, ICMP_EQ(t, CONST(0))); LET1(ptr_N, ICMP_SLT(t, CONST(0))); }
+
+#define COMPUTE_CARRY(src1, src2, result) \
+	(AND(ICMP_NE(src2, CONST(0)), ICMP_ULT(result, src1)))
+
+#define LINK LET32(14, CONST((uint64_t)(sint64_t)(sint32_t)pc+8))
 
 int arch_arm_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 printf("%s:%d pc=%llx\n", __func__, __LINE__, pc);
@@ -176,14 +190,32 @@ printf("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 	switch ((instr >> 26) & 3) { /* bits 26 and 27 */
 		case 0:
 			switch(opcode) {
-				case 10:
+				case 4: /* ADD */
+					{
+						Value *op1 = R(RN);
+						Value *op2 = OPERAND;
+						Value *res = ADD(op1,op2);
+						LET(RD, res);
+						if (S) {
+							SET_NZ(res);
+							LET1(ptr_C, COMPUTE_CARRY(op1, op2, res));
+							BAD;
+							//XXX TODO overflow!
+						}
+					}
+					break;
+				case 10: /* CMP */
 					if (!S) /* CMP without S bit */
 						BAD;
 					setsub(cpu, R(RN), OPERAND, bb);
 					break;
-				case 13:
+				case 13: /* MOV */
 					if (S)
 						BAD;
+					if (RD == 15) {
+						new StoreInst(SUB(R(14),CONST(4)), cpu->ptr_PC, bb);
+						break;
+					}
 					LET(RD, OPERAND);
 					break;
 				default:
@@ -193,34 +225,16 @@ printf("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 		case 1:
 			BAD;
 		case 2:
-			BAD;
+			if (BIT(25)) {
+				if (BIT(24))
+					LINK;
+				break;
+			} else
+				BAD;
 		case 3:
 			BAD;
 		
 	}
-
-#if 0
-	switch (((instr >> 20) & 0xFF) & ~0x20) { /* opcode without I bit */
-		case 0x1A: /* MOV */
-			if (RD==15) {
-				LOG;//BAD;
-				//armregs[15]=(armregs[15]&~r15mask)|((shift2(opcode)+4)&r15mask);
-			} else {
-				LOG;//BAD;
-				//armregs[RD]=shift2(opcode);
-			}
-			break;
-		case 0x15: /* CMP */
-			if (RD==15) {
-				BAD;
-			} else {
-				setsub(cpu, R(RN), OPERAND, bb);
-			}
-			break;
-		default:
-			BAD;	
-	}
-#endif
 
 	LOG;
 	return 4;
