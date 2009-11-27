@@ -41,6 +41,7 @@
  * . - step and display modified registers.
  * > - non interactive step and display modified registers.
  * c/q - continue execution (detach)
+ * i - toggle IR dumping
  *
  * --NYI--
  * I - dump LLVM IR.
@@ -640,7 +641,7 @@ idbg_init(cpu_t *cpu, debug_function_t debug_func, idbg_t *ctx)
 
 	cpu->flags = ctx->old_flags | CPU_FLAG_QUIET;
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
-	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP);
+	cpu_set_flags_debug(cpu, old_debug_flags | CPU_DEBUG_SINGLESTEP);
 }
 
 static void
@@ -1070,6 +1071,10 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 			if (rc != JIT_RETURN_SINGLESTEP)
 				return rc;
 			last_command = 2;
+		} else if (*p == 'i') {
+			cpu_set_flags_debug(cpu, cpu->flags_debug ^ CPU_DEBUG_PRINT_IR);
+			fprintf(stderr, "LLVM IR dumping is now %s.\n",
+				(cpu->flags_debug & CPU_DEBUG_PRINT_IR) ? "ENABLED" : "DISABLED");
 		} else if (*p == '>') {
 			last_command = 2;
 			interactive = false;
