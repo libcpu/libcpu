@@ -51,33 +51,12 @@ arch_6502_pull16(cpu_t *cpu, BasicBlock *bb)
 {
 	Value *lo = PULL;
 	Value *hi = PULL;
-	return (ADD(ZEXT16(lo), SHL(ZEXT16(hi), CONST16(8))));
+	return (OR(ZEXT16(lo), SHL(ZEXT16(hi), CONST16(8))));
 }
 
-static inline Value *
-arch_6502_load_ram_8(cpu_t *cpu, Value *addr, BasicBlock *bb) {
-	Value* ptr = GetElementPtrInst::Create(cpu->ptr_RAM, addr, "", bb);
-	return new LoadInst(ptr, "", false, bb);
-}
-
-static Value *
-arch_6502_load_ram_16(cpu_t *cpu, int is_32, Value *addr, BasicBlock *bb) {
-	ConstantInt* const_int32_0001 = ConstantInt::get(getType(Int32Ty), 0x0001);
-	ConstantInt* const_int32_0008 = ConstantInt::get(is_32? getType(Int32Ty) : getType(Int16Ty), 0x0008);
-
-	/* get lo */
-	Value *lo = arch_6502_load_ram_8(cpu, addr, bb);
-	Value *lo32 = new ZExtInst(lo, getIntegerType(is_32? 32:16), "", bb);
-
-	/* get hi */
-	addr = BinaryOperator::Create(Instruction::Add, addr, const_int32_0001, "", bb);
-	Value *hi = arch_6502_load_ram_8(cpu, addr, bb);
-	Value *hi32 = new ZExtInst(hi, getIntegerType(is_32? 32:16), "", bb);
-
-	/* combine */
-	BinaryOperator* hi32shifted = BinaryOperator::Create(Instruction::Shl, hi32, const_int32_0008, "", bb);
-	return BinaryOperator::Create(Instruction::Add, lo32, hi32shifted, "", bb);
-}
+#define LOAD_RAM8(a) LOAD(GEP(a))
+/* explicit little endian load of 16 bits */
+#define LOAD_RAM16(a) OR(ZEXT16(LOAD_RAM8(a)), SHL(ZEXT16(LOAD_RAM8(ADD(a, CONST32(1)))), CONST16(8)))
 
 static Value *
 arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
@@ -132,7 +111,7 @@ arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 		ea = AND(ea, CONST32(0xFFFF));
 
 	if (is_indirect)
-		ea = arch_6502_load_ram_16(cpu, true, ea, bb);
+		ea = ZEXT32(LOAD_RAM16(ea));
 
 	if (index_register_after)
 		ea = ADD(ZEXT32(LOAD(index_register_after)), ea);
@@ -148,6 +127,7 @@ arch_6502_store(Value *v, Value *a, BasicBlock *bb)
 }
 
 #define STORE(v,a) arch_6502_store(v, a, bb)
+//#define STORE(v,a) (new StoreInst(v, a, bb),v) // why does this not work?
 
 static void
 arch_6502_trap(cpu_t *cpu, addr_t pc, BasicBlock *bb)
@@ -190,44 +170,31 @@ arch_6502_shiftrotate(Value *l, bool left, bool rotate, BasicBlock *bb)
  */
 static void
 arch_6502_addsub(cpu_t *cpu, uint16_t pc, Value *reg, Value *reg2, int is_sub, int with_carry, BasicBlock *bb) {
-	Value *old_c = NULL; //XXX GCC
+	/* load second operand */
+	Value *v2 = ZEXT16(OPERAND);
 
-	/* load operand, A and C */
-	Value *v1 = new LoadInst(reg, "", false, bb);
-	Value *v2 = OPERAND;
-
-	/* NOT operand (if subtraction) */
+	/* if subtraction, NOT second operand */
 	if (is_sub)
-		v2 = BinaryOperator::Create(Instruction::Xor, v2, CONST8(0xFF), "", bb);
-
-	/* convert to 16 bits */
-	v1 = new ZExtInst(v1, getIntegerType(16), "", bb);
-	v2 = new ZExtInst(v2, getIntegerType(16), "", bb);
+		v2 = XOR(v2, CONST16(0xFF));
 
 	/* add them together */
-	v1 = BinaryOperator::Create(Instruction::Add, v1, v2, "", bb);
+	Value *v1 = ADD(ZEXT16(LOAD(reg)), v2);
 
 	/* add C or 1 */
-	if (with_carry) {
-		old_c = new LoadInst(ptr_C, "", false, bb);
-		old_c = new ZExtInst(old_c, getIntegerType(16), "", bb);
-		v1 = BinaryOperator::Create(Instruction::Add, v1, old_c, "", bb);
-	} else {
-		v1 = BinaryOperator::Create(Instruction::Add, v1, CONST16(1), "", bb);
-	}
+	v1 = ADD(v1, with_carry? (Value*)ZEXT16(LOAD(ptr_C)) : (Value*)CONST16(1));
 
 	/* get C */
-	Value *c = BinaryOperator::Create(Instruction::LShr, v1, CONST16(8), "", bb);
-	c = new TruncInst(c, getIntegerType(1), "", bb);
-	new StoreInst(c, ptr_C, bb);
+	STORE(TRUNC1(LSHR(v1, CONST16(8))), ptr_C);
 
 	/* get result */
-	v1 = new TruncInst(v1, getIntegerType(8), "", bb);
-	if (reg2)
-		new StoreInst(v1, reg2, bb);
+	v1 = TRUNC8(v1);
 
 	/* set flags */
 	SET_NZ(v1);
+
+	if (reg2)
+		STORE(v1, reg2);
+
 }
 
 
@@ -386,7 +353,7 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		/* control flow */
 		case INSTR_JMP:
 			if (instraddmode[opcode].addmode == ADDMODE_IND) {
-				Value *v = arch_6502_load_ram_16(cpu, false, CONST32(OPERAND_16), bb);
+				Value *v = LOAD_RAM16(CONST32(OPERAND_16));
 				new StoreInst(v, cpu->ptr_PC, bb);
 			}
 			break;
