@@ -241,22 +241,8 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	uint8_t opcode = cpu->RAM[pc];
 
 //printf("%s:%d PC=$%04X\n", __func__, __LINE__, pc);
-
-#if 0 //XXX this must move into generic code
-	// add a call to debug_function()
-	ConstantInt* v_pc = ConstantInt::get(Type::Int16Ty, pc);
-	new StoreInst(v_pc, cpu->ptr_PC, bb);
-	// serialize flags
-	Value *flags = arch_6502_flags_encode(bb);
-	new StoreInst(flags, ptr_P, false, bb);
-
-	create_call(cpu, ptr_func_debug, bb);
-
-	flags = new LoadInst(ptr_P, "", false, bb);
-	arch_6502_flags_decode(flags, bb);
-#endif
-
 //	printf("\naddmode = %i\n", instraddmode[opcode].addmode);
+
 	switch (instraddmode[opcode].instr) {
 		/* flags */
 		case INSTR_CLC:	LET1(ptr_C, FALSE);				break;
