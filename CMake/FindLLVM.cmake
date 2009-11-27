@@ -31,6 +31,7 @@ else (LLVM_INCLUDE_DIR)
       /opt/local/bin
       /opt/llvm/2.6/bin
       /opt/llvm/bin
+      /Developer/usr/bin
   )
 
   find_program(LLVM_GXX_EXECUTABLE
@@ -39,12 +40,17 @@ else (LLVM_INCLUDE_DIR)
       /opt/local/bin
       /opt/llvm/2.6/bin
       /opt/llvm/bin
+      /Developer/usr/bin
   )
 
-  if (LLVM_GXX_EXECUTABLE)
+  if(LLVM_GCC_EXECUTABLE)
+      MESSAGE(STATUS "LLVM llvm-gcc found at: ${LLVM_GCC_EXECUTABLE}")
+      #CMAKE_FORCE_C_COMPILER(${LLVM_GCC_EXECUTABLE} GNU)
+  endif(LLVM_GCC_EXECUTABLE)
+
+  if(LLVM_GXX_EXECUTABLE)
       MESSAGE(STATUS "LLVM llvm-g++ found at: ${LLVM_GXX_EXECUTABLE}")
-# else(LLVM_GXX_EXECUTABLE)
-#     MESSAGE(FATAL_ERROR "LLVM llvm-g++ is required, but not found!")
+      #CMAKE_FORCE_CXX_COMPILER(${LLVM_GXX_EXECUTABLE} GNU)
   endif(LLVM_GXX_EXECUTABLE)
   
   MACRO(FIND_LLVM_LIBS LLVM_CONFIG_EXECUTABLE _libname_ LIB_VAR OBJECT_VAR)
@@ -111,8 +117,11 @@ else (LLVM_INCLUDE_DIR)
   MESSAGE(STATUS "LLVM LD flags: " ${LLVM_LDFLAGS})
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --libs core ipa ipo instrumentation bitreader bitwriter linker OUTPUT_VARIABLE LLVM_LIBS_CORE )
   MESSAGE(STATUS "LLVM core libs: " ${LLVM_LIBS_CORE})
-  FIND_LLVM_LIBS( ${LLVM_CONFIG_EXECUTABLE} "jit native" LLVM_LIBS_JIT LLVM_LIBS_JIT_OBJECTS )
-  #STRING(REPLACE " -lLLVMCore -lLLVMSupport -lLLVMSystem" "" LLVM_LIBS_JIT ${LLVM_LIBS_JIT_RAW})
+  IF(APPLE AND UNIVERSAL)
+    FIND_LLVM_LIBS( ${LLVM_CONFIG_EXECUTABLE} "jit native x86 PowerPC ARM" LLVM_LIBS_JIT LLVM_LIBS_JIT_OBJECTS )
+  ELSE(APPLE AND UNIVERSAL)
+    FIND_LLVM_LIBS( ${LLVM_CONFIG_EXECUTABLE} "jit native" LLVM_LIBS_JIT LLVM_LIBS_JIT_OBJECTS )
+  ENDIF(APPLE AND UNIVERSAL)
   MESSAGE(STATUS "LLVM JIT libs: " ${LLVM_LIBS_JIT})
   MESSAGE(STATUS "LLVM JIT objs: " ${LLVM_LIBS_JIT_OBJECTS})
   
