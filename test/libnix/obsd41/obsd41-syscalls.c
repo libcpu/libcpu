@@ -3332,7 +3332,7 @@ int obsd41___sysctl(
 							for (x = 0; x < GE32 (&gi, *oldlenp); x++)
 								p += sprintf (p, "%02x ", (uint8_t)buf[x]);
 
-							XEC_LOG(g_bsd_log, XEC_LOG_ERROR, 0, "Generated RND sequence = %s", pbuf);
+							XEC_LOG(g_bsd_log, XEC_LOG_INFO, 0, "Generated RND sequence = %s", pbuf);
 							memcpy (oldp, buf, GE32 (&gi, *oldlenp));
 						}
 					}

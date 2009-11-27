@@ -20,6 +20,8 @@ extern void *g_bsd_log;
  *   __syscall  takes a quad syscall number, so that other
  *   arguments are at their natural alignments.
  *
+ *  Succesful system calls increment by 1 instruction the 
+ *  program counter!
  */
 
 void
@@ -85,7 +87,8 @@ obsd41_guest_get_next_param(void                *_self,
 		__nix_try
 		{
 			xec_mem_flg_t   mf = 0;
-			m88k_uintptr_t *sp = (m88k_uintptr_t *)xec_mem_gtoh(mem, ctx->gpr[31], &mf);
+			m88k_uintptr_t *sp = (m88k_uintptr_t *)
+				xec_mem_gtoh(mem, ctx->gpr[31], &mf);
 
 			XEC_ASSERT (g_bsd_log, mf == 0);
 			sp += (self->last_param - 8);
@@ -135,21 +138,17 @@ obsd41_guest_get_next_param(void                *_self,
 }
 
 void
-obsd41_guest_set_result(void                *self,
-						xec_monitor_t       *xmon,
-						int                  error,
-						xec_param_t const   *result)
+obsd41_guest_set_result(void              *self,
+						xec_monitor_t     *xmon,
+						int                error,
+						xec_param_t const *result)
 {
 	m88k_context_t *ctx = xec_monitor_get_context (xmon); 
 
 	if (error != 0) {
-		ctx->psr |= (1 << 28); /* Set Carry */
 		ctx->gpr[2] = error;
 	} else {
 		uint32_t hi, lo;
-
-		ctx->psr &= ~(1 << 28); /* Clear Carry */
-      
 		hi = lo = 0;
 
 		if (result != NULL) {
@@ -170,11 +169,12 @@ obsd41_guest_set_result(void                *self,
 					lo = result->value.tnosign.u64 & 0xffffffff;
 					break;
 				default:
-					XEC_BUGCHECK (g_bsd_log, 5012);
+					XEC_BUGCHECK(g_bsd_log, 5012);
 			}
 		}
 
 		ctx->gpr[2] = lo;
 		ctx->gpr[3] = hi;
+		ctx->sxip += 4;
 	}
 }
