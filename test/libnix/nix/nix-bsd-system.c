@@ -17,14 +17,14 @@ nix_bsd_sysarch(int number, void *args, nix_env_t *env)
 }
 
 int
-nix_bsd_quotactl (char const *path, int cmd, nix_uid_t uid, void *arg,
+nix_bsd_quotactl(char const *path, int cmd, nix_uid_t uid, void *arg,
 	nix_env_t *env)
 {
 	return (nix_nosys(env));
 }
 
 int
-nix_bsd_swapctl (int cmd, void const *arg, int misc, nix_env_t *env)
+nix_bsd_swapctl(int cmd, void const *arg, int misc, nix_env_t *env)
 {
 	return (nix_nosys(env));
 }

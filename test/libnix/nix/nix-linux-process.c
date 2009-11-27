@@ -47,7 +47,7 @@ nix_linux_personality(uintmax_t personality, nix_env_t *env)
 }
 
 int
-nix_linux_prctl (int option, uintmax_t arg2, uintmax_t arg3 , uintmax_t arg4,
+nix_linux_prctl(int option, uintmax_t arg2, uintmax_t arg3 , uintmax_t arg4,
 	uintmax_t arg5, nix_env_t *env)
 {
   return (nix_nosys(env));

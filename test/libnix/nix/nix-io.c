@@ -235,28 +235,28 @@ nix_writev(int fd, struct nix_iovec const *iov, int iovcnt, nix_env_t *env)
 
 	if (iov == NULL)
 	  {
-		nix_env_set_errno (env, EFAULT);
+		nix_env_set_errno(env, EFAULT);
 		return -1;
 	  }
 
 	if (iovcnt < 0)
 	  {
-		nix_env_set_errno (env, EINVAL);
+		nix_env_set_errno(env, EINVAL);
 		return -1;
 	  }
 
-	if ( (rfd = nix_fd_get (fd)) < 0)
+	if ((rfd = nix_fd_get(fd)) < 0)
 	  {
-		nix_env_set_errno (env, EBADF);
+		nix_env_set_errno(env, EBADF);
 		return -1;
 	  }
 
 	if (iovcnt == 0)
 	  return 0;
 
-	nb = writev (rfd, (struct iovec *)iov, iovcnt);
+	nb = writev(rfd, (struct iovec *)iov, iovcnt);
 	if (nb < 0)
-	  nix_env_set_errno (env, errno);
+	  nix_env_set_errno(env, errno);
 
 	return nb;
 }
