@@ -1,3 +1,5 @@
+#include <sys/types.h>
+#include <sys/mman.h>
 #include <libcpu.h>
 #include "arch/m88k/libcpu_m88k.h"
 #include "arch/m88k/m88k_isa.h"
@@ -12,13 +14,15 @@
 
 #define DEBUGGER
 
-#define RAM_SIZE (64 * 1024 * 1024)
+#define RAM_SIZE (16 * 1024 * 1024)
 #define STACK_TOP ((long long)(RAM+RAM_SIZE-4))
 
 #define PC (((m88k_grf_t*)cpu->reg)->sxip)
+#define TRAPNO (((m88k_grf_t*)cpu->reg)->trapno)
 #define PSR (((m88k_grf_t*)cpu->reg)->psr)
 #define R (((m88k_grf_t*)cpu->reg)->r)
 
+static size_t host_page_size;
 static uint8_t *RAM;
 
 /* XEC Mem If */
@@ -47,14 +51,21 @@ run88_mem_gmap(xec_mem_if_t *self, xec_haddr_t addr, size_t len, unsigned flags)
 {
 	uintptr_t dist;
 
-	if (len >= 0x1000000)
+	if (len >= 0x1000000) {
+		assert(0 && "the guest passed insane value!");
 		return (xec_gaddr_t)(-1);
+	}
 
 	dist = addr - (xec_haddr_t)RAM;
 	fprintf(stderr, "GMAP: %llx || %p -> %llx\n",
 		(unsigned long long)addr, RAM, (unsigned long long)dist);
-	if (dist >= RAM_SIZE && dist < 4ULL * 1024 * 1024 * 1024)
-		return (dist);
+
+	if (sizeof(dist) == sizeof(uint64_t)) {
+		if (dist >= RAM_SIZE && dist < (uintptr_t)(4ULL * 1024 * 1024 * 1024))
+			return (dist);
+		else
+			assert(0 && "The address isn't in the low 4G!");
+	}
 
 	return (xec_gaddr_t)(-1);
 }
@@ -226,6 +237,42 @@ dump_state(uint8_t *RAM, m88k_grf_t *reg)
 	printf("\n");
 }
 
+void
+aspace_lock(void)
+{
+#if defined(__x86_64__)
+	static size_t const four_gigs = 4ULL*1024*1024*1024;
+
+	if (host_page_size == 0)
+		host_page_size = getpagesize();
+
+	/* Unmap the low 4G by the kernel, it may be mapped using a single 4G page! */
+	munmap(NULL, four_gigs);
+
+	/* Remap 4G immediatly */
+	RAM = (uint8_t *)mmap(NULL, four_gigs, PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE|MAP_FIXED, -1, 0);
+	if (RAM == (uint8_t *)MAP_FAILED) {
+		fprintf(stderr, "error: cannot allocate %u bytes\n", RAM_SIZE);
+		exit(EXIT_FAILURE);
+	}
+
+	/* Protect page zero for null deref */
+	mprotect(NULL, host_page_size, 0);
+#else
+#warning "Not tested on this arch."
+#endif
+}
+
+void
+aspace_unlock(void)
+{
+#ifdef __x86_64__
+	/* Unmap as much as possible. */
+	munmap((void*)RAM_SIZE, 0x100000000 - RAM_SIZE);
+#endif
+}
+
+
 int
 main(int ac, char **av, char **ep)
 {
@@ -238,6 +285,8 @@ main(int ac, char **av, char **ep)
 	m88k_uintptr_t stack_top;
 	nix_env_t *env;
 	bool debugging = false;
+
+	aspace_lock();
 
 	if (ac < 2) {
 		fprintf(stderr, "usage: %s <executable> [args...]\n", *av);
@@ -253,13 +302,6 @@ main(int ac, char **av, char **ep)
 	cpu = cpu_new(CPU_ARCH_M88K);
 	if (cpu == NULL) {
 		fprintf(stderr, "error: failed initializing M88K architecture.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	/* Create RAM */
-	RAM = (uint8_t *)malloc(RAM_SIZE);
-	if (RAM == NULL) {
-		fprintf(stderr, "error: cannot allocate %u bytes\n", RAM_SIZE);
 		exit(EXIT_FAILURE);
 	}
 
@@ -329,6 +371,8 @@ main(int ac, char **av, char **ep)
 	debugging = true;
 #endif
 
+	aspace_unlock();
+
 	for (;;) {
 		if (debugging) {
 			rc = cpu_debugger(cpu, debug_function);
@@ -351,7 +395,7 @@ main(int ac, char **av, char **ep)
 					goto double_break;
 
 				// bad :(
-				printf("%s: error: $%llX not found!\n", __func__, (unsigned long long)PC);
+				printf("%s: error: 0x%llX not found!\n", __func__, (unsigned long long)PC);
 				printf("PC: ");
 				for (size_t i = 0; i < 16; i++)
 					printf("%02X ", RAM[PC+i]);
@@ -360,8 +404,7 @@ main(int ac, char **av, char **ep)
 				break;
 
 			case JIT_RETURN_TRAP:
-				printf("TRAP %u / %u!\n", ((m88k_grf_t *)cpu->reg)->trapno,
-					((m88k_grf_t *)cpu->reg)->r13);
+				printf("TRAP %u / %u!\n", TRAPNO, R[13]);
 				xec_us_syscall_dispatch(us_syscall, monitor);
 				break;
 

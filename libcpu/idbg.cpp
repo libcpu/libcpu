@@ -641,7 +641,7 @@ idbg_init(cpu_t *cpu, debug_function_t debug_func, idbg_t *ctx)
 
 	cpu->flags = ctx->old_flags | CPU_FLAG_QUIET;
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
-	cpu_set_flags_debug(cpu, old_debug_flags | CPU_DEBUG_SINGLESTEP);
+	cpu_set_flags_debug(cpu, ctx->old_debug_flags | CPU_DEBUG_SINGLESTEP);
 }
 
 static void
