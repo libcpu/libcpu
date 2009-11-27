@@ -31,8 +31,8 @@ Value* ptr_N;
 
 #define SET_NZ(a) { Value *t = a; LET1(ptr_Z, ICMP_EQ(t, CONST8(0))); LET1(ptr_N, ICMP_SLT(t, CONST8(0))); }
 
-#define OPERAND arch_6502_get_operand_rvalue(cpu, pc, bb)
 #define LOPERAND arch_6502_get_operand_lvalue(cpu, pc, bb)
+#define OPERAND LOAD(LOPERAND)
 #define LET1(a,b) new StoreInst(b, a, false, bb)
 
 #define GEP(a) GetElementPtrInst::Create(cpu->ptr_RAM, a, "", bb)
@@ -80,29 +80,29 @@ arch_6502_load_ram_16(cpu_t *cpu, int is_32, Value *addr, BasicBlock *bb) {
 }
 
 static Value *
-arch_6502_add_index(Value *ea, Value *index_register, BasicBlock *bb) {
-	return ADD(ZEXT32(LOAD(index_register)), ea);
-}
-
-static Value *
 arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 	int am = instraddmode[OPCODE].addmode;
 	Value *index_register_before;
 	Value *index_register_after;
 	bool is_indirect;
-	bool is_8bit;
+	bool is_8bit_base;
 
 	switch (am) {
 		case ADDMODE_ACC:
 			return ptr_A;
 		case ADDMODE_BRA:
-		case ADDMODE_IMM:
 		case ADDMODE_IMPL:
 			return NULL;
+		case ADDMODE_IMM:
+			{
+			Value *ptr_temp = new AllocaInst(getIntegerType(8), "temp", bb);
+			new StoreInst(CONST8(OPERAND_8), ptr_temp, bb);
+			return ptr_temp;
+			}
 	}
 
 	is_indirect = ((am == ADDMODE_IND) || (am == ADDMODE_INDX) || (am == ADDMODE_INDY));
-	is_8bit = !((am == ADDMODE_ABS) || (am == ADDMODE_ABSX) || (am == ADDMODE_ABSY));
+	is_8bit_base = !((am == ADDMODE_ABS) || (am == ADDMODE_ABSX) || (am == ADDMODE_ABSY));
 	index_register_before = NULL;
 	if ((am == ADDMODE_ABSX) || (am == ADDMODE_INDX) || (am == ADDMODE_ZPX))
 		index_register_before = ptr_X;
@@ -115,41 +115,29 @@ arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 	printf("index_register_before = %x\n", index_register_before);
 	printf("index_register_after = %x\n", index_register_after);
 	printf("is_indirect = %x\n", is_indirect);
-	printf("is_8bit = %x\n", is_8bit);
+	printf("is_8bit_base = %x\n", is_8bit_base);
 #endif
 
 	/* create base constant */
-	uint16_t base = is_8bit? (OPERAND_8):(OPERAND_16);
+	uint16_t base = is_8bit_base? (OPERAND_8):(OPERAND_16);
 	Value *ea = CONST32(base);
 
 	if (index_register_before)
-		ea = arch_6502_add_index(ea, index_register_before, bb);
+		ea = ADD(ZEXT32(LOAD(index_register_before)), ea);
 
 	/* wrap around in zero page */
-	if (is_8bit)
-		ea = BinaryOperator::Create(Instruction::And, ea, CONST32(0x00FF), "", bb);
+	if (is_8bit_base)
+		ea = AND(ea, CONST32(0x00FF));
 	else if (base >= 0xFF00) /* wrap around in memory */
-		ea = BinaryOperator::Create(Instruction::And, ea, CONST32(0xFFFF), "", bb);
+		ea = AND(ea, CONST32(0xFFFF));
 
 	if (is_indirect)
 		ea = arch_6502_load_ram_16(cpu, true, ea, bb);
 
 	if (index_register_after)
-		ea = arch_6502_add_index(ea, index_register_after, bb);
+		ea = ADD(ZEXT32(LOAD(index_register_after)), ea);
 
-	return GetElementPtrInst::Create(cpu->ptr_RAM, ea, "", bb);
-}
-
-static Value *
-arch_6502_get_operand_rvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb)
-{
-	switch (instraddmode[OPCODE].addmode) {
-		case ADDMODE_IMM:
-			return CONST8(OPERAND_8);
-		default:
-			Value *lvalue = arch_6502_get_operand_lvalue(cpu, pc, bb);
-			return new LoadInst(lvalue, "", false, bb);
-	}
+	return GEP(ea);
 }
 
 static Value *
@@ -166,17 +154,15 @@ arch_6502_trap(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 	Value* v_pc = CONST16(pc);
 	new StoreInst(v_pc, cpu->ptr_PC, bb);
-	ReturnInst::Create(_CTX(), CONST32(JIT_RETURN_TRAP), bb);//XXX needs #define
+	ReturnInst::Create(_CTX(), CONST32(JIT_RETURN_TRAP), bb);
 }
 
 static void
-arch_6502_shiftrotate(cpu_t *cpu, uint16_t pc, bool left, bool rotate, BasicBlock *bb)
+arch_6502_shiftrotate(Value *l, bool left, bool rotate, BasicBlock *bb)
 {
-	/* load operand */
-	Value *v = OPERAND;
 	Value *c;
+	Value *v = LOAD(l);
 
-	/* shift */
 	if (left) {
 		c = ICMP_SLT(v, CONST8(0));	/* old MSB to carry */
 		v = SHL(v, CONST8(1));
@@ -189,8 +175,7 @@ arch_6502_shiftrotate(cpu_t *cpu, uint16_t pc, bool left, bool rotate, BasicBloc
 			v = OR(v,SHL(ZEXT8(LOAD(ptr_C)), CONST8(7)));
 	}
 	
-	/* store */	
-	SET_NZ(STORE(v, LOPERAND));
+	SET_NZ(STORE(v, l));
 	LET1(ptr_C, c);
 }
 
@@ -209,7 +194,7 @@ arch_6502_addsub(cpu_t *cpu, uint16_t pc, Value *reg, Value *reg2, int is_sub, i
 
 	/* load operand, A and C */
 	Value *v1 = new LoadInst(reg, "", false, bb);
-	Value *v2 = arch_6502_get_operand_rvalue(cpu, pc, bb);
+	Value *v2 = OPERAND;
 
 	/* NOT operand (if subtraction) */
 	if (is_sub)
@@ -354,16 +339,16 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 
 		/* shift */
 		case INSTR_ASL:
-			arch_6502_shiftrotate(cpu, pc, true, false, bb);
+			arch_6502_shiftrotate(LOPERAND, true, false, bb);
 			break;
 		case INSTR_LSR:
-			arch_6502_shiftrotate(cpu, pc, false, false, bb);
+			arch_6502_shiftrotate(LOPERAND, false, false, bb);
 			break;
 		case INSTR_ROL:
-			arch_6502_shiftrotate(cpu, pc, true, true, bb);
+			arch_6502_shiftrotate(LOPERAND, true, true, bb);
 			break;
 		case INSTR_ROR:
-			arch_6502_shiftrotate(cpu, pc, false, true, bb);
+			arch_6502_shiftrotate(LOPERAND, false, true, bb);
 			break;
 
 		/* bit logic */
