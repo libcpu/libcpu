@@ -434,7 +434,7 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	/* get target basic block */
 	if ((tag & TAG_RET) || (new_pc == NEW_PC_NONE)) /* recompile_instr() will set PC */
 		bb_target = bb_ret;
-	else
+	else if (tag & (TAG_CALL|TAG_BRANCH))
 		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
 	/* get not-taken & conditional basic block */
 	if (tag & TAG_CONDITIONAL)
@@ -443,9 +443,9 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	bb_cont = recompile_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
 
 	/* If it's not a branch, append "store PC & return" to basic block */
-	if (tag & TAG_CONTINUE ) {
+	if (bb_cont)
 		emit_store_pc_return(cpu, bb_cont, next_pc, bb_ret);
-	}
+
 	return cur_bb;
 }
 
