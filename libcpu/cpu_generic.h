@@ -120,6 +120,27 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define FPDIV(a,b) BinaryOperator::Create(Instruction::FDiv, a, b, "", bb)
 #define FPREM(a,b) BinaryOperator::Create(Instruction::FRem, a, b, "", bb)
 
+#define FPCMP_ORD(a,b) new FCmpInst(*bb, FCmpInst::FCMP_ORD, a, b, "")
+#define FPCMP_UNO(a,b) new FCmpInst(*bb, FCmpInst::FCMP_UNO, a, b, "")
+
+#define FPCMP_OEQ(a,b) new FCmpInst(*bb, FCmpInst::FCMP_OEQ, a, b, "")
+#define FPCMP_UEQ(a,b) new FCmpInst(*bb, FCmpInst::FCMP_UEQ, a, b, "")
+
+#define FPCMP_ONE(a,b) new FCmpInst(*bb, FCmpInst::FCMP_ONE, a, b, "")
+#define FPCMP_UNE(a,b) new FCmpInst(*bb, FCmpInst::FCMP_UNE, a, b, "")
+
+#define FPCMP_OGT(a,b) new FCmpInst(*bb, FCmpInst::FCMP_OGT, a, b, "")
+#define FPCMP_UGT(a,b) new FCmpInst(*bb, FCmpInst::FCMP_UGT, a, b, "")
+
+#define FPCMP_OGE(a,b) new FCmpInst(*bb, FCmpInst::FCMP_OGE, a, b, "")
+#define FPCMP_UGE(a,b) new FCmpInst(*bb, FCmpInst::FCMP_UGE, a, b, "")
+
+#define FPCMP_OLT(a,b) new FCmpInst(*bb, FCmpInst::FCMP_OLT, a, b, "")
+#define FPCMP_ULT(a,b) new FCmpInst(*bb, FCmpInst::FCMP_ULT, a, b, "")
+
+#define FPCMP_OLE(a,b) new FCmpInst(*bb, FCmpInst::FCMP_OLE, a, b, "")
+#define FPCMP_ULE(a,b) new FCmpInst(*bb, FCmpInst::FCMP_ULE, a, b, "")
+
 /* condition */
 #define SELECT(c,a,b) (SelectInst::Create(c, a, b, "", bb))
 
