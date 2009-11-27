@@ -221,7 +221,12 @@ needs_dispatch_entry(cpu_t *cpu, addr_t a)
 		 TAG_AFTER_TRAP));		/* instruction after a call */
 }
 
-static void
+/*
+ * returns the basic block where code execution continues, or
+ * NULL if the instruction always branches away
+ * (The caller needs this to link the basic block)
+ */
+static BasicBlock *
 recompile_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 	BasicBlock *bb_target,
 	BasicBlock *bb_next,
@@ -251,6 +256,7 @@ recompile_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 			// delay
 			cpu->f.recompile_instr(cpu, delay_pc, bb_delay);
 			BranchInst::Create(bb_next, bb_delay);
+			return NULL;
 		} else {
 			addr_t delay_pc;
 			// bb
@@ -258,12 +264,14 @@ recompile_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 			BranchInst::Create(bb_cond, bb_next, c, cur_bb);
 			// cond
 			pc += cpu->f.recompile_instr(cpu, pc, bb_cond);
-			if (tag & (TAG_BRANCH | TAG_CALL|TAG_RET))
+			if (tag & (TAG_BRANCH | TAG_CALL | TAG_RET)) {
 				BranchInst::Create(bb_target, bb_cond);
-			else if (tag & TAG_TRAP)
+				return NULL;
+			} else if (tag & TAG_TRAP) {
 				BranchInst::Create(bb_trap, bb_cond);
-			else
-				BranchInst::Create(bb_next, bb_cond);
+				return NULL;
+			} else
+				return bb_cond;
 		}
 	} else {
 		if (tag & TAG_DELAY_SLOT) {
@@ -271,13 +279,18 @@ recompile_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 			pc += cpu->f.recompile_instr(cpu, pc, cur_bb);
 			pc += cpu->f.recompile_instr(cpu, pc, cur_bb);
 			BranchInst::Create(bb_target, cur_bb);
+			return NULL;
 		} else {
 			// bb
 			pc += cpu->f.recompile_instr(cpu, pc, cur_bb);
-			if (tag & (TAG_BRANCH | TAG_CALL|TAG_RET))
+			if (tag & (TAG_BRANCH | TAG_CALL | TAG_RET)) {
 				BranchInst::Create(bb_target, cur_bb);
-			if (tag & TAG_TRAP)
+				return NULL;
+			} else if (tag & TAG_TRAP) {
 				BranchInst::Create(bb_trap, cur_bb);
+				return NULL;
+			} else 
+				return cur_bb;
 		}
 	}
 }
@@ -328,7 +341,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 		pc = strtol(cstr+1, (char **)NULL, 16);
 printf("basicblock: L%08llx\n", (unsigned long long)pc);
 		tag_t tag;
-		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_delay = NULL;
+		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_delay = NULL, *bb_cont = NULL;
 		do {
 			tag_t dummy1;
 			addr_t dummy2;
@@ -359,22 +372,21 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 			if (tag & TAG_CONDITIONAL)
  				bb_next = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, next_pc, BB_TYPE_NORMAL);
 
-			recompile_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
+			bb_cont = recompile_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
 
 			pc = next_pc;
 
 		} while (is_code(cpu, pc) && !(is_start_of_basicblock(cpu, pc)));
 
 		/* link with next basic block if there isn't a control flow instr. already */
-		if (!(tag & (TAG_CALL|TAG_BRANCH|TAG_RET|TAG_TRAP))) {
+		if (bb_cont) {
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, BB_TYPE_NORMAL);
 			if (!target) {
 				printf("error: unknown continue $%04llx!\n", (unsigned long long)pc);
 				exit(1);
 			}
 			printf("info: linking continue $%04llx!\n", (unsigned long long)pc);
-			if (!(tag & TAG_CONDITIONAL))
-				BranchInst::Create(target, (BasicBlock*)cur_bb);
+			BranchInst::Create(target, bb_cont);
 		}
     }
 
@@ -408,7 +420,7 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 {
 	addr_t new_pc;
 	tag_t tag;
-	BasicBlock *cur_bb = NULL, *bb_target = NULL, *bb_next = NULL;
+	BasicBlock *cur_bb = NULL, *bb_target = NULL, *bb_next = NULL, *bb_cont = NULL;
 	addr_t next_pc, pc = cpu->f.get_pc(cpu, cpu->reg);
 	tag_t dummy1;
 	addr_t dummy2;
@@ -428,11 +440,11 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	if (tag & TAG_CONDITIONAL)
 		bb_next = create_singlestep_return_basicblock(cpu, next_pc, bb_ret);
 
-	recompile_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
+	bb_cont = recompile_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
 
 	/* If it's not a branch, append "store PC & return" to basic block */
 	if (tag & TAG_CONTINUE ) {
-		emit_store_pc_return(cpu, cur_bb, next_pc, bb_ret);
+		emit_store_pc_return(cpu, bb_cont, next_pc, bb_ret);
 	}
 	return cur_bb;
 }
