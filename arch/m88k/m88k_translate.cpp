@@ -367,7 +367,7 @@ arch_m88k_bcnd_cond(cpu_t *cpu, Value *src1, m88k_bcnd_t cond, BasicBlock *bb)
 }
 
 Value *
-arch_m88k_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
+arch_m88k_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 	m88k_insn insn(INSTR(pc));
 	uint8_t bit = insn.mb();
@@ -627,7 +627,7 @@ arch_m88k_xmem(cpu_t *cpu, bool byte, m88k_reg_t rd, Value *src1, Value *src2, B
 //////////////////////////////////////////////////////////////////////
 
 int
-arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
+arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 #define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0)
 #define LOG printf("%s:%d\n", __func__, __LINE__);

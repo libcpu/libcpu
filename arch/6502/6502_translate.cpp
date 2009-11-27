@@ -219,7 +219,7 @@ arch_6502_flags_decode(Value *flags, BasicBlock *bb)
 }
 
 Value *
-arch_6502_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
+arch_6502_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	uint8_t opcode = cpu->RAM[pc];
 printf("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
 
@@ -237,7 +237,7 @@ printf("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
 }
 
 static int
-arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
+arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	uint8_t opcode = cpu->RAM[pc];
 
 //printf("%s:%d PC=$%04X\n", __func__, __LINE__, pc);
@@ -422,8 +422,8 @@ arch_func_t arch_func_6502 = {
 	arch_6502_spill_reg_state,
 	arch_6502_tag_instr,
 	arch_6502_disasm_instr,
-	arch_6502_recompile_cond,
-	arch_6502_recompile_instr,
+	arch_6502_translate_cond,
+	arch_6502_translate_instr,
 	// idbg support
 	arch_6502_get_psr,
 	arch_6502_get_reg,

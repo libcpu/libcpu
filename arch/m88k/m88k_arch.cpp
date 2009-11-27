@@ -123,8 +123,8 @@ arch_func_t arch_func_m88k = {
 	arch_m88k_spill_reg_state,
 	arch_m88k_tag_instr,
 	arch_m88k_disasm_instr,
-	arch_m88k_recompile_cond,
-	arch_m88k_recompile_instr,
+	arch_m88k_translate_cond,
+	arch_m88k_translate_instr,
 	// idbg support
 	arch_m88k_get_psr,
 	arch_m88k_get_reg,

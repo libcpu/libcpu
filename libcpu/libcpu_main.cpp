@@ -184,7 +184,7 @@ printf("creating basic block %s\n", label);
 }
 
 //////////////////////////////////////////////////////////////////////
-// recompile one instruction
+// translate one instruction
 //////////////////////////////////////////////////////////////////////
 void
 emit_store_pc(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc)
@@ -206,7 +206,7 @@ emit_store_pc_return(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc, BasicBloc
  * (The caller needs this to link the basic block)
  */
 static BasicBlock *
-recompile_instr(cpu_t *cpu, addr_t pc, tag_t tag,
+translate_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 	BasicBlock *bb_target,
 	BasicBlock *bb_next,
 	BasicBlock *bb_trap,
@@ -226,20 +226,20 @@ recompile_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 		if (tag & TAG_CONDITIONAL) {
 			addr_t delay_pc;
 			// cur_bb:  if (cond) goto b_cond; else goto bb_delay;
-			Value *c = cpu->f.recompile_cond(cpu, pc, cur_bb);
+			Value *c = cpu->f.translate_cond(cpu, pc, cur_bb);
 			BranchInst::Create(bb_cond, bb_delay, c, cur_bb);
 			// bb_cond: instr; delay; goto bb_target;
-			pc += cpu->f.recompile_instr(cpu, pc, bb_cond);
+			pc += cpu->f.translate_instr(cpu, pc, bb_cond);
 			delay_pc = pc;
-			cpu->f.recompile_instr(cpu, pc, bb_cond);
+			cpu->f.translate_instr(cpu, pc, bb_cond);
 			BranchInst::Create(bb_target, bb_cond);
 			// bb_cond: delay; goto bb_next;
-			cpu->f.recompile_instr(cpu, delay_pc, bb_delay);
+			cpu->f.translate_instr(cpu, delay_pc, bb_delay);
 			BranchInst::Create(bb_next, bb_delay);
 		} else {
 			// cur_bb:  instr; delay; goto bb_target;
-			pc += cpu->f.recompile_instr(cpu, pc, cur_bb);
-			cpu->f.recompile_instr(cpu, pc, cur_bb);
+			pc += cpu->f.translate_instr(cpu, pc, cur_bb);
+			cpu->f.translate_instr(cpu, pc, cur_bb);
 			BranchInst::Create(bb_target, cur_bb);
 		}
 		return NULL; /* don't link */
@@ -249,12 +249,12 @@ recompile_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 	if (tag & TAG_CONDITIONAL) {
 		// cur_bb:  if (cond) goto b_cond; else goto bb_next;
 		addr_t delay_pc;
-		Value *c = cpu->f.recompile_cond(cpu, pc, cur_bb);
+		Value *c = cpu->f.translate_cond(cpu, pc, cur_bb);
 		BranchInst::Create(bb_cond, bb_next, c, cur_bb);
 		cur_bb = bb_cond;
 	}
 
-	cpu->f.recompile_instr(cpu, pc, cur_bb);
+	cpu->f.translate_instr(cpu, pc, cur_bb);
 
 	if (tag & (TAG_BRANCH | TAG_CALL | TAG_RET))
 		BranchInst::Create(bb_target, cur_bb);
@@ -268,7 +268,7 @@ recompile_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 }
 
 //////////////////////////////////////////////////////////////////////
-// buik recompile
+// buik translate
 //////////////////////////////////////////////////////////////////////
 static const BasicBlock *
 lookup_basicblock(Function* f, addr_t pc, uint8_t bb_type) {
@@ -286,7 +286,7 @@ lookup_basicblock(Function* f, addr_t pc, uint8_t bb_type) {
 }
 
 static BasicBlock *
-cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
+cpu_translate(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 {
 	// find all instructions that need labels and create basic blocks for them
 	int bbs = 0;
@@ -321,7 +321,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 		}
 	}
 
-// recompile basic blocks
+// translate basic blocks
     Function::const_iterator it;
     for (it = cpu->func_jitmain->getBasicBlockList().begin(); it != cpu->func_jitmain->getBasicBlockList().end(); it++) {
 		const BasicBlock *hack = it;
@@ -349,7 +349,7 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 			if (tag & TAG_RET)
 				bb_target = bb_dispatch;
 			if (tag & (TAG_CALL|TAG_BRANCH)) {
-				if (new_pc == NEW_PC_NONE) { /* recompile_instr() will set PC */
+				if (new_pc == NEW_PC_NONE) { /* translate_instr() will set PC */
 					bb_target = bb_dispatch;
 				} else {
 					bb_target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, new_pc, BB_TYPE_NORMAL);
@@ -363,7 +363,7 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 			if (tag & TAG_CONDITIONAL)
  				bb_next = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, next_pc, BB_TYPE_NORMAL);
 
-			bb_cont = recompile_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
+			bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
 
 			pc = next_pc;
 
@@ -396,7 +396,7 @@ create_singlestep_return_basicblock(cpu_t *cpu, addr_t new_pc, BasicBlock *bb_re
 }
 
 static BasicBlock *
-cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
+cpu_translate_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 {
 	addr_t new_pc;
 	tag_t tag;
@@ -412,7 +412,7 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	cpu->f.tag_instr(cpu, pc, &tag, &new_pc, &next_pc);
 
 	/* get target basic block */
-	if ((tag & TAG_RET) || (new_pc == NEW_PC_NONE)) /* recompile_instr() will set PC */
+	if ((tag & TAG_RET) || (new_pc == NEW_PC_NONE)) /* translate_instr() will set PC */
 		bb_target = bb_ret;
 	else if (tag & (TAG_CALL|TAG_BRANCH))
 		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
@@ -420,7 +420,7 @@ cpu_recompile_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	if (tag & TAG_CONDITIONAL)
 		bb_next = create_singlestep_return_basicblock(cpu, next_pc, bb_ret);
 
-	bb_cont = recompile_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
+	bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
 
 	/* If it's not a branch, append "store PC & return" to basic block */
 	if (bb_cont)
@@ -691,7 +691,7 @@ spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 }
 
 static void
-cpu_recompile_function(cpu_t *cpu)
+cpu_translate_function(cpu_t *cpu)
 {
 	cpu->func_jitmain = cpu_create_function(cpu, "jitmain");
 
@@ -735,9 +735,9 @@ cpu_recompile_function(cpu_t *cpu)
 
 	BasicBlock *bb_start;
 	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP) {
-		bb_start = cpu_recompile_singlestep(cpu, bb_ret, bb_trap);
+		bb_start = cpu_translate_singlestep(cpu, bb_ret, bb_trap);
 	} else {
-		bb_start = cpu_recompile(cpu, bb_ret, bb_trap);
+		bb_start = cpu_translate(cpu, bb_ret, bb_trap);
 	}
 
 	// entry basicblock
@@ -777,7 +777,7 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 
 	/* on demand recompilation */
 	if (!cpu->fp)
-		cpu_recompile_function(cpu);
+		cpu_translate_function(cpu);
 
 	/* run it ! */
 	typedef int (*fp_t)(uint8_t *RAM, void *reg, void *fp_reg, debug_function_t fp);

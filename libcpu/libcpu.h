@@ -35,8 +35,8 @@ typedef void        (*fp_emit_decode_reg)(struct cpu *cpu, BasicBlock *bb);
 typedef void        (*fp_spill_reg_state)(struct cpu *cpu, BasicBlock *bb);
 typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc);
 typedef int         (*fp_disasm_instr)(struct cpu *cpu, addr_t pc, char *line, unsigned int max_line);
-typedef Value      *(*fp_recompile_cond)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
-typedef int         (*fp_recompile_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
+typedef Value      *(*fp_translate_cond)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
+typedef int         (*fp_translate_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
 // idbg support
 typedef uint64_t    (*fp_get_psr)(struct cpu *cpu, void *regs);
 typedef int         (*fp_get_reg)(struct cpu *cpu, void *regs, unsigned reg_no, uint64_t *value);
@@ -49,8 +49,8 @@ typedef struct {
 	fp_spill_reg_state spill_reg_state;
 	fp_tag_instr tag_instr;
 	fp_disasm_instr disasm_instr;
-	fp_recompile_cond recompile_cond;
-	fp_recompile_instr recompile_instr;
+	fp_translate_cond translate_cond;
+	fp_translate_instr translate_instr;
 	// idbg support
 	fp_get_psr get_psr;
 	fp_get_reg get_reg;

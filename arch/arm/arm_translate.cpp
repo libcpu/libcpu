@@ -86,7 +86,7 @@ static inline unsigned shift4(unsigned opcode)
 #define shift2(o) ((o&0xFF0)?shift4(o):armregs[RM])
 
 Value *
-arch_arm_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
+arch_arm_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	switch (*(uint32_t*)&cpu->RAM[pc] >> 28) {
 		case 0x0: /* EQ */
 			return LOAD(ptr_Z);
@@ -174,7 +174,7 @@ setsub(cpu_t *cpu, Value *op1, Value *op2, BasicBlock *bb)
 
 #define LINK LET32(14, CONST((uint64_t)(sint64_t)(sint32_t)pc+8))
 
-int arch_arm_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
+int arch_arm_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 printf("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
 

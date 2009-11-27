@@ -282,7 +282,7 @@ arch_mips_get_sa(cpu_t *cpu, uint32_t instr, uint32_t bits, BasicBlock *bb) {
 //////////////////////////////////////////////////////////////////////
 
 Value *
-arch_mips_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
+arch_mips_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 	uint32_t instr = INSTR(pc);
 
@@ -316,7 +316,7 @@ arch_mips_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 }
 
 int
-arch_mips_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
+arch_mips_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 #define BAD printf("%s:%d\n", __func__, __LINE__); exit(1);
 #define LOG printf("%s:%d\n", __func__, __LINE__);
