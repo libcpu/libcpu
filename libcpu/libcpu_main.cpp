@@ -258,7 +258,12 @@ recompile_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 			BranchInst::Create(bb_cond, bb_next, c, cur_bb);
 			// cond
 			pc += cpu->f.recompile_instr(cpu, pc, bb_cond);
-			BranchInst::Create(bb_target, bb_cond);
+			if (tag & (TAG_BRANCH | TAG_CALL|TAG_RET))
+				BranchInst::Create(bb_target, bb_cond);
+			else if (tag & TAG_TRAP)
+				BranchInst::Create(bb_trap, bb_cond);
+			else
+				BranchInst::Create(bb_next, bb_cond);
 		}
 	} else {
 		if (tag & TAG_DELAY_SLOT) {
@@ -269,9 +274,7 @@ recompile_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 		} else {
 			// bb
 			pc += cpu->f.recompile_instr(cpu, pc, cur_bb);
-			if (tag & (TAG_BRANCH | TAG_CALL))
-				BranchInst::Create(bb_target, cur_bb);
-			if (tag & TAG_RET)
+			if (tag & (TAG_BRANCH | TAG_CALL|TAG_RET))
 				BranchInst::Create(bb_target, cur_bb);
 			if (tag & TAG_TRAP)
 				BranchInst::Create(bb_trap, cur_bb);
@@ -325,7 +328,7 @@ cpu_recompile(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 		pc = strtol(cstr+1, (char **)NULL, 16);
 printf("basicblock: L%08llx\n", (unsigned long long)pc);
 		tag_t tag;
-		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_cond = NULL, *bb_delay = NULL;
+		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_delay = NULL;
 		do {
 			tag_t dummy1;
 			addr_t dummy2;
@@ -370,9 +373,7 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 				exit(1);
 			}
 			printf("info: linking continue $%04llx!\n", (unsigned long long)pc);
-			if (tag & TAG_CONDITIONAL)
-				BranchInst::Create(target, (BasicBlock*)bb_cond);
-			else
+			if (!(tag & TAG_CONDITIONAL))
 				BranchInst::Create(target, (BasicBlock*)cur_bb);
 		}
     }
