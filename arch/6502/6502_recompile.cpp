@@ -159,29 +159,18 @@ arch_6502_shiftrotate(Value *l, bool left, bool rotate, BasicBlock *bb)
 	LET1(ptr_C, c);
 }
 
+#define SHIFTROTATE(l,left,rotate) arch_6502_shiftrotate(l,left,rotate,bb)
+
 /*
- * This is used for ADC, SBC and CMP
- * - for ADC, we add A + B + C
- * - for SBC, we add A + ~B + C
- * - for CMP, we add A + ~B + 1
  * XXX TODO: consider changing code to avoid 16 bit arithmetic:
  *     while this works ok for 8 bit, it doesn't scale. M88K and ARM
  *     do it differently already.
+ *     we should use llvm.uadd.with.overflow.*
  */
-static void
-arch_6502_addsub(cpu_t *cpu, uint16_t pc, Value *reg, Value *reg2, int is_sub, int with_carry, BasicBlock *bb) {
-	/* load second operand */
-	Value *v2 = ZEXT16(OPERAND);
-
-	/* if subtraction, NOT second operand */
-	if (is_sub)
-		v2 = XOR(v2, CONST16(0xFF));
-
-	/* add them together */
-	Value *v1 = ADD(ZEXT16(LOAD(reg)), v2);
-
-	/* add C or 1 */
-	v1 = ADD(v1, with_carry? (Value*)ZEXT16(LOAD(ptr_C)) : (Value*)CONST16(1));
+static Value *
+arch_6502_adc(Value *dreg, Value *sreg, Value *v, Value *c, BasicBlock *bb) {
+	/* calculate intermediate result */
+	Value *v1 = ADD(ADD(ZEXT16(LOAD(sreg)), ZEXT16(v)), ZEXT16(c));
 
 	/* get C */
 	STORE(TRUNC1(LSHR(v1, CONST16(8))), ptr_C);
@@ -189,14 +178,12 @@ arch_6502_addsub(cpu_t *cpu, uint16_t pc, Value *reg, Value *reg2, int is_sub, i
 	/* get result */
 	v1 = TRUNC8(v1);
 
-	/* set flags */
-	SET_NZ(v1);
+	if (dreg)
+		STORE(v1, dreg);
 
-	if (reg2)
-		STORE(v1, reg2);
-
+	return v1;
 }
-
+#define ADC(dreg,sreg,v,c) arch_6502_adc(dreg,sreg,v,c,bb)
 
 #define N_SHIFT 7
 #define V_SHIFT 6
@@ -238,13 +225,13 @@ printf("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
 
 	switch (instraddmode[opcode].instr) {
 		case INSTR_BEQ: /* Z */		return LOAD(ptr_Z);
-		case INSTR_BNE: /* !Z */	return NOT(LOAD(ptr_Z));
+		case INSTR_BNE: /* !Z */	return NOT1(LOAD(ptr_Z));
 		case INSTR_BCS: /* C */		return LOAD(ptr_C);
-		case INSTR_BCC: /* !C */	return NOT(LOAD(ptr_C));
+		case INSTR_BCC: /* !C */	return NOT1(LOAD(ptr_C));
 		case INSTR_BMI: /* N */		return LOAD(ptr_N);
-		case INSTR_BPL: /* !N */	return NOT(LOAD(ptr_N));
+		case INSTR_BPL: /* !N */	return NOT1(LOAD(ptr_N));
 		case INSTR_BVS: /* V */		return LOAD(ptr_V);
-		case INSTR_BVC: /* !V */	return NOT(LOAD(ptr_V));
+		case INSTR_BVC: /* !V */	return NOT1(LOAD(ptr_V));
 		default:					return NULL; /* no condition; should not be reached */
 	}
 }
@@ -305,18 +292,10 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		case INSTR_PLP:	arch_6502_flags_decode(PULL, bb);	break;
 
 		/* shift */
-		case INSTR_ASL:
-			arch_6502_shiftrotate(LOPERAND, true, false, bb);
-			break;
-		case INSTR_LSR:
-			arch_6502_shiftrotate(LOPERAND, false, false, bb);
-			break;
-		case INSTR_ROL:
-			arch_6502_shiftrotate(LOPERAND, true, true, bb);
-			break;
-		case INSTR_ROR:
-			arch_6502_shiftrotate(LOPERAND, false, true, bb);
-			break;
+		case INSTR_ASL:	SHIFTROTATE(LOPERAND, true, false);			break;
+		case INSTR_LSR:	SHIFTROTATE(LOPERAND, false, false);		break;
+		case INSTR_ROL:	SHIFTROTATE(LOPERAND, true, true);			break;
+		case INSTR_ROR:	SHIFTROTATE(LOPERAND, false, true);			break;
 
 		/* bit logic */
 		case INSTR_AND:	SET_NZ(LET(A,AND(R(A),OPERAND)));			break;
@@ -325,21 +304,11 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		case INSTR_BIT:	SET_NZ(OPERAND);							break;
 
 		/* arithmetic */
-		case INSTR_ADC:
-			arch_6502_addsub(cpu, pc, ptr_A, ptr_A, false, true, bb);
-			break;
-		case INSTR_SBC:
-			arch_6502_addsub(cpu, pc, ptr_A, ptr_A, true, true, bb);
-			break;
-		case INSTR_CMP:
-			arch_6502_addsub(cpu, pc, ptr_A, NULL, true, false, bb);
-			break;
-		case INSTR_CPX:
-			arch_6502_addsub(cpu, pc, ptr_X, NULL, true, false, bb);
-			break;
-		case INSTR_CPY:
-			arch_6502_addsub(cpu, pc, ptr_Y, NULL, true, false, bb);
-			break;
+		case INSTR_ADC:	SET_NZ(ADC(ptr_A, ptr_A, OPERAND, LOAD(ptr_C)));		break;
+		case INSTR_SBC:	SET_NZ(ADC(ptr_A, ptr_A, NOT(OPERAND), LOAD(ptr_C)));	break;
+		case INSTR_CMP:	SET_NZ(ADC(NULL, ptr_A, NOT(OPERAND), CONST1(1)));		break;
+		case INSTR_CPX:	SET_NZ(ADC(NULL, ptr_X, NOT(OPERAND), CONST1(1)));		break;
+		case INSTR_CPY:	SET_NZ(ADC(NULL, ptr_Y, NOT(OPERAND), CONST1(1)));		break;
 
 		/* increment/decrement */
 		case INSTR_INX:	SET_NZ(LET(X,INC(R(X))));			break;
