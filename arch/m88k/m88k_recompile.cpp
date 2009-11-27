@@ -96,8 +96,12 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_
 			}
 			break;
 
-		case M88K_OPC_TB0:
 		case M88K_OPC_TB1:
+			if (instr.rs1() == 0) {
+				*tag = TAG_CONTINUE;
+				break;
+			}
+		case M88K_OPC_TB0:
 		case M88K_OPC_TBND:
 		case M88K_OPC_TCND:
 			*tag = TAG_TRAP; //XXX COND_TRAP
@@ -430,7 +434,7 @@ arch_m88k_shift(cpu_t *cpu, m88k_opcode_t opc, m88k_reg_t rd, Value *src1, Value
 	uint32_t width, uint32_t offset, bool ifmt,
 	BasicBlock *bb)
 {
-	uint32_t wmask = ifmt ? ((1 << width) - 1) : -1U;
+	uint32_t wmask = (width != 0) ? (1 << width) - 1 : (-1U);
 
 	switch (opc) {
 		case M88K_OPC_ROT: // (rs1 >> bits)|(rs1 << (32-bits))
@@ -444,7 +448,7 @@ arch_m88k_shift(cpu_t *cpu, m88k_opcode_t opc, m88k_reg_t rd, Value *src1, Value
 			break;
 
 		case M88K_OPC_MAK: // (rs1 & wmask) << offset
-			if (ifmt)
+			if (ifmt) 
 				LET32(rd, SHL(AND(src1, CONST32(wmask)), CONST32(offset)));
 			else
 				LET32(rd, SHL(src1, src2));
@@ -454,28 +458,35 @@ arch_m88k_shift(cpu_t *cpu, m88k_opcode_t opc, m88k_reg_t rd, Value *src1, Value
 			if (ifmt)
 				LET32(rd, OR(src1, CONST32(wmask << offset)));
 			else
-				LET32(rd, OR(src1, SHL(CONST32(wmask), src2)));
+				LET32(rd, OR(src1, SHL(CONST32(wmask),
+					AND(src2, CONST32(0x1f)))));
 			break;
 
 		case M88K_OPC_CLR: // rs1 & ~(wmask << n)
 			if (ifmt)
 				LET32(rd, AND(src1, CONST32(~(wmask << offset))));
 			else
-				LET32(rd, AND(src1, COM(SHL(CONST32(wmask), src2))));
+				LET32(rd, AND(src1, COM(SHL(CONST32(wmask),
+					AND(src2, CONST32(0x1f))))));
 			break;
 
 		case M88K_OPC_EXT: // ((int)rs1 >> n) & wmask
-			if (ifmt)
-				LET32(rd, AND(ASHR(src1, CONST32(offset)), CONST32(wmask)));
-			else
-				LET32(rd, ASHR(src1, src2));
+			if (ifmt) {
+				if (width == 0) {
+					LET32(rd, ASHR(src1, CONST32(offset)));
+				} else {
+					unsigned nb = 32 - (offset + width);
+					LET32(rd, ASHR(SHL(src1, CONST32(nb & 0x1f)), CONST32((offset + nb) & 0x1f)));
+				}
+			} else
+				LET32(rd, ASHR(src1, AND(src2, CONST32(0x1f))));
 			break;
 
 		case M88K_OPC_EXTU: // (rs1 >> n) & wmask
 			if (ifmt)
 				LET32(rd, AND(LSHR(src1, CONST32(offset)), CONST32(wmask)));
 			else
-				LET32(rd, LSHR(src1, src2));
+				LET32(rd, LSHR(src1, AND(src2, CONST32(0x1f))));
 			break;
 
 		default:
@@ -958,8 +969,10 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 		case M88K_OPC_BCND_N:
 			break;
 
-		case M88K_OPC_TB0:
 		case M88K_OPC_TB1:
+			if (instr.rs1() == 0)
+				break;
+		case M88K_OPC_TB0:
 		case M88K_OPC_TBND:
 		case M88K_OPC_TCND:
 			TRAP(CONST32(instr.vec9()));
