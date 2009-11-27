@@ -316,7 +316,9 @@ nix_bsd_fstatfs(int fd, struct nix_statfs *buf, nix_env_t *env)
 
 	__nix_try
 	{
+#if defined(HAVE_FSTATFS) || defined(HAVE_FSTATVFS)
 		cvt_statfs(&nsfs, buf);
+#endif
 #if defined(HAVE_GETEXTMNTENT)
 		rc = setmntpaths_fd(rfd, buf, env);
 #else
@@ -363,7 +365,9 @@ nix_bsd_statfs(char const *path, struct nix_statfs *buf, nix_env_t *env)
 
 	__nix_try
 	{
+#if defined(HAVE_FSTATFS) || defined(HAVE_FSTATVFS)
 		cvt_statfs(&nsfs, buf);
+#endif
 #if defined(HAVE_GETEXTMNTENT)
 		rc = setmntpaths_path(path, buf, env);
 #else

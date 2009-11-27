@@ -224,7 +224,7 @@ nix_flock(int fd, int op, nix_env_t *env)
 
 #if defined(HAVE_FLOCK)
 	rc = flock(rfd, op);
-#else
+#elif defined(sun)
 	flock_t flock;
 
 	memset(&flock, 0, sizeof(flock));
@@ -254,6 +254,9 @@ nix_flock(int fd, int op, nix_env_t *env)
 		int fop = (op & NIX_LOCK_NB) ? F_SETLK : F_SETLKW;
 		rc = fcntl(rfd, fop, &flock);
 	}
+#else
+	rc = -1;
+	errno = ENOSYS;
 #endif
 
 	if (rc != 0) {
