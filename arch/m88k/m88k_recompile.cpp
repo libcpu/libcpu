@@ -14,7 +14,7 @@ extern Value* m88k_ptr_C; // Carry
 #define ptr_TRAPNO ptr_r32[33]
 
 //////////////////////////////////////////////////////////////////////
-// tagging
+// TAGGING
 //////////////////////////////////////////////////////////////////////
 
 #include "tag.h"
@@ -60,6 +60,7 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_
 		case M88K_OPC_JSR:
 		case M88K_OPC_JSR_N:
 			*tag = TAG_CALL;
+			*new_pc = NEW_PC_NONE;
 			break;
 
 		case M88K_OPC_BR:
@@ -135,7 +136,7 @@ int arch_m88k_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_
 
 enum { I_SEXT = 1, I_UPPER = 2, I_BS = 4 };
 
-Value *
+static Value *
 arch_m88k_get_imm(cpu_t *cpu, m88k_insn const &instr, uint32_t bits,
   unsigned flags, BasicBlock *bb)
 {
@@ -186,6 +187,133 @@ arch_m88k_get_imm(cpu_t *cpu, m88k_insn const &instr, uint32_t bits,
 #define GET_CARRY()		(SEXT32(new LoadInst(m88k_ptr_C, "", false, bb)))
 #define SET_CARRY(v)	(new StoreInst(v, m88k_ptr_C, bb))
 
+//////////////////////////////////////////////////////////////////////
+// FLOATING POINT
+//////////////////////////////////////////////////////////////////////
+
+static Value *
+arch_m88k_get_fpr(cpu_t *cpu, bool xfr, m88k_reg_t r, uint32_t t,
+	BasicBlock *bb)
+{
+	if (xfr) {
+		switch (t) {
+			case 0: return FPBITCAST32(FR80(r));
+			case 1: return FPBITCAST64(FR80(r));
+			case 2: return FR80(r);
+		}
+	} else {
+		switch (t) {
+			case 0: return FPBITCAST32(R32(r));
+			case 1: if (r < 2)
+						return FPCONST64(0);
+					else
+						return FPBITCAST64(OR(SHL(ZEXT64(R32(r & ~1)), CONST64(32)), ZEXT64(R32(r | 1))));
+			case 2: abort(); // can't happen
+		}
+	}
+}
+
+static void
+arch_m88k_set_fpr(cpu_t *cpu, bool xfr, m88k_reg_t r,
+	uint32_t t, Value *v, BasicBlock *bb)
+{
+	if (xfr) {
+		switch(t) {
+			case 0: LETFP(r, FPBITCAST80(FPBITCAST32(v))); break;
+			case 1: LETFP(r, FPBITCAST80(FPBITCAST64(v))); break;
+			case 2: LETFP(r, FPBITCAST80(v)); break;
+		}
+	} else {
+		Value *iv;
+		switch (t) {
+			case 0: LET32(r, IBITCAST32(FPBITCAST32(v))); break;
+			case 1: iv = IBITCAST64(FPBITCAST64(v));
+					LET32(r & ~1, TRUNC32(LSHR(iv, CONST64(32))));
+					LET32(r | 1, TRUNC32(iv));
+					break;
+			case 2: abort(); // can't happen
+		}
+	}
+}
+
+#define GET_FPR(x,r,t)   arch_m88k_get_fpr(cpu, x, r, t, bb)
+#define SET_FPR(x,r,t,v) arch_m88k_set_fpr(cpu, x, r, t, v, bb)
+
+enum {
+	FP_OP_CMP,
+	FP_OP_ADD,
+	FP_OP_SUB,
+	FP_OP_MUL,
+	FP_OP_DIV,
+	FP_OP_REM,
+	FP_OP_CMP_OEQ,
+	FP_OP_CMP_OGE
+};
+
+#undef getType // XXX clash!
+
+/*
+ * The Motorola 88K can operate on three different
+ * types of floating point using the same register set,
+ * and can mix them in a single instruction so that,
+ * for example, you can add a double to a single and
+ * put the result in an extended float.
+ *
+ * LLVM mandates both operands of a binary operation
+ * shall be the same size. This function overrides 
+ * cpu_generic.h macros and extends the operation to
+ * the biggest of the two operands.
+ */
+static Value *
+arch_m88k_fp_op(cpu_t *cpu, unsigned op, Value *a, Value *b,
+	BasicBlock *bb)
+{
+	Type::TypeID typeid_a, typeid_b;
+	Type const *type_a = a->getType();
+	Type const *type_b = b->getType();
+
+	typeid_a = type_a->getTypeID();
+	typeid_b = type_b->getTypeID();
+
+	// Both a and b shall be of the same size,
+	// extend to the biggest.
+	if (typeid_a != typeid_b) {
+		if (typeid_a > typeid_b)
+			b = new FPExtInst(b, type_a, "", bb);
+		else
+			a = new FPExtInst(a, type_b, "", bb);
+	}
+
+	switch (op) {
+		case FP_OP_ADD:		return FPADD(a, b);
+		case FP_OP_SUB:		return FPSUB(a, b);
+		case FP_OP_MUL:		return FPMUL(a, b);
+		case FP_OP_DIV:		return FPDIV(a, b);
+		case FP_OP_REM:		return FPREM(a, b);
+		case FP_OP_CMP_OEQ:	return FPCMP_OEQ(a, b);
+		case FP_OP_CMP_OGE:	return FPCMP_OGE(a, b);
+		default:			assert(0 && "Invalid FP operation");
+							return NULL;
+	}
+}
+
+#undef FPADD
+#undef FPSUB
+#undef FPMUL
+#undef FPDIV
+#undef FPREM
+#undef FPCMP_OEQ
+#undef FPCMP_OGE
+#define FPADD(a, b) arch_m88k_fp_op(cpu, FP_OP_ADD, a, b, bb)
+#define FPSUB(a, b) arch_m88k_fp_op(cpu, FP_OP_SUB, a, b, bb)
+#define FPMUL(a, b) arch_m88k_fp_op(cpu, FP_OP_MUL, a, b, bb)
+#define FPDIV(a, b) arch_m88k_fp_op(cpu, FP_OP_DIV, a, b, bb)
+#define FPREM(a, b) arch_m88k_fp_op(cpu, FP_OP_REM, a, b, bb)
+#define FPCMP_OGE(a, b) arch_m88k_fp_op(cpu, FP_OP_CMP_OGE, a, b, bb)
+#define FPCMP_OEQ(a, b) arch_m88k_fp_op(cpu, FP_OP_CMP_OEQ, a, b, bb)
+
+//////////////////////////////////////////////////////////////////////
+// CONDITIONAL EXECUTION
 //////////////////////////////////////////////////////////////////////
 
 static Value *
@@ -254,6 +382,8 @@ arch_m88k_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 	}
 }
 
+//////////////////////////////////////////////////////////////////////
+// COMPLEX INSTRUCTIONS
 //////////////////////////////////////////////////////////////////////
 
 #define COMPUTE_CARRY(src1, src2, result) \
@@ -357,20 +487,36 @@ arch_m88k_shift(cpu_t *cpu, m88k_opcode_t opc, m88k_reg_t rd, Value *src1, Value
  * Motorola 88000 optimized cmp:
  *
  * if (s1 == s2)
- *     dst = 0xaa4;
+ *     dst = 0x5aa4;
  * else {
- *     dst = 0x8;
+ *     dst = 0xa008;
  *     if ((u)s1 > (u)s2) dst |= 0x900; else dst |= 0x600;
  *     if ((s)s1 > (s)s2) dst |= 0x90;  else dst |= 0x60;
  * }
+ *
+ * bit name meaning/pseudo-code
+ *   2 eq   s1 == s2
+ *   3 ne   s1 != s2
+ *   4 gt   (s)s1 > (s)s2
+ *   5 le   (s)s1 <= (s)s2
+ *   6 lt   (s)s1 < (s)s2
+ *   7 ge   (s)s1 >= (s)s2
+ *   8 hi   (u)s1 > (u)s2
+ *   9 ls   (u)s1 <= (u)s2
+ *  10 lo   (u)s1 < (u)s2
+ *  11 hs   (u)s1 >= (u)s2
+ *  12 be   any_byte_eq(s1, s2)  (supported partially)
+ *  13 nb   !any_byte_eq(s1, s2) (supported partially)
+ *  14 he   any_half_eq(s1, s2)  (supported partially)
+ *  15 nh   !any_half_eq(s1, s2) (supported partially)
  */
 static void
 arch_m88k_cmp(cpu_t *cpu, m88k_reg_t dst, Value *src1, Value *src2, BasicBlock *bb)
 {
 	LET32(dst,
 		SELECT(ICMP_EQ(src1, src2),
-			CONST32(0xaa4),
-			OR(CONST(8), // NE flag
+			CONST32(0x5aa4), // EQ | LE | GE | LS | HS | BE | HE
+			OR(CONST(0xa008), // NE | NB | NH
 			   // (((-X) ^ 6) & 0xf) << Y will do the trick.
 			   OR(SHL(AND(XOR(SEXT32(ICMP_UGT(src1, src2)), CONST32(6)),
 					CONST32(0xf)), CONST32(8)),
@@ -378,16 +524,68 @@ arch_m88k_cmp(cpu_t *cpu, m88k_reg_t dst, Value *src1, Value *src2, BasicBlock *
 					CONST32(0xf)), CONST32(4))))));
 }
 
-static void
+/* Small inline optimization for always true case (reg1 == reg2). */
+static inline void
 arch_m88k_cmp_reg(cpu_t *cpu, m88k_reg_t dst, m88k_reg_t src1, m88k_reg_t src2, BasicBlock *bb)
 {
 	if (src1 == src2)
-		LET32(dst, CONST32(0xaa4));
+		LET32(dst, CONST32(0x5aa4));
 	else
 		arch_m88k_cmp(cpu, dst, R32(src1), R32(src2), bb);
 }
 
 /*
+ * Motorola 88000 fcmp(u):
+ *
+ * Broken optimization: (this works as long as we don't encounter NaNs,
+ * it's fine for testing purpose but needs to be reimplemented).
+ *
+ *    s1 == s2  => 0x6a6
+ *    s1 < s2   => 0x66a --+-> 0x666 ^ ( (s1 < s2) ^ 0x66)
+ *    s1 >= s2  => 0x69a --+
+ *
+ * bit name meaning/pseudo-code
+ *   0 un   is_unordered(s1) || is_unordered(s2)
+ *   1 leg  !(is_unordered(s1) || is_unordered(s2))
+ *   2 eq   s1 == s2
+ *   3 ne   s1 != s2
+ *   4 gt   s1 > s2
+ *   5 le   s1 <= s2
+ *   6 lt   s1 < s2
+ *   7 ge   s1 >= s2
+ *   8 ou   (s2 >= 0.0) && (is_unordered(s1 - s2) || (s1 < 0 || s1 > s2))
+ *   9 ib   (s2 >= 0.0) && is_ordered(s1 - s2) && (s1 >= 0 && s1 <= s2)
+ *  11 in   (s2 >= 0.0) && is_ordered(s1 - s1) && (s1 >= 0 && s1 <= s2)
+ *  12 ob   (s2 >= 0.0) && (is_unordered(s1 - s2) || (s1 < 0 || s1 > s2))
+ *  13 ue   is_unordered(s1 - s2) || (s1 == s2)
+ *  14 lg   is_ordered(s1 - s2) && (s1 < s2 || s1 > s2)
+ *  15 ug   is_unordered(s1 - s2) || (s1 > s2)
+ *  16 ule  is_unordered(s1 - s2) || (s1 <= s2)
+ *  17 ul   is_unordered(s1 - s2) || (s1 < s2)
+ *  18 uge  is_unordered(s1 - s2) || (s1 >= s2)
+ *
+ * TBD Unordered!!
+ *     Negative values in 's2' sets OU/IB/IN/OB to zero.
+ *     If an operand is either signalling or quiet NaN,
+ *     set the FINV bit in the FPSR; if using fcmp,
+ *     raise also FPE.
+ */
+static void
+arch_m88k_fcmp(cpu_t *cpu, m88k_reg_t dst, Value *src1, Value *src2, BasicBlock *bb)
+{
+	LET32(dst,
+		SELECT(FPCMP_OEQ(src1, src2),
+			CONST32(0x6a6), // LEG | EQ | LE | GE | IB | IN 
+			XOR(CONST(0x6a6), //
+				// 0x6a6 ^ ((((-(s1 > s2)) << 4) & 0xff) ^ 0xcc) is another trick to
+				// satisfy GT/LE/LT/LE correct flags.
+	 			XOR(AND(SHL(NEG(SEXT32(FPCMP_OGE(src1, src2))), CONST32(4)),
+							CONST32(0xff)), CONST32(0xcc)))));
+}
+
+/*
+ * Exchange Register/Memory (Word/Byte)
+ *
  * NOTE: This operation locks the bus, so when we'll go system
  * emulation, this operation must be atomic.
  */
@@ -413,106 +611,9 @@ arch_m88k_xmem(cpu_t *cpu, bool byte, m88k_reg_t rd, Value *src1, Value *src2, B
 		STORE32(reg_value, address);
 }
 
-static Value *
-arch_m88k_get_fpr(cpu_t *cpu, bool xfr, m88k_reg_t r, uint32_t t,
-	BasicBlock *bb)
-{
-	if (xfr) {
-		switch (t) {
-			case 0: return FPBITCAST32(FR80(r));
-			case 1: return FPBITCAST64(FR80(r));
-			case 2: return FR80(r);
-		}
-	} else {
-		switch (t) {
-			case 0: return FPBITCAST32(R32(r));
-			case 1: if (r < 2)
-						return FPCONST64(0);
-					else
-						return FPBITCAST64(OR(SHL(ZEXT64(R32(r & ~1)), CONST64(32)), ZEXT64(R32(r | 1))));
-			case 2: abort(); // can't happen
-		}
-	}
-}
-
-static void
-arch_m88k_set_fpr(cpu_t *cpu, bool xfr, m88k_reg_t r,
-	uint32_t t, Value *v, BasicBlock *bb)
-{
-	if (xfr) {
-		switch(t) {
-			case 0: LETFP(r, FPBITCAST80(FPBITCAST32(v))); break;
-			case 1: LETFP(r, FPBITCAST80(FPBITCAST64(v))); break;
-			case 2: LETFP(r, FPBITCAST80(v)); break;
-		}
-	} else {
-		Value *iv;
-		switch (t) {
-			case 0: LET32(r, IBITCAST32(FPBITCAST32(v))); break;
-			case 1: iv = IBITCAST64(FPBITCAST64(v));
-					LET32(r & ~1, TRUNC32(LSHR(iv, CONST64(32))));
-					LET32(r | 1, TRUNC32(iv));
-					break;
-			case 2: abort(); // can't happen
-		}
-	}
-}
-
-#define GET_FPR(x,r,t)   arch_m88k_get_fpr(cpu, x, r, t, bb)
-#define SET_FPR(x,r,t,v) arch_m88k_set_fpr(cpu, x, r, t, v, bb)
-
-enum {
-	FP_OP_CMP,
-	FP_OP_ADD,
-	FP_OP_SUB,
-	FP_OP_MUL,
-	FP_OP_DIV,
-	FP_OP_REM
-};
-
-#undef getType // XXX clash!
-
-static Value *
-arch_m88k_fp_op(cpu_t *cpu, unsigned op, Value *a, Value *b,
-	BasicBlock *bb)
-{
-	Type::TypeID typeid_a, typeid_b;
-	Type const *type_a = a->getType();
-	Type const *type_b = b->getType();
-
-	typeid_a = type_a->getTypeID();
-	typeid_b = type_b->getTypeID();
-
-	// Both a and b shall be of the same size,
-	// extend to the biggest.
-	if (typeid_a != typeid_b) {
-		if (typeid_a > typeid_b)
-			b = new FPExtInst(b, type_a, "", bb);
-		else
-			a = new FPExtInst(a, type_b, "", bb);
-	}
-
-	switch (op) {
-		case FP_OP_ADD: return FPADD(a, b);
-		case FP_OP_SUB: return FPSUB(a, b);
-		case FP_OP_MUL: return FPMUL(a, b);
-		case FP_OP_DIV: return FPDIV(a, b);
-		case FP_OP_REM: return FPREM(a, b);
-		default:		assert(0 && "Invalid FP operation");
-						return NULL;
-	}
-}
-
-#undef FPADD
-#undef FPSUB
-#undef FPMUL
-#undef FPDIV
-#undef FPREM
-#define FPADD(a, b) arch_m88k_fp_op(cpu, FP_OP_ADD, a, b, bb)
-#define FPSUB(a, b) arch_m88k_fp_op(cpu, FP_OP_SUB, a, b, bb)
-#define FPMUL(a, b) arch_m88k_fp_op(cpu, FP_OP_MUL, a, b, bb)
-#define FPDIV(a, b) arch_m88k_fp_op(cpu, FP_OP_DIV, a, b, bb)
-#define FPREM(a, b) arch_m88k_fp_op(cpu, FP_OP_REM, a, b, bb)
+//////////////////////////////////////////////////////////////////////
+// TRANSLATOR
+//////////////////////////////////////////////////////////////////////
 
 int
 arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
@@ -919,6 +1020,10 @@ arch_m88k_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 
 		case M88K_OPC_FCMP:
 		case M88K_OPC_FCMPU:
+			arch_m88k_fcmp(cpu, instr.rd(),
+					GET_FPR(fmt == M88K_TFMT_XFR, instr.rs1(), instr.t1()),
+					GET_FPR(fmt == M88K_TFMT_XFR, instr.rs2(), instr.t2()),
+					bb);
 			break;
 
 		case M88K_OPC_MOV:
