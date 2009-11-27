@@ -15,8 +15,8 @@ static Value* ptr_I;
 
 #define ptr_CPSR cpu->ptr_r32[16]
 
-#define BAD printf("%s:%d\n", __func__, __LINE__); exit(1);
-#define LOG printf("%s:%d\n", __func__, __LINE__);
+#define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0);
+#define LOG do { printf("%s:%d\n", __func__, __LINE__); } while(0);
 
 //////////////////////////////////////////////////////////////////////
 // tagging
@@ -39,9 +39,13 @@ int arch_arm_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t
 	return 4;
 }
 
-#define RD ((instr>>12)&0xF)
-#define RN ((instr>>16)&0xF)
-#define RM (instr&0xF)
+#define RD ((instr >> 12) & 0xF)
+#define RN ((instr >> 16) & 0xF)
+#define RM (instr & 0xF)
+#define I ((instr >> 25) & 1)
+#define BIT(n) ((instr >> (n)) & 1)
+#define BITS(a,b) ((instr >> (a)) & ((1 << (1+(b)-(a)))-1))
+#define S BIT(20)
 
 #define GETADDR(r) ((r==15)?(armregs[15]&r15mask):armregs[r])
 
@@ -71,28 +75,6 @@ static inline unsigned shift4(unsigned opcode)
                 }
         }
 #endif
-}
-
-static inline void setsub(cpu_t *cpu, Value *op1, Value *op2, BasicBlock *bb)
-{
-	Value *v = BinaryOperator::Create(Instruction::Sub, op1, op2, "", bb);
-	Value* z = new ICmpInst(*bb, ICmpInst::ICMP_EQ, v, CONST(0));
-	Value* n = new ICmpInst(*bb, ICmpInst::ICMP_SLT, v, CONST(0));
-	new StoreInst(z, ptr_Z, bb);
-	new StoreInst(n, ptr_N, bb);
-	new StoreInst(ICMP_SLE(v, op1), ptr_C, false, bb);
-	new StoreInst(TRUNC1(LSHR(AND(XOR(op1, op2),XOR(op1,v)),CONST(31))), ptr_V, false, bb);
-	return;
-}
-
-static uint32_t rotate2(uint32_t instr)
-{
-	uint32_t res;
-	int c;
-
-	res = instr & 0xFF;
-	c = ((instr >> 8) & 0xF) << 1;
-	return (res >> c) | (res << (32 - c));
 }
 
 #define shift2(o) ((o&0xFF0)?shift4(o):armregs[RM])
@@ -135,20 +117,90 @@ arch_arm_recompile_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	}
 }
 
+Value *operand(cpu_t *cpu, addr_t pc, BasicBlock *bb)
+{
+	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
+	if (I) { /* 32-bit immediate */
+		//XXX TODO: shifter carry out
+		uint32_t immed_8 = instr & 0xFF;
+		int rotate_imm = ((instr >> 8) & 0xF) << 1;
+		return CONST((immed_8 >> rotate_imm) | (immed_8 << (32 - rotate_imm)));
+	} else {
+		if (!BIT(4)) { /* Immediate shifts */
+			int shift = BITS(5,6);
+			int shift_imm = BITS(7,11);
+			printf("shift=%x\n", shift);
+			printf("shift_imm=%x\n", shift_imm);
+			if (!shift && !shift_imm) { /* Register */
+				return R(RM);
+			} else {
+				BAD;
+			}
+		} else {
+			if (!BIT(7)) { /* Register shifts */
+				BAD;
+			} else { /* arithmetic or Load/Store instruction extension space */
+				BAD;
+			}
+		}
+	}
+}
+#define OPERAND operand(cpu,pc,bb)
+
+
+static void
+setsub(cpu_t *cpu, Value *op1, Value *op2, BasicBlock *bb)
+{
+	Value *v = BinaryOperator::Create(Instruction::Sub, op1, op2, "", bb);
+	/* Z */	new StoreInst(ICMP_EQ(v, CONST(0)), ptr_Z, bb);
+	/* N */	new StoreInst(ICMP_SLT(v, CONST(0)), ptr_N, bb);
+	/* C */	new StoreInst(ICMP_SLE(v, op1), ptr_C, false, bb);
+	/* V */	new StoreInst(TRUNC1(LSHR(AND(XOR(op1, op2),XOR(op1,v)),CONST(31))), ptr_V, false, bb);
+	return;
+}
+
 
 int arch_arm_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 printf("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
 
-	int cond = instr >> 28;
-	int op1 = (instr>>20)&0xFF;
-	int op2 = (instr>>4)&0xF;
-	int shift_bits = (instr>>4)&0xFF;
+//	int cond = instr >> 28;
+//	int op1 = (instr>>20)&0xFF;
+//	int op2 = (instr>>4)&0xF;
+//	int shift_bits = (instr>>4)&0xFF;
+//	printf("cond=%x, op1=%x, op2=%x, shift_bits=%x\n", cond, op1, op2, shift_bits);
 
-	printf("cond=%x, op1=%x, op2=%x, shift_bits=%x\n", cond, op1, op2, shift_bits);
+	int opcode = ((instr >> 21) & 0x0F);
+	printf("opcode=%d\n", opcode);
 
+	switch ((instr >> 26) & 3) { /* bits 26 and 27 */
+		case 0:
+			switch(opcode) {
+				case 10:
+					if (!S) /* CMP without S bit */
+						BAD;
+					setsub(cpu, R(RN), OPERAND, bb);
+					break;
+				case 13:
+					if (S)
+						BAD;
+					LET(RD, OPERAND);
+					break;
+				default:
+					BAD;
+			}
+			break;
+		case 1:
+			BAD;
+		case 2:
+			BAD;
+		case 3:
+			BAD;
+		
+	}
 
-	switch ((instr>>20)&0xFF) {
+#if 0
+	switch (((instr >> 20) & 0xFF) & ~0x20) { /* opcode without I bit */
 		case 0x1A: /* MOV */
 			if (RD==15) {
 				LOG;//BAD;
@@ -158,19 +210,19 @@ printf("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 				//armregs[RD]=shift2(opcode);
 			}
 			break;
-		case 0x35: /* CMP */
+		case 0x15: /* CMP */
 			if (RD==15) {
 				BAD;
 			} else {
-				setsub(cpu, R(RN),CONST(rotate2(instr)), bb);
+				setsub(cpu, R(RN), OPERAND, bb);
 			}
 			break;
 		default:
-			LOG;//BAD;	
+			BAD;	
 	}
+#endif
 
-//	BAD;
-
+	LOG;
 	return 4;
 }
 
