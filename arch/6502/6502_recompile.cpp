@@ -137,7 +137,7 @@ arch_6502_trap(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 	ReturnInst::Create(_CTX(), CONST32(JIT_RETURN_TRAP), bb);
 }
 
-static void
+static Value *
 arch_6502_shiftrotate(Value *l, bool left, bool rotate, BasicBlock *bb)
 {
 	Value *c;
@@ -155,8 +155,8 @@ arch_6502_shiftrotate(Value *l, bool left, bool rotate, BasicBlock *bb)
 			v = OR(v,SHL(ZEXT8(LOAD(ptr_C)), CONST8(7)));
 	}
 	
-	SET_NZ(STORE(v, l));
 	LET1(ptr_C, c);
+	return STORE(v, l);
 }
 
 #define SHIFTROTATE(l,left,rotate) arch_6502_shiftrotate(l,left,rotate,bb)
@@ -292,10 +292,10 @@ arch_6502_recompile_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		case INSTR_PLP:	arch_6502_flags_decode(PULL, bb);	break;
 
 		/* shift */
-		case INSTR_ASL:	SHIFTROTATE(LOPERAND, true, false);			break;
-		case INSTR_LSR:	SHIFTROTATE(LOPERAND, false, false);		break;
-		case INSTR_ROL:	SHIFTROTATE(LOPERAND, true, true);			break;
-		case INSTR_ROR:	SHIFTROTATE(LOPERAND, false, true);			break;
+		case INSTR_ASL:	SET_NZ(SHIFTROTATE(LOPERAND, true, false));			break;
+		case INSTR_LSR:	SET_NZ(SHIFTROTATE(LOPERAND, false, false));		break;
+		case INSTR_ROL:	SET_NZ(SHIFTROTATE(LOPERAND, true, true));			break;
+		case INSTR_ROR:	SET_NZ(SHIFTROTATE(LOPERAND, false, true));			break;
 
 		/* bit logic */
 		case INSTR_AND:	SET_NZ(LET(A,AND(R(A),OPERAND)));			break;
