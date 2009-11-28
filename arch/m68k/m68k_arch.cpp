@@ -53,6 +53,7 @@ arch_m68k_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
 
 arch_func_t arch_func_m68k = {
 	arch_m68k_init,
+	NULL,
 	arch_m68k_get_pc,
 	NULL, /* emit_decode_reg */
 	NULL, /* spill_reg_state */

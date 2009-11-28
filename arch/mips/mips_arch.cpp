@@ -56,6 +56,7 @@ arch_mips_get_pc(cpu_t *cpu, void *reg)
 
 arch_func_t arch_func_mips = {
 	arch_mips_init,
+	NULL,
 	arch_mips_get_pc,
 	NULL, /* emit_decode_reg */
 	NULL, /* spill_reg_state */

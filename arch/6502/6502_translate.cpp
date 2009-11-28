@@ -417,6 +417,7 @@ arch_6502_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
 
 arch_func_t arch_func_6502 = {
 	arch_6502_init,
+	NULL,
 	arch_6502_get_pc,
 	arch_6502_emit_decode_reg,
 	arch_6502_spill_reg_state,

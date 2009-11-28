@@ -118,6 +118,7 @@ arch_m88k_get_fp_reg(cpu_t *cpu, void *regs, unsigned reg_no, void *value)
 
 arch_func_t arch_func_m88k = {
 	arch_m88k_init,
+	NULL,
 	arch_m88k_get_pc,
 	arch_m88k_emit_decode_reg,
 	arch_m88k_spill_reg_state,

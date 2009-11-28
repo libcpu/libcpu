@@ -29,6 +29,7 @@ using namespace llvm;
 
 struct cpu;
 typedef void        (*fp_init)(struct cpu *cpu);
+typedef void        (*fp_done)(struct cpu *cpu);
 typedef StructType *(*fp_get_struct_reg)(struct cpu *cpu);
 typedef addr_t      (*fp_get_pc)(struct cpu *cpu, void *regs);
 typedef void        (*fp_emit_decode_reg)(struct cpu *cpu, BasicBlock *bb);
@@ -44,6 +45,7 @@ typedef int         (*fp_get_fp_reg)(struct cpu *cpu, void *regs, unsigned reg_n
 
 typedef struct {
 	fp_init init;
+	fp_done done;
 	fp_get_pc get_pc;
 	fp_emit_decode_reg emit_decode_reg;
 	fp_spill_reg_state spill_reg_state;
