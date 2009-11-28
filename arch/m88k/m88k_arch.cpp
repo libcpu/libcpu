@@ -4,20 +4,53 @@
 #include "frontend.h"
 #include "arch_types.h"
 
-#define ptr_PSR		ptr_r32[32]
-#define ptr_TRAPNO	ptr_r32[33]
+#define ptr_PSR		ptr_xr[0]
+#define ptr_TRAPNO	ptr_xr[1]
 #define ptr_C		(cpu->feptr)
 
 static void
-arch_m88k_init(cpu_t *cpu)
+arch_m88k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
 	m88k_grf_t *reg;
 	m88k_xrf_t *fp_reg;
 
-	cpu->is_little_endian = !!(cpu->flags_arch & CPU_M88K_IS_LE);
-	cpu->reg_size = 32;
-	cpu->has_special_r0 = true;
+	// Basic Information
+	info->name = "m88k";
+	info->full_name = "Motorola 88110";
 
+	// This architecture is biendian, accept whatever the
+	// client wants, override other flags.
+	info->common_flags &= CPU_FLAG_ENDIAN_MASK;
+	// Both r0 and x0 are hardwired to zero.
+	info->common_flags |= CPU_FLAG_HARDWIRE_GPR0;
+	info->common_flags |= CPU_FLAG_HARDWIRE_FPR0;
+	// This architecture supports delay slots (w/o annihilation)
+	// with 1 instruction.
+	info->common_flags |= CPU_FLAG_DELAY_SLOT;
+	info->delay_slots = 1;
+	// The byte size is 8bits.
+	// The word size is 32bits.
+	// The float size is 80bits.
+	// The address size is 32bits.
+	info->byte_size = 8;
+	info->word_size = 32;
+	info->float_size = 80;
+	info->address_size = 32;
+	// Page size is just 4K.
+	info->min_page_size = 4096;
+	info->max_page_size = 4096;
+	info->default_page_size = 4096;
+	// There are 32 32-bit GPRs and 32 80-bit FPRs.
+	info->register_count[CPU_REG_GPR] = 32;
+	info->register_size[CPU_REG_GPR] = info->word_size;
+	info->register_count[CPU_REG_FPR] = 32;
+	info->register_size[CPU_REG_FPR] = info->float_size;
+	// There are also 2 extra registers to handle
+	// PSR and TRAPNO.
+	info->register_count[CPU_REG_XR] = 2;
+	info->register_size[CPU_REG_XR] = 32;
+
+	// Setup the register files
 	reg = (m88k_grf_t *)malloc(sizeof(m88k_grf_t));
 	fp_reg = (m88k_xrf_t *)malloc(sizeof(m88k_xrf_t));
 	for (int i = 0; i < 32; i++) {
@@ -25,26 +58,25 @@ arch_m88k_init(cpu_t *cpu)
 		fp_reg->x[i].i.hi = 0;
 		fp_reg->x[i].i.lo = 0;
 	}
+
 	reg->sxip = 0;
 	reg->psr = 0;
 	reg->trapno = 0;
 
-	cpu->reg = reg;
-	cpu->pc_width = 32;
-	cpu->count_regs_i8 = 0;
-	cpu->count_regs_i16 = 0;
-	cpu->count_regs_i32 = 32 + 2;
-	cpu->count_regs_i64 = 0;
+	// Architecture Register File
+	rf->pc = &reg->sxip;
+	rf->grf = reg;
+	rf->frf = fp_reg;
+	rf->vrf = NULL;
 
-	cpu->fp_reg = fp_reg;
-	cpu->fp_reg_size = 80;
-	cpu->has_special_fr0 = true;
-	cpu->count_regs_f32 = 0;
-	cpu->count_regs_f64 = 0;
-	cpu->count_regs_f80 = 32;
-	cpu->count_regs_f128 = 0;
+	log("Motorola 88110 initialized.\n");
+}
 
-	log("Motorola 88100 initialized.\n");
+static void
+arch_m88k_done(cpu_t *cpu)
+{
+	free(cpu->rf.frf);
+	free(cpu->rf.grf);
 }
 
 static addr_t
@@ -117,7 +149,7 @@ arch_m88k_get_fp_reg(cpu_t *cpu, void *regs, unsigned reg_no, void *value)
 
 arch_func_t arch_func_m88k = {
 	arch_m88k_init,
-	NULL,
+	arch_m88k_done,
 	arch_m88k_get_pc,
 	arch_m88k_emit_decode_reg,
 	arch_m88k_spill_reg_state,

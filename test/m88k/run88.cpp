@@ -17,10 +17,10 @@
 #define RAM_SIZE (16 * 1024 * 1024)
 #define STACK_TOP ((long long)(RAM+RAM_SIZE-4))
 
-#define PC (((m88k_grf_t*)cpu->reg)->sxip)
-#define TRAPNO (((m88k_grf_t*)cpu->reg)->trapno)
-#define PSR (((m88k_grf_t*)cpu->reg)->psr)
-#define R (((m88k_grf_t*)cpu->reg)->r)
+#define PC (((m88k_grf_t*)cpu->rf.grf)->sxip)
+#define TRAPNO (((m88k_grf_t*)cpu->rf.grf)->trapno)
+#define PSR (((m88k_grf_t*)cpu->rf.grf)->psr)
+#define R (((m88k_grf_t*)cpu->rf.grf)->r)
 
 static size_t host_page_size;
 static uint8_t *RAM;
@@ -216,7 +216,7 @@ openbsd_m88k_setup_uframe(cpu_t           *cpu,
 static void
 debug_function(cpu_t *cpu)
 {
-	fprintf(stderr, "%s:%u [trap %u]\n", __FILE__, __LINE__, ((m88k_grf_t*)cpu->reg)->r[13]);
+	fprintf(stderr, "%s:%u [trap %u]\n", __FILE__, __LINE__, R[13]);
 }
 
 static void
@@ -299,7 +299,7 @@ main(int ac, char **av, char **ep)
 	loader_init();
 
 	/* Create CPU */
-	cpu = cpu_new(CPU_ARCH_M88K);
+	cpu = cpu_new(CPU_ARCH_M88K, CPU_FLAG_ENDIAN_BIG, 0);
 	if (cpu == NULL) {
 		fprintf(stderr, "error: failed initializing M88K architecture.\n");
 		exit(EXIT_FAILURE);
@@ -333,14 +333,11 @@ main(int ac, char **av, char **ep)
 	g_uframe_log = xec_log_register("uframe");
 	openbsd_m88k_setup_uframe(cpu, mem_if, ac - 1, av + 1, NULL, &stack_top);
 
-	/* Setup and initialize the CPU */
-	cpu_set_flags_arch(cpu, CPU_M88K_IS_32BIT | CPU_M88K_IS_BE);
+	/* Setup the CPU */
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
 	cpu_set_flags_debug(cpu, 0);
 	cpu_set_flags_hint(cpu, CPU_HINT_TRAP_RETURNS_TWICE);
 	cpu_set_ram(cpu, RAM);
-
-	cpu_init(cpu);
 
 	/* Create XEC bridge monitor */
 	guest_info.name = "m88k";
@@ -348,7 +345,7 @@ main(int ac, char **av, char **ep)
 	guest_info.byte_size = 8;
 	guest_info.word_size = 32;
 	guest_info.page_size = 4096;
-	monitor = xec_monitor_create(&guest_info, mem_if, cpu->reg, NULL);
+	monitor = xec_monitor_create(&guest_info, mem_if, cpu->rf.grf, NULL);
 	if (monitor == NULL) {
 		fprintf(stderr, "error: failed createc xec monitor.\n");
 		exit(EXIT_FAILURE);
@@ -366,7 +363,7 @@ main(int ac, char **av, char **ep)
 
 	cpu_tag(cpu, cpu->code_entry);
 
-	dump_state(RAM, (m88k_grf_t*)cpu->reg);
+	dump_state(RAM, (m88k_grf_t*)cpu->rf.grf);
 
 #ifdef DEBUGGER
 	debugging = true;
@@ -390,7 +387,7 @@ main(int ac, char **av, char **ep)
 				break;
 
 			case JIT_RETURN_FUNCNOTFOUND:
-				dump_state(RAM, (m88k_grf_t*)cpu->reg);
+				dump_state(RAM, (m88k_grf_t*)cpu->rf.grf);
 
 				if (PC == -1)
 					goto double_break;

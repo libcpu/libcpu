@@ -57,7 +57,7 @@ asm("nop");
 
 static void
 debug_function(cpu_t *cpu) {
-	reg_6502_t *reg = (reg_6502_t*)cpu->reg;
+	reg_6502_t *reg = (reg_6502_t*)cpu->rf.grf;
 	printf("DEBUG: $%04X: A=$%02X X=$%02X Y=$%02X S=$%02X P=$%02X %02X/%02X\n", reg->pc, reg->a, reg->x, reg->y, reg->s, reg->p, cpu->RAM[0x33], cpu->RAM[0x34]);
 //	{ int i; for (i=0x01F0; i<0x0200; i++) printf("%02X ", cpu->RAM[i]); printf("\n"); }
 	{ int i; for (i=0xB5FF; i<0xB60F; i++) printf("%02X ", cpu->RAM[i]); printf("\n"); }
@@ -92,7 +92,9 @@ main(int argc, char **argv) {
 	int ramsize = 65536;
 	RAM = (uint8_t*)malloc(ramsize);
 
-	cpu = cpu_new(CPU_ARCH_6502);
+	cpu = cpu_new(CPU_ARCH_6502, 0, CPU_6502_BRK_TRAP |
+		CPU_6502_XXX_TRAP | CPU_6502_V_IGNORE);
+
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
 	cpu_set_flags_debug(cpu, 0
 		| (print_ir? CPU_DEBUG_PRINT_IR : 0)
@@ -101,13 +103,7 @@ main(int argc, char **argv) {
 		| (SINGLESTEP_STEP? CPU_DEBUG_SINGLESTEP    : 0)
 		| (SINGLESTEP_BB?   CPU_DEBUG_SINGLESTEP_BB : 0)
 		);
-	cpu_set_flags_arch(cpu, 
-		CPU_6502_BRK_TRAP |
-		CPU_6502_XXX_TRAP |
-		CPU_6502_V_IGNORE);
 	cpu_set_ram(cpu, RAM);
-
-	cpu_init(cpu);
 
 /* parameter parsing */
 	if (argc<2) {
@@ -147,12 +143,12 @@ main(int argc, char **argv) {
 	find_rets(RAM, cpu->code_start, cpu->code_end);
 #endif
 
-#define PC (((reg_6502_t*)cpu->reg)->pc)
-#define A (((reg_6502_t*)cpu->reg)->a)
-#define X (((reg_6502_t*)cpu->reg)->x)
-#define Y (((reg_6502_t*)cpu->reg)->y)
-#define S (((reg_6502_t*)cpu->reg)->s)
-#define P (((reg_6502_t*)cpu->reg)->p)
+#define PC (((reg_6502_t*)cpu->rf.grf)->pc)
+#define A (((reg_6502_t*)cpu->rf.grf)->a)
+#define X (((reg_6502_t*)cpu->rf.grf)->x)
+#define Y (((reg_6502_t*)cpu->rf.grf)->y)
+#define S (((reg_6502_t*)cpu->rf.grf)->s)
+#define P (((reg_6502_t*)cpu->rf.grf)->p)
 
 	PC = cpu->code_entry;
 	S = 0xFF;

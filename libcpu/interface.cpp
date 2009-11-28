@@ -23,18 +23,59 @@
 #include "arch/m88k/libcpu_m88k.h"
 #include "arch/arm/libcpu_arm.h"
 
+#define IS_LITTLE_ENDIAN(cpu) (((cpu)->info.common_flags & CPU_FLAG_ENDIAN_MASK) == CPU_FLAG_ENDIAN_LITTLE)
+
+static inline bool
+is_valid_gpr_size(size_t size)
+{
+	switch (size) {
+		case 0: case 1: case 8: case 16: case 32: case 64:
+			return true;
+		default:
+			return false;
+	}
+}
+
+static inline bool
+is_valid_fpr_size(size_t size)
+{
+	switch (size) {
+		case 0: case 32: case 64: case 80: case 128:
+			return true;
+		default:
+			return false;
+	}
+}
+
+static inline bool
+is_valid_vr_size(size_t size)
+{
+	switch (size) {
+		case 0: case 64: case 128:
+			return true;
+		default:
+			return false;
+	}
+}
+
 //////////////////////////////////////////////////////////////////////
 // cpu_t
 //////////////////////////////////////////////////////////////////////
+
 cpu_t *
-cpu_new(cpu_arch_t arch)
+cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 {
 	cpu_t *cpu;
 
 	llvm::InitializeNativeTarget();
 
 	cpu = (cpu_t*)malloc(sizeof(cpu_t));
-	cpu->arch = arch;
+	assert(cpu != NULL);
+	memset(&cpu->info, 0, sizeof(cpu->info));
+	memset(&cpu->rf, 0, sizeof(cpu->rf));
+
+	cpu->info.type = arch;
+	cpu->info.name = "noname";
 
 	switch (arch) {
 		case CPU_ARCH_6502:
@@ -57,7 +98,6 @@ cpu_new(cpu_arch_t arch)
 			exit(1);
 	}
 
-	cpu->name = "noname";
 	cpu->code_start = 0;
 	cpu->code_end = 0;
 	cpu->code_entry = 0;
@@ -67,18 +107,55 @@ cpu_new(cpu_arch_t arch)
 	cpu->flags_debug = CPU_DEBUG_NONE;
 	cpu->flags_hint = CPU_HINT_NONE;
 	cpu->flags = 0;
-	cpu->flags_arch = 0;
 
-	cpu->fp = NULL;
-	cpu->reg = NULL;
-	cpu->mod = new Module(cpu->name, _CTX());
+	// init the frontend
+	cpu->f.init(cpu, &cpu->info, &cpu->rf);
+
+	assert(is_valid_gpr_size(cpu->info.register_size[CPU_REG_GPR]) &&
+		"the specified GPR size is not guaranteed to work");
+	assert(is_valid_fpr_size(cpu->info.register_size[CPU_REG_FPR]) &&
+		"the specified FPR size is not guaranteed to work");
+	assert(is_valid_vr_size(cpu->info.register_size[CPU_REG_VR]) &&
+		"the specified VR size is not guaranteed to work");
+	assert(is_valid_gpr_size(cpu->info.register_size[CPU_REG_XR]) &&
+		"the specified XR size is not guaranteed to work");
+
+	uint32_t count = cpu->info.register_count[CPU_REG_GPR];
+	if (count != 0) {
+		cpu->ptr_gpr = (Value **)calloc(count, sizeof(Value *));
+		cpu->in_ptr_gpr = (Value **)calloc(count, sizeof(Value *));
+	} else {
+		cpu->ptr_gpr = NULL;
+		cpu->in_ptr_gpr = NULL;
+	}
+
+	count = cpu->info.register_count[CPU_REG_XR];
+	if (count != 0) {
+		cpu->ptr_xr = (Value **)calloc(count, sizeof(Value *));
+		cpu->in_ptr_xr = (Value **)calloc(count, sizeof(Value *));
+	} else {
+		cpu->ptr_xr = NULL;
+		cpu->in_ptr_xr = NULL;
+	}
+
+	count = cpu->info.register_count[CPU_REG_FPR];
+	if (count != 0) {
+		cpu->ptr_fpr = (Value **)calloc(count, sizeof(Value *));
+		cpu->in_ptr_fpr = (Value **)calloc(count, sizeof(Value *));
+	} else {
+		cpu->ptr_fpr = NULL;
+		cpu->in_ptr_fpr = NULL;
+	}
+
+	// init LLVM
+	cpu->mod = new Module(cpu->info.name, _CTX());
+	assert(cpu->mod != NULL);
 	cpu->exec_engine = ExecutionEngine::create(cpu->mod);
-
 	assert(cpu->exec_engine != NULL);
 
-	//XXX there is a better way to do this?
+	// check if FP80 and FP128 are supported by this architecture.
+	// XXX there is a better way to do this?
 	std::string data_layout = cpu->exec_engine->getTargetData()->getStringRepresentation();
-	//printf("Target Data Layout = %s\n", data_layout.c_str());
 	if (data_layout.find("f80") != std::string::npos) {
 		log("INFO: FP80 supported.\n");
 		cpu->flags |= CPU_FLAG_FP80;
@@ -88,16 +165,37 @@ cpu_new(cpu_arch_t arch)
 		cpu->flags |= CPU_FLAG_FP128;
 	}
 
-//	cpu->mod->setDataLayout("e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32");
-//	cpu->mod->setTargetTriple("i386-pc-linux-gnu");
+	// check if we need to swap guest memory.
+	if (cpu->exec_engine->getTargetData()->isLittleEndian()
+			^ IS_LITTLE_ENDIAN(cpu))
+		cpu->flags |= CPU_FLAG_SWAPMEM;
 
 	return cpu;
 }
 
 void
-cpu_init(cpu_t *cpu)
+cpu_free(cpu_t *cpu)
 {
-	cpu->f.init(cpu);
+	if (cpu->f.done != NULL)
+		cpu->f.done(cpu);
+	if (cpu->exec_engine != NULL) {
+    if (cpu->func_jitmain != NULL)
+      cpu->exec_engine->freeMachineCodeForFunction(cpu->func_jitmain);
+		delete cpu->exec_engine;
+  }
+	if (cpu->in_ptr_fpr != NULL)
+		free(cpu->in_ptr_fpr);
+	if (cpu->ptr_fpr != NULL)
+		free(cpu->ptr_fpr);
+	if (cpu->in_ptr_xr != NULL)
+		free(cpu->in_ptr_xr);
+	if (cpu->ptr_xr != NULL)
+		free(cpu->ptr_xr);
+	if (cpu->in_ptr_gpr != NULL)
+		free(cpu->in_ptr_gpr);
+	if (cpu->ptr_gpr != NULL)
+		free(cpu->ptr_gpr);
+	free(cpu);
 }
 
 void
@@ -122,12 +220,6 @@ void
 cpu_set_flags_hint(cpu_t *cpu, uint32_t f)
 {
 	cpu->flags_hint = f;
-}
-
-void
-cpu_set_flags_arch(cpu_t *cpu, uint32_t f)
-{
-	cpu->flags_arch = f;
 }
 
 void
@@ -183,14 +275,12 @@ cpu_translate_function(cpu_t *cpu)
 void
 cpu_translate(cpu_t *cpu)
 {
-	/* lazy init of frontend */
-	if (!cpu->reg)
-		cpu_init(cpu);
-
 	/* on demand translation */
-	if (!cpu->fp)
+	if (cpu->fp == NULL)
 		cpu_translate_function(cpu);
 }
+
+typedef int (*fp_t)(uint8_t *RAM, void *grf, void *frf, debug_function_t fp);
 
 int
 cpu_run(cpu_t *cpu, debug_function_t debug_function)
@@ -198,10 +288,9 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 	cpu_translate(cpu);
 
 	/* run it ! */
-	typedef int (*fp_t)(uint8_t *RAM, void *reg, void *fp_reg, debug_function_t fp);
 	fp_t FP = (fp_t)cpu->fp;
 
-	return FP(cpu->RAM, cpu->reg, cpu->fp_reg, debug_function);
+	return FP(cpu->RAM, cpu->rf.grf, cpu->rf.frf, debug_function);
 }
 
 void

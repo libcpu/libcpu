@@ -11,6 +11,10 @@
 #include "basicblock.h"
 #include "translate.h"
 
+//////////////////////////////////////////////////////////////////////
+// single stepping
+//////////////////////////////////////////////////////////////////////
+
 BasicBlock *
 create_singlestep_return_basicblock(cpu_t *cpu, addr_t new_pc, BasicBlock *bb_ret)
 {
@@ -25,7 +29,7 @@ cpu_translate_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	addr_t new_pc;
 	tag_t tag;
 	BasicBlock *cur_bb = NULL, *bb_target = NULL, *bb_next = NULL, *bb_cont = NULL;
-	addr_t next_pc, pc = cpu->f.get_pc(cpu, cpu->reg);
+	addr_t next_pc, pc = cpu->f.get_pc(cpu, cpu->rf.grf);
 	tag_t dummy1;
 	addr_t dummy2;
 

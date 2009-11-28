@@ -141,8 +141,10 @@ main(int argc, char **argv)
 	ramsize = 5*1024*1024;
 	RAM = (uint8_t*)malloc(ramsize);
 
-	cpu = cpu_new(CPU_ARCH_MIPS);
-
+	cpu = cpu_new(CPU_ARCH_MIPS, CPU_FLAG_ENDIAN_BIG,
+			CPU_MIPS_IS_32BIT
+			//CPU_MIPS_IS_64BIT
+			);
 
 #ifdef SINGLESTEP
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
@@ -153,11 +155,7 @@ main(int argc, char **argv)
 	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);
 #endif
 
-	cpu_set_flags_arch(cpu, CPU_MIPS_IS_32BIT | CPU_MIPS_IS_BE);
-//	cpu_set_flags_arch(cpu, CPU_MIPS_IS_64BIT | CPU_MIPS_IS_BE);
 	cpu_set_ram(cpu, RAM);
-	
-	cpu_init(cpu);
 
 /* parameter parsing */
 	if (argc<2) {
@@ -210,8 +208,8 @@ main(int argc, char **argv)
 	
 #define STACK ((long long)(stack+STACK_SIZE-4))
 
-#define PC (((reg_mips32_t*)cpu->reg)->pc)
-#define R (((reg_mips32_t*)cpu->reg)->r)
+#define PC (((reg_mips32_t*)cpu->rf.grf)->pc)
+#define R (((reg_mips32_t*)cpu->rf.grf)->r)
 
 	PC = cpu->code_entry;
 
@@ -230,7 +228,7 @@ main(int argc, char **argv)
 	R[6] = 0x2000;
 	strcpy((char*)&RAM[R[4]], STRING);
 #endif
-	dump_state(RAM, (reg_mips32_t*)cpu->reg);
+	dump_state(RAM, (reg_mips32_t*)cpu->rf.grf);
 
 #ifdef SINGLESTEP
 	for(step = 0;;) {
@@ -238,7 +236,7 @@ main(int argc, char **argv)
 
 		cpu_run(cpu, debug_function);
 
-		dump_state(RAM, (reg_mips32_t*)cpu->reg);
+		dump_state(RAM, (reg_mips32_t*)cpu->rf.grf);
 		
 		if (PC == -1)
 			break;
@@ -257,7 +255,7 @@ main(int argc, char **argv)
 			case JIT_RETURN_NOERR: /* JIT code wants us to end execution */
 				break;
 			case JIT_RETURN_FUNCNOTFOUND:
-				dump_state(RAM, (reg_mips32_t*)cpu->reg);
+				dump_state(RAM, (reg_mips32_t*)cpu->rf.grf);
 
 				if (PC == -1)
 					goto double_break;
@@ -297,7 +295,7 @@ double_break:
 
 	printf("done!\n");
 
-	dump_state(RAM, (reg_mips32_t*)cpu->reg);
+	dump_state(RAM, (reg_mips32_t*)cpu->rf.grf);
 
 	printf("RUN2..."); fflush(stdout);
 	t3 = abs_time();

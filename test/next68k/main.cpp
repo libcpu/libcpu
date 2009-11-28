@@ -91,7 +91,7 @@ asm("nop");
 
 static void
 debug_function(cpu_t *cpu) {
-	reg_m68k_t *reg = (reg_m68k_t*)cpu->reg;
+	reg_m68k_t *reg = (reg_m68k_t*)cpu->rf.grf;
 	fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
 }
 
@@ -110,12 +110,10 @@ main(int argc, char **argv) {
 		return 1;
 	}
 
-	cpu = cpu_new(CPU_ARCH_M68K);
+	cpu = cpu_new(CPU_ARCH_M68K, 0, 0);
 	// cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
 	cpu_set_ram(cpu, RAM);
-
-	cpu_init(cpu);
 
 /* parameter parsing */
 	if (argc<2) {
@@ -157,7 +155,7 @@ main(int argc, char **argv) {
 
 	printf("*** Executing... %lx\n", (unsigned long)cpu->code_entry);
 
-#define PC (((reg_m68k_t*)cpu->reg)->pc)
+#define PC (((reg_m68k_t*)cpu->rf.grf)->pc)
 
 	PC = cpu->code_entry;
 	// S = 0xFF;

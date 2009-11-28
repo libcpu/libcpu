@@ -14,7 +14,7 @@
 BasicBlock *
 cpu_translate_singlestep_bb(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 {
-	addr_t entry = cpu->f.get_pc(cpu, cpu->reg);
+	addr_t entry = cpu->f.get_pc(cpu, cpu->rf.grf);
 	addr_t pc = entry;
 
 	BasicBlock *cur_bb = create_basicblock(cpu, pc, cpu->func_jitmain, BB_TYPE_NORMAL);

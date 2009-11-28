@@ -3,32 +3,43 @@
 #include "frontend.h"
 
 static void
-arch_arm_init(cpu_t *cpu)
+arch_arm_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
-	cpu->reg_size = 32;
-	cpu->is_little_endian = !!(cpu->flags_arch & CPU_ARM_IS_LE);
-	cpu->has_special_r0 = false;
-	cpu->fp_reg_size = 64;
-	cpu->has_special_fr0 = false;
+	assert(offsetof(reg_6502_t, pc) == 5);
+
+	// Basic Information
+	info->name = "arm";
+	info->full_name = "ARM v6";
+
+	// This architecture is biendian, accept whatever the
+	// client wants, override other flags.
+	info->common_flags &= CPU_FLAG_ENDIAN_MASK;
+
+	info->delay_slots = 0;
+	// The byte size is 8bits.
+	// The word size is 32bits.
+	// The float size is 64bits.
+	// The address size is 32bits.
+	info->byte_size = 8;
+	info->word_size = 32;
+	info->float_size = 64;
+	info->address_size = 32;
+	// There are 16 8-bit GPRs
+	info->register_count[CPU_REG_GPR] = 16;
+	info->register_size[CPU_REG_GPR] = info->word_size;
+	// There is also 1 extra register to handle PSR.
+	info->register_count[CPU_REG_XR] = 1;
+	info->register_size[CPU_REG_XR] = 32;
 
 	reg_arm_t *reg;
 	reg = (reg_arm_t*)malloc(sizeof(reg_arm_t));
 	for (int i=0; i<17; i++) /* this includes pc */
 		reg->r[i] = 0;
-	cpu->reg = reg;
-	cpu->pc_width = 32;
 
-	cpu->count_regs_i8 = 0;
-	cpu->count_regs_i16 = 0;
-	cpu->count_regs_i32 = 17;
-	cpu->count_regs_i64 = 0;
+	cpu->rf.pc = &reg->r[15];
+	cpu->rf.grf = reg;
 
-	cpu->fp_reg = NULL;
-	cpu->count_regs_f32 = 0;
-	cpu->count_regs_f64 = 0;
-	cpu->count_regs_f80 = 0;
-	cpu->count_regs_f128 = 0;
-
+	// allocate space for CC flags.
 	cpu->feptr = malloc(sizeof(ccarm_t));
 	assert(cpu->feptr != NULL);
 }
@@ -37,6 +48,7 @@ static void
 arch_arm_done(cpu_t *cpu)
 {
 	free(cpu->feptr);
+	free(cpu->rf.grf);
 }
 
 static addr_t

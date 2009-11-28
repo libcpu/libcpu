@@ -200,8 +200,7 @@ main(int argc, char **argv)
 	ramsize = 5*1024*1024;
 	RAM = (uint8_t*)malloc(ramsize);
 
-	cpu = cpu_new(CPU_ARCH_M88K);
-
+	cpu = cpu_new(CPU_ARCH_M88K, CPU_FLAG_ENDIAN_BIG, 0);
 
 #ifdef SINGLESTEP
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
@@ -214,11 +213,8 @@ main(int argc, char **argv)
 	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);
 #endif
 
-	cpu_set_flags_arch(cpu, CPU_M88K_IS_32BIT | CPU_M88K_IS_BE);
 	cpu_set_ram(cpu, RAM);
 	
-	cpu_init(cpu);
-
 	/* parameter parsing */
 	if (argc < 2) {
 #ifdef BENCHMARK_FIB
@@ -274,10 +270,10 @@ main(int argc, char **argv)
 
 #define STACK ((long long)(stack+STACK_SIZE-4))
 
-#define PC (((m88k_grf_t*)cpu->reg)->sxip)
-#define PSR (((m88k_grf_t*)cpu->reg)->psr)
-#define R (((m88k_grf_t*)cpu->reg)->r)
-#define X (((m88k_xrf_t*)cpu->fp_reg)->x)
+#define PC (((m88k_grf_t*)cpu->rf.grf)->sxip)
+#define PSR (((m88k_grf_t*)cpu->rf.grf)->psr)
+#define R (((m88k_grf_t*)cpu->rf.grf)->r)
+#define X (((m88k_xrf_t*)cpu->rf.fpr)->x)
 
 	PC = cpu->code_entry;
 #if 0
@@ -293,7 +289,7 @@ main(int argc, char **argv)
 	R[2] = 0x3f800000; // 1.0
 	ieee754_fp80_set_d(&X[2], 1.0);
 #endif
-	dump_state(RAM, (m88k_grf_t*)cpu->reg, NULL);
+	dump_state(RAM, (m88k_grf_t*)cpu->rf.grf, NULL);
 
 #ifdef SINGLESTEP
 	for(step = 0;;) {
@@ -321,7 +317,7 @@ main(int argc, char **argv)
 			case JIT_RETURN_NOERR: /* JIT code wants us to end execution */
 				break;
 			case JIT_RETURN_FUNCNOTFOUND:
-				dump_state(RAM, (m88k_grf_t*)cpu->reg, (m88k_xrf_t*)cpu->fp_reg);
+				dump_state(RAM, (m88k_grf_t*)cpu->rf.grf, (m88k_xrf_t*)cpu->rf.frf);
 
 				if (PC == -1)
 					goto double_break;
@@ -361,7 +357,7 @@ double_break:
 
 	printf("done!\n");
 	
-	dump_state(RAM, (m88k_grf_t*)cpu->reg, NULL);
+	dump_state(RAM, (m88k_grf_t*)cpu->rf.grf, NULL);
 
 	printf("RUN2..."); fflush(stdout);
 	t3 = abs_time();

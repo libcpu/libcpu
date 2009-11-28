@@ -3,30 +3,40 @@
 #include "frontend.h"
 
 static void
-arch_m68k_init(cpu_t *cpu)
+arch_m68k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
-	cpu->reg_size = 32;
-	cpu->is_little_endian = true;
-	cpu->has_special_r0 = false;
-	cpu->fp_reg_size = 80;
-	cpu->has_special_fr0 = false;
+	// Basic Information
+	info->name = "m68k";
+	info->full_name = "Motorola 68000";
+
+	// This architecture is big endian, override the user
+  // flags.
+	info->common_flags = CPU_FLAG_ENDIAN_BIG;
+	// The byte size is 8bits.
+	// The word size is 32bits.
+	// The float size is 80bits.
+	// The address size is 32bits.
+	info->byte_size = 8;
+	info->word_size = 32;
+	info->float_size = 80;
+	info->address_size = 32;
+	// Page size is 4K or 8K, default is 8K.
+	info->min_page_size = 4096;
+	info->max_page_size = 8192;
+	info->default_page_size = 8192;
+	// There are 16 32-bit GPRs 
+	info->register_count[CPU_REG_GPR] = 16;
+	info->register_size[CPU_REG_GPR] = info->word_size;
 
 	reg_m68k_t *reg;
 	reg = (reg_m68k_t*)malloc(sizeof(reg_m68k_t));
 	for (int i=0; i<16; i++) 
 		reg->r[i] = 0;
-	reg->pc = 0;
-	cpu->reg = reg;
-	cpu->pc_width = 32;
-	cpu->count_regs_i8 = 0;
-	cpu->count_regs_i16 = 0;
-	cpu->count_regs_i32 = 16;
-	cpu->count_regs_i64 = 0;
 
-	cpu->count_regs_f32 = 0;
-	cpu->count_regs_f64 = 0;
-	cpu->count_regs_f80 = 0;
-	cpu->count_regs_f128 = 0;
+	reg->pc = 0;
+
+  rf->pc = &reg->pc;
+  rf->grf = reg;
 }
 
 static addr_t

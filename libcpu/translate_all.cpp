@@ -35,7 +35,7 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	for (pc = cpu->code_start; pc<cpu->code_end; pc++) {
 		if (needs_dispatch_entry(cpu, pc)) {
 			log("info: adding case: %llx\n", pc);
-			ConstantInt* c = ConstantInt::get(getIntegerType(cpu->pc_width), pc);
+			ConstantInt* c = ConstantInt::get(getIntegerType(cpu->info.address_size), pc);
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->func_jitmain, pc, BB_TYPE_NORMAL);
 			if (!target) {
 				log("error: unknown rts target $%04llx!\n", (unsigned long long)pc);

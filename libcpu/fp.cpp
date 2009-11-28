@@ -8,6 +8,8 @@
 
 #undef getType // XXX clash with llvm
 
+#define HAS_SPECIAL_FPR0(cpu) ((cpu)->info.common_flags & CPU_FLAG_HARDWIRE_FPR0)
+
 /* 
  * Don't expose these macros!
  */
@@ -112,7 +114,7 @@ arch_synthesize_fp80_load(cpu_t *cpu, uint32_t index, BasicBlock *bb)
 	Value *hi, *lo;
 	Value *v64;
 
-	if (index == 0 && cpu->has_special_fr0)
+	if (index == 0 && HAS_SPECIAL_FPR0(cpu))
 		return FPCONST64(0);
 
 	// load
@@ -163,16 +165,18 @@ void
 arch_store_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits,
 	BasicBlock *bb)
 {
+	uint32_t size = cpu->info.register_size[CPU_REG_FPR];
+
 	/*
 	 * if the caller cares about bit size and
 	 * the size is not the register size, we'll extend.
 	 */
-	if (bits && cpu->fp_reg_size != bits)
-		v = fp_cast(cpu, cpu->fp_reg_size, v, bb);
+	if (bits && size != bits)
+		v = fp_cast(cpu, size, v, bb);
 
-	if (cpu->fp_reg_size == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) {
+	if (size == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) {
 		arch_synthesize_fp80_store(cpu, index * 2, v, bb);
-	} else if (cpu->fp_reg_size == 128 && (cpu->flags & CPU_FLAG_FP128) == 0) {
+	} else if (size == 128 && (cpu->flags & CPU_FLAG_FP128) == 0) {
 		assert(0 && "FP128 not yet implemented");
 	} else {
 		arch_put_fp_reg(cpu, index, v, bits, bb);
@@ -184,17 +188,18 @@ arch_load_fp_reg(cpu_t *cpu, uint32_t index, uint32_t bits,
 	BasicBlock *bb)
 {
 	Value *v;
+	uint32_t size = cpu->info.register_size[CPU_REG_FPR];
 
-	if (cpu->fp_reg_size == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) {
+	if (size == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) {
 		v = arch_synthesize_fp80_load(cpu, index * 2, bb);
-	} else if (cpu->fp_reg_size == 128 && (cpu->flags & CPU_FLAG_FP128) == 0) {
+	} else if (size == 128 && (cpu->flags & CPU_FLAG_FP128) == 0) {
 		assert(0 && "FP128 not yet implemented");
 	} else {
 		v = arch_get_fp_reg(cpu, index, bits, bb);
 	}
 
-	/* optionally truncate it */
-	if (bits && cpu->fp_reg_size != bits)
+	/* optionally cast it */
+	if (bits != 0 && size != bits)
 		v = fp_cast(cpu, bits, v, bb);
 
 	return v;

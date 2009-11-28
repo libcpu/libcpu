@@ -28,7 +28,7 @@
 using namespace llvm;
 
 struct cpu;
-typedef void        (*fp_init)(struct cpu *cpu);
+typedef void        (*fp_init)(struct cpu *cpu, struct cpu_archinfo *info, struct cpu_archrf *rf);
 typedef void        (*fp_done)(struct cpu *cpu);
 typedef StructType *(*fp_get_struct_reg)(struct cpu *cpu);
 typedef addr_t      (*fp_get_pc)(struct cpu *cpu, void *regs);
@@ -69,24 +69,70 @@ typedef enum {
 } cpu_arch_t;
 
 enum {
-	CPU_FLAG_FP80  = (1 << 15), // FP80 is natively supported.
-	CPU_FLAG_FP128 = (1 << 16), // FP128 is natively supported.
+	CPU_FLAG_ENDIAN_MASK   = (1 << 1),
+	CPU_FLAG_ENDIAN_BIG    = (0 << 1),
+	CPU_FLAG_ENDIAN_LITTLE = (1 << 1),
+
+	CPU_FLAG_HARDWIRE_GPR0 = (1 << 2),
+	CPU_FLAG_HARDWIRE_FPR0 = (1 << 3),
+	CPU_FLAG_DELAY_SLOT    = (1 << 4),
+	CPU_FLAG_DELAY_NULLIFY = (1 << 5),
+
+	// internal flags.
+	CPU_FLAG_FP80          = (1 << 15), // FP80 is natively supported.
+	CPU_FLAG_FP128         = (1 << 16), // FP128 is natively supported.
+	CPU_FLAG_SWAPMEM       = (1 << 17), // Swap load/store
 };
 
+// Four register classes
+enum {
+	CPU_REG_GPR, // General Purpose
+	CPU_REG_FPR, // Floating Point
+	CPU_REG_VR,  // Vector
+	CPU_REG_XR   // Extra Registers, the core expects these to follow
+	 			 // GPRs in the memory layout, they are kept separate
+				 // to avoid confusing the client about the number of
+				 // registers available.
+};
+
+typedef struct cpu_archinfo {
+	cpu_arch_t type;
+	
+	char const *name;
+	char const *full_name;
+
+	uint32_t common_flags;
+	uint32_t arch_flags;
+
+	uint32_t delay_slots;
+
+	uint32_t byte_size;
+	uint32_t word_size;
+	uint32_t float_size;
+	uint32_t vector_size;
+	uint32_t address_size;
+
+	uint32_t min_page_size;
+	uint32_t max_page_size;
+	uint32_t default_page_size;
+
+	uint32_t register_count[4];
+	uint32_t register_size[4];
+} cpu_archinfo_t;
+
+typedef struct cpu_archrf {
+	void *pc;  // Program Counter
+	void *grf; // GP register file
+	void *frf; // FP register file
+	void *vrf; // Vector register file
+} cpu_archrf_t;
+
 typedef struct cpu {
-	cpu_arch_t arch;
+	cpu_archinfo_t info;
+	cpu_archrf_t rf;
 	arch_func_t f;
+
 	uint16_t pc_offset;
-	uint32_t pc_width;
-	uint32_t count_regs_i8;
-	uint32_t count_regs_i16;
-	uint32_t count_regs_i32;
-	uint32_t count_regs_i64;
-	uint32_t count_regs_f32;
-	uint32_t count_regs_f64;
-	uint32_t count_regs_f80;
-	uint32_t count_regs_f128;
-	const char *name;
 	addr_t code_start;
 	addr_t code_end;
 	addr_t code_entry;
@@ -94,43 +140,28 @@ typedef struct cpu {
 	uint32_t flags_debug;
 	uint32_t flags_hint;
 	uint32_t flags;
-	uint32_t flags_arch;
 	tag_t *tag; /* array of flags, one per byte of code */
 	Module *mod;
 	Function *func_jitmain;
 	ExecutionEngine *exec_engine;
 	void *fp;
-	void *reg;
-	void *fp_reg;
 	uint8_t *RAM;
-	bool is_little_endian;
-	uint32_t reg_size;
-	bool has_special_r0;
-	uint32_t fp_reg_size;
-	bool has_special_fr0;
-	Value *ptr_reg;
-	Value *ptr_fp_reg;
 	Value *ptr_PC;
 	Value *ptr_RAM;
 	PointerType *type_pfunc_callout;
 	Value *ptr_func_debug;
-	#define MAX_REGISTERS 64
-	Value *ptr_r8[MAX_REGISTERS];
-	Value *ptr_r16[MAX_REGISTERS];
-	Value *ptr_r32[MAX_REGISTERS];
-	Value *ptr_r64[MAX_REGISTERS];
-	Value *ptr_f32[MAX_REGISTERS];
-	Value *ptr_f64[MAX_REGISTERS];
-	Value *ptr_f80[MAX_REGISTERS];
-	Value *ptr_f128[MAX_REGISTERS];
-	Value *in_ptr_r8[MAX_REGISTERS];
-	Value *in_ptr_r16[MAX_REGISTERS];
-	Value *in_ptr_r32[MAX_REGISTERS];
-	Value *in_ptr_r64[MAX_REGISTERS];
-	Value *in_ptr_f32[MAX_REGISTERS];
-	Value *in_ptr_f64[MAX_REGISTERS];
-	Value *in_ptr_f80[MAX_REGISTERS];
-	Value *in_ptr_f128[MAX_REGISTERS];
+
+	Value *ptr_grf; // gpr register file
+	Value **ptr_gpr; // GPRs
+	Value **in_ptr_gpr;
+	Value **ptr_xr; // XRs
+	Value **in_ptr_xr;
+
+	Value *ptr_frf; // fp register file
+	Value **ptr_fpr; // FPRs
+	Value **in_ptr_fpr;
+
+
 	void *feptr; /* This pointer can be used freely by the frontend. */
 } cpu_t;
 
@@ -182,17 +213,16 @@ typedef void (*debug_function_t)(cpu_t*);
 
 //////////////////////////////////////////////////////////////////////
 
-cpu_t *cpu_new(cpu_arch_t arch);
+cpu_t *cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags);
+void cpu_free(cpu_t *cpu);
 void cpu_set_flags_optimize(cpu_t *cpu, uint64_t f);
 void cpu_set_flags_hint(cpu_t *cpu, uint32_t f);
 void cpu_set_flags_debug(cpu_t *cpu, uint32_t f);
 void cpu_tag(cpu_t *cpu, addr_t pc);
 int cpu_run(cpu_t *cpu, debug_function_t debug_function);
 void cpu_translate(cpu_t *cpu);
-void cpu_set_flags_arch(cpu_t *cpu, uint32_t f);
 void cpu_set_ram(cpu_t *cpu, uint8_t *RAM);
 void cpu_flush(cpu_t *cpu);
-void cpu_init(cpu_t *cpu);
 
 /* runs the interactive debugger */
 int cpu_debugger(cpu_t *cpu, debug_function_t debug_function);

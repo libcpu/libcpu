@@ -75,7 +75,7 @@ main(int argc, char **argv) {
 	int ramsize = 65536;
 	RAM = (uint8_t*)malloc(ramsize);
 
-	cpu = cpu_new(CPU_ARCH_ARM);
+	cpu = cpu_new(CPU_ARCH_ARM, CPU_FLAG_ENDIAN_LITTLE, 0);
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
 //	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR);
@@ -86,8 +86,6 @@ main(int argc, char **argv) {
 //		CPU_6502_XXX_TRAP |
 //		CPU_6502_V_IGNORE);
 	cpu_set_ram(cpu, RAM);
-
-	cpu_init(cpu);
 
 /* parameter parsing */
 	if (argc<2) {
@@ -129,8 +127,8 @@ main(int argc, char **argv) {
 
 	printf("*** Executing...\n");
 
-#define PC (((reg_arm_t*)cpu->reg)->pc)
-#define R (((reg_arm_t*)cpu->reg)->r)
+#define PC (((reg_arm_t*)cpu->rf.grf)->pc)
+#define R (((reg_arm_t*)cpu->rf.grf)->r)
 
 	PC = cpu->code_entry;
 	R[0] = START_NO; // parameter

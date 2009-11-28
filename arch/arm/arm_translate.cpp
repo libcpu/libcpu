@@ -10,7 +10,7 @@ using namespace llvm;
 #define ptr_C			((ccarm_t*)cpu->feptr)->ptr_C
 #define ptr_V			((ccarm_t*)cpu->feptr)->ptr_V
 #define ptr_I			((ccarm_t*)cpu->feptr)->ptr_I
-#define ptr_CPSR	cpu->ptr_r32[16]
+#define ptr_CPSR	cpu->ptr_xr[0]
 
 #define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0)
 #define LOG do { log("%s:%d\n", __func__, __LINE__); } while(0)

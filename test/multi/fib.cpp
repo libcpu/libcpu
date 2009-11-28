@@ -76,19 +76,14 @@ main(int argc, char **argv)
 	ramsize = 5*1024*1024;
 	RAM = (uint8_t*)malloc(ramsize);
 
-	cpu = cpu_new(arch);
-
+	cpu = cpu_new(arch, 0, 0);
 
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
 //	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);
 
-	cpu_set_flags_arch(cpu, CPU_M88K_IS_32BIT | CPU_M88K_IS_BE);
 	cpu_set_ram(cpu, RAM);
 	
-	cpu_init(cpu);
-
-
 	/* load code */
 	if (!(f = fopen(executable, "rb"))) {
 		printf("Could not open %s!\n", executable);
@@ -110,22 +105,22 @@ main(int argc, char **argv)
 	uint32_t *reg_pc, *reg_lr, *reg_param, *reg_result;
 	switch (arch) {
 		case CPU_ARCH_M88K:
-			reg_pc = &((m88k_grf_t*)cpu->reg)->sxip;
-			reg_lr = &((m88k_grf_t*)cpu->reg)->r[1];
-			reg_param = &((m88k_grf_t*)cpu->reg)->r[2];
-			reg_result = &((m88k_grf_t*)cpu->reg)->r[2];
+			reg_pc = &((m88k_grf_t*)cpu->rf.grf)->sxip;
+			reg_lr = &((m88k_grf_t*)cpu->rf.grf)->r[1];
+			reg_param = &((m88k_grf_t*)cpu->rf.grf)->r[2];
+			reg_result = &((m88k_grf_t*)cpu->rf.grf)->r[2];
 			break;
 		case CPU_ARCH_MIPS:
-			reg_pc = &((reg_mips32_t*)cpu->reg)->pc;
-			reg_lr = &((reg_mips32_t*)cpu->reg)->r[31];
-			reg_param = &((reg_mips32_t*)cpu->reg)->r[4];
-			reg_result = &((reg_mips32_t*)cpu->reg)->r[4];
+			reg_pc = &((reg_mips32_t*)cpu->rf.grf)->pc;
+			reg_lr = &((reg_mips32_t*)cpu->rf.grf)->r[31];
+			reg_param = &((reg_mips32_t*)cpu->rf.grf)->r[4];
+			reg_result = &((reg_mips32_t*)cpu->rf.grf)->r[4];
 			break;
 		case CPU_ARCH_ARM:
-			reg_pc = &((reg_arm_t*)cpu->reg)->pc;
-			reg_lr = &((reg_arm_t*)cpu->reg)->r[14];
-			reg_param = &((reg_arm_t*)cpu->reg)->r[0];
-			reg_result = &((reg_arm_t*)cpu->reg)->r[0];
+			reg_pc = &((reg_arm_t*)cpu->rf.grf)->pc;
+			reg_lr = &((reg_arm_t*)cpu->rf.grf)->r[14];
+			reg_param = &((reg_arm_t*)cpu->rf.grf)->r[0];
+			reg_result = &((reg_arm_t*)cpu->rf.grf)->r[0];
 			break;
 	}
 
@@ -137,8 +132,8 @@ main(int argc, char **argv)
 
 	t1 = abs_time();
 	cpu_run(cpu, debug_function);
-	r1 = *reg_result;
 	t2 = abs_time();
+	r1 = *reg_result;
 
 	printf("done!\n");
 
@@ -147,6 +142,8 @@ main(int argc, char **argv)
 	r2 = fib(start_no);
 	t4 = abs_time();
 	printf("done!\n");
+
+  cpu_free(cpu);
 
 	printf("Time HOST:  %lld\n", t2-t1);
 	printf("Time GUEST: %lld\n", t4-t3);

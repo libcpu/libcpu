@@ -8,8 +8,8 @@
 
 using namespace llvm;
 
-#define ptr_PSR		ptr_r32[32]
-#define ptr_TRAPNO	ptr_r32[33]
+#define ptr_PSR		ptr_xr[0]
+#define ptr_TRAPNO	ptr_xr[1]
 #define ptr_C		((Value *)cpu->feptr)
 
 //////////////////////////////////////////////////////////////////////
@@ -156,7 +156,7 @@ arch_m88k_get_imm(cpu_t *cpu, m88k_insn const &instr, uint32_t bits,
 	} else if (flags & I_BS)
 		imm |= 0xffff0000;
 
-	return ConstantInt::get(getIntegerType(bits ? bits : cpu->reg_size), imm);
+	return ConstantInt::get(getIntegerType(bits ? bits : cpu->info.word_size), imm);
 }
 
 #define IMM    arch_m88k_get_imm(cpu, instr, 0, I_SEXT, bb)

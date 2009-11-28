@@ -9,12 +9,12 @@
 #define X 1
 #define Y 2
 #define S 3
-#define P 4
-#define ptr_A cpu->ptr_r8[A]
-#define ptr_X cpu->ptr_r8[X]
-#define ptr_Y cpu->ptr_r8[Y]
-#define ptr_S cpu->ptr_r8[S]
-#define ptr_P cpu->ptr_r8[P]
+#define ptr_A cpu->ptr_gpr[A]
+#define ptr_X cpu->ptr_gpr[X]
+#define ptr_Y cpu->ptr_gpr[Y]
+#define ptr_S cpu->ptr_gpr[S]
+//#define P 0
+#define ptr_P cpu->ptr_xr[0]
 
 #define ptr_C ((cc6502_t*)cpu->feptr)->ptr_C
 #define ptr_Z ((cc6502_t*)cpu->feptr)->ptr_Z
@@ -339,8 +339,28 @@ arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 }
 
 static void
-arch_6502_init(cpu_t *cpu)
+arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
+	assert(offsetof(reg_6502_t, pc) == 5);
+
+	// Basic Information
+	info->name = "6502";
+	info->full_name = "MOS 6502";
+
+	// This architecture is little endian, override any user flag.
+	info->common_flags = CPU_FLAG_ENDIAN_LITTLE;
+	// The byte and word size are both 8bits.
+	// The address size is 16bits.
+	info->byte_size = 8;
+	info->word_size = 8;
+	info->address_size = 16;
+	// There are 4 8-bit GPRs
+	info->register_count[CPU_REG_GPR] = 4;
+	info->register_size[CPU_REG_GPR] = info->word_size;
+	// There is also 1 extra register to handle PSR.
+	info->register_count[CPU_REG_XR] = 1;
+	info->register_size[CPU_REG_XR] = 8;
+
 	reg_6502_t *reg;
 	reg = (reg_6502_t*)malloc(sizeof(reg_6502_t));
 	reg->pc = 0;
@@ -349,24 +369,11 @@ arch_6502_init(cpu_t *cpu)
 	reg->y = 0;
 	reg->s = 0xFF;
 	reg->p = 0;
-	cpu->reg = reg;
 
-	cpu->pc_width = 16;
-	cpu->count_regs_i8 = 5;
-	cpu->count_regs_i16 = 0;
-	cpu->count_regs_i32 = 0;
-	cpu->count_regs_i64 = 0;
-	cpu->reg_size = 8;
+	rf->pc = &reg->pc;
+	rf->grf = reg;
 
-	cpu->is_little_endian = true;
-	cpu->fp_reg = NULL;
-	cpu->count_regs_f32 = 0;
-	cpu->count_regs_f64 = 0;
-	cpu->count_regs_f80 = 0;
-	cpu->count_regs_f128 = 0;
-
-	assert(offsetof(reg_6502_t, pc) == 5);
-
+	// allocate space for CC flags.
 	cpu->feptr = malloc(sizeof(cc6502_t));
 	assert(cpu->feptr != NULL);
 }
@@ -375,6 +382,7 @@ static void
 arch_6502_done(cpu_t *cpu)
 {
 	free(cpu->feptr);
+	free(cpu->rf.grf);
 }
 
 static void

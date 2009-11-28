@@ -11,92 +11,110 @@
 // GENERIC: register access
 //////////////////////////////////////////////////////////////////////
 
-static Value **
-ptr_r(cpu_t *cpu)
-{
-	switch (cpu->reg_size) {
-		case 8:
-			return cpu->ptr_r8;
-		case 16:
-			return cpu->ptr_r16;
-		case 32:
-			return cpu->ptr_r32;
-		case 64:
-			return cpu->ptr_r64;
-		default:
-			return 0; /* can't happen */
-	}
-}
-
-static Value **
-ptr_f(cpu_t *cpu)
-{
-	switch (cpu->fp_reg_size) {
-		case 32:
-			return cpu->ptr_f32;
-		case 64:
-			return cpu->ptr_f64;
-		case 80:
-			return cpu->ptr_f80;
-		case 128:
-			return cpu->ptr_f128;
-		default:
-			return 0; /* can't happen */
-	}
-}
+#define IS_LITTLE_ENDIAN(x)   (((cpu)->info.common_flags & CPU_FLAG_ENDIAN_MASK) == CPU_FLAG_ENDIAN_LITTLE)
+#define HAS_SPECIAL_GPR0(cpu) ((cpu)->info.common_flags & CPU_FLAG_HARDWIRE_GPR0)
+#define HAS_SPECIAL_FPR0(cpu) ((cpu)->info.common_flags & CPU_FLAG_HARDWIRE_FPR0)
 
 // GET REGISTER
 Value *
 arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
 	Value *v;
+	Value **regs = cpu->ptr_gpr;
+	uint32_t size = cpu->info.register_size[CPU_REG_GPR];
+	uint32_t count = cpu->info.register_count[CPU_REG_GPR];
 
-	/* R0 is always 0 (on certain RISCs) */
-	if (cpu->has_special_r0 && !index)
-		return CONSTs(bits? bits : cpu->reg_size, 0);
+	/*
+	 * XXX If the index is past the number of the available GPRs,
+	 * then it's considered an XR.  This is in order to maintain
+	 * compatibility with the current implementation.
+	 */
+	if (index >= count) {
+		index -= count;
+		regs = cpu->ptr_xr;
+		size = cpu->info.register_size[CPU_REG_XR];
+		count = cpu->info.register_count[CPU_REG_XR];
+		if (index >= count) {
+			assert(0 && "GPR/XR register index is out of range!");
+			return NULL;
+		}
+	} else {
+		/* R0 is always 0 (on certain RISCs) */
+		if (HAS_SPECIAL_GPR0(cpu) && index == 0)
+			return CONSTs(bits ? bits : size, 0);
+	}
 
 	/* get the register */
-	v = new LoadInst(ptr_r(cpu)[index], "", false, bb);
+	v = new LoadInst(regs[index], "", false, bb);
 
 	/* optionally truncate it */
-	if (bits && cpu->reg_size != bits)
+	if (bits != 0 && bits < size)
 		v = TRUNC(bits, v);
-	
+
 	return v;
 }
 
 Value *
-arch_get_fp_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
-	Value *v;
-
+arch_get_fp_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb)
+{
+	assert(index < cpu->info.register_count[CPU_REG_FPR]);
 	/* get the register */
-	return new LoadInst(ptr_f(cpu)[index], "", false, bb);
+	return new LoadInst(cpu->ptr_fpr[index], "", false, bb);
 }
 
 // PUT REGISTER
 Value *
-arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, BasicBlock *bb) {
+arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext,
+	BasicBlock *bb)
+{
+	Value **regs = cpu->ptr_gpr;
+	uint32_t size = cpu->info.register_size[CPU_REG_GPR];
+	uint32_t count = cpu->info.register_count[CPU_REG_GPR];
+
+	/*
+	 * XXX If the index is past the number of the available GPRs,
+	 * then it's considered an XR.  This is in order to maintain
+	 * compatibility with the current implementation.
+	 */
+	if (index >= count) {
+		index -= count;
+		regs = cpu->ptr_xr;
+		size = cpu->info.register_size[CPU_REG_XR];
+		count = cpu->info.register_count[CPU_REG_XR];
+		if (index >= count) {
+			assert(0 && "GPR/XR register index is out of range!");
+			return NULL;
+		}
+	} 
+
 	/*
 	 * if the caller cares about bit size and
 	 * the size is not the register size, we'll zext or sext
 	 */
-	if (bits && cpu->reg_size != bits)
+	if (bits != 0 && size != bits) {
 		if (sext)
-			v = SEXT(cpu->reg_size, v);
+			v = SEXT(size, v);
 		else
-			v = ZEXT(cpu->reg_size, v);
+			v = ZEXT(size, v);
+	}
 
 	/* store value, unless it's R0 (on certain RISCs) */
-	if (!cpu->has_special_r0 || index)
-		new StoreInst(v, ptr_r(cpu)[index], bb);
+	if (regs == cpu->ptr_xr || !HAS_SPECIAL_GPR0(cpu) || index != 0)
+		new StoreInst(v, regs[index], bb);
 
 	return v;
 }
 
 void
-arch_put_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, BasicBlock *bb) {
+arch_put_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits,
+	BasicBlock *bb)
+{
+	assert(index < cpu->info.register_count[CPU_REG_FPR]);
+	assert(bits == cpu->info.float_size);
+
 	/* store value, unless it's R0 (on certain RISCs) */
-	if (!cpu->has_special_fr0 || index)
-		new StoreInst(v, ptr_f(cpu)[index], bb);
+	if (!HAS_SPECIAL_FPR0(cpu) || index != 0) {
+		new StoreInst(v, cpu->ptr_fpr[index], bb);
+	}
 }
 
 //XXX TODO
@@ -149,8 +167,7 @@ arch_gep32(cpu_t *cpu, Value *a, BasicBlock *bb) {
 Value *
 arch_load32_aligned(cpu_t *cpu, Value *a, BasicBlock *bb) {
 	a = arch_gep32(cpu, a, bb);
-	bool swap = (cpu->exec_engine->getTargetData()->isLittleEndian () ^ cpu->is_little_endian);
-	if(swap)
+	if (cpu->flags & CPU_FLAG_SWAPMEM)
 		return SWAP32(new LoadInst(a, "", false, bb));
 	else
 		return new LoadInst(a, "", false, bb);
@@ -160,8 +177,7 @@ arch_load32_aligned(cpu_t *cpu, Value *a, BasicBlock *bb) {
 void
 arch_store32_aligned(cpu_t *cpu, Value *v, Value *a, BasicBlock *bb) {
 	a = arch_gep32(cpu, a, bb);
-	bool swap = (cpu->exec_engine->getTargetData()->isLittleEndian () ^ cpu->is_little_endian);
-	new StoreInst(swap ? SWAP32(v) : v, a, bb);
+	new StoreInst((cpu->flags & CPU_FLAG_SWAPMEM) ? SWAP32(v) : v, a, bb);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -172,7 +188,7 @@ static Value *
 arch_get_shift8(cpu_t *cpu, Value *addr, BasicBlock *bb)
 {
 	Value *shift = AND(addr,CONST(3));
-	if (!cpu->is_little_endian)
+	if (!IS_LITTLE_ENDIAN(cpu))
 		shift = XOR(shift, CONST(3));
 	return SHL(shift, CONST(3));
 }
@@ -181,7 +197,7 @@ static Value *
 arch_get_shift16(cpu_t *cpu, Value *addr, BasicBlock *bb)
 {
 	Value *shift = AND(LSHR(addr,CONST(1)),CONST(1));
-	if (!cpu->is_little_endian)
+	if (!IS_LITTLE_ENDIAN(cpu))
 		shift = XOR(shift, CONST(1));
 	return SHL(shift, CONST(4));
 }

@@ -58,6 +58,8 @@
 
 #include "libcpu.h"
 
+#define IS_LITTLE_ENDIAN(x) (((cpu)->info.common_flags & CPU_FLAG_ENDIAN_MASK) == CPU_FLAG_ENDIAN_LITTLE)
+
 #define ALIGN8(x) (((x) + 7) & -8)
 
 typedef struct _idbg {
@@ -67,11 +69,11 @@ typedef struct _idbg {
 	unsigned old_optimize_flags;
 	unsigned old_debug_flags;
 
-	unsigned reg_format;
-	unsigned reg_count;
+	unsigned gpr_format;
+	unsigned gpr_count;
 
-	unsigned fp_reg_format;
-	unsigned fp_reg_count;
+	unsigned fpr_format;
+	unsigned fpr_count;
 
 	uint64_t saved_pc;
 	uint64_t saved_psr;
@@ -276,7 +278,7 @@ idbg_read_hword(idbg_t *ctx, addr_t address, uint16_t *half)
 	uint8_t b[2];
 	cpu_t *cpu = ctx->cpu;
 
-	if (cpu->is_little_endian) {
+	if (IS_LITTLE_ENDIAN(cpu)) {
 		b[1] = cpu->RAM[address+0];
 		b[0] = cpu->RAM[address+1];
 	} else {
@@ -293,7 +295,7 @@ idbg_read_word(idbg_t *ctx, addr_t address, uint32_t *word)
 	uint8_t b[2];
 	cpu_t *cpu = ctx->cpu;
 
-	if (cpu->is_little_endian) {
+	if (IS_LITTLE_ENDIAN(cpu)) {
 		b[3] = cpu->RAM[address+0];
 		b[2] = cpu->RAM[address+1];
 		b[1] = cpu->RAM[address+2];
@@ -312,12 +314,13 @@ static inline int
 idbg_read_dword(idbg_t *ctx, addr_t address, uint64_t *dword)
 {
   	uint32_t w[2];
+	cpu_t *cpu = ctx->cpu;
 
 	if (idbg_read_word(ctx, address, w + 0) ||
 		idbg_read_word(ctx, address + 4, w + 1))
 		return (-1);
 
-	if (ctx->cpu->is_little_endian)
+	if (IS_LITTLE_ENDIAN(cpu))
 		*dword = ((uint64_t)w[1] << 32) | w[0];
 	else
 		*dword = ((uint64_t)w[0] << 32) | w[1];
@@ -335,7 +338,7 @@ idbg_read_qword(idbg_t *ctx, addr_t address, uint64_t *qword)
 		idbg_read_dword(ctx, address + 8, w + 1))
 		return (-1);
 
-	if (ctx->cpu->is_little_endian) {
+	if (IS_LITTLE_ENDIAN(cpu)) {
 		qword[0] = w[1];
 		qword[1] = w[0];
 	} else {
@@ -350,8 +353,9 @@ idbg_read_tword(idbg_t *ctx, addr_t address, uint64_t *tword)
 {
   	uint64_t lo;
 	uint16_t hi;
+	cpu_t *cpu = ctx->cpu;
 
-	if (ctx->cpu->is_little_endian) {
+	if (IS_LITTLE_ENDIAN(cpu)) {
 		if (idbg_read_dword(ctx, address, &lo) ||
 			idbg_read_hword(ctx, address + 8, &hi))
 			return (-1);
@@ -523,7 +527,7 @@ idbg_examine_one(idbg_t *ctx, addr_t address, unsigned format,
 static void
 idbg_print_address(idbg_t *ctx, addr_t address)
 {
-	idbg_print_int_value(address, ctx->cpu->reg_size, -1, M_HEX);
+	idbg_print_int_value(address, ctx->cpu->info.address_size, -1, M_HEX);
 }
 
 static void
@@ -531,10 +535,10 @@ idbg_print_register(idbg_t *ctx, unsigned type, void const *value,
 	unsigned mode)
 {
 	if (type == R_GPR) {
-		idbg_print_int_value(*(uint64_t *)value, ctx->cpu->reg_size,
+		idbg_print_int_value(*(uint64_t *)value, ctx->cpu->info.word_size,
 			0, mode);
 	} else if (type == R_FPR) {
-		switch (ctx->fp_reg_format) {
+		switch (ctx->fpr_format) {
 		  	case F_FLOAT32:
 				idbg_print_float32(*(uint32_t *)value, true);
 				break;
@@ -554,36 +558,38 @@ idbg_print_register(idbg_t *ctx, unsigned type, void const *value,
 //////////////////////////////////////////////////////////////////////////////
 
 static inline unsigned
-reg_size_to_type(cpu_t *cpu)
+gpr_size_to_type(cpu_t *cpu)
 {
 	unsigned format = F_INVALID;
+  uint32_t size = cpu->info.register_size[CPU_REG_GPR];
 
-	if (cpu->reg_size <= 8)
+	if (size <= 8)
 		format = F_BYTE;
-	else if (cpu->reg_size <= 16)
+	else if (size <= 16)
 		format = F_HWORD;
-	else if (cpu->reg_size <= 32)
+	else if (size <= 32)
 		format = F_WORD;
-	else if (cpu->reg_size <= 64)
+	else if (size <= 64)
 		format = F_DWORD;
-	else if (cpu->reg_size <= 128)
+	else if (size <= 128)
 		format = F_QWORD;
 
 	return format;
 }
 
 static inline unsigned
-fp_reg_size_to_type(cpu_t *cpu)
+fpr_size_to_type(cpu_t *cpu)
 {
 	unsigned format = F_INVALID;
+  uint32_t size = cpu->info.register_size[CPU_REG_FPR];
 
-	if (cpu->fp_reg_size == 32)
+	if (size == 32)
 		format = F_FLOAT32;
-	else if (cpu->fp_reg_size == 64)
+	else if (size == 64)
 		format = F_FLOAT64;
-	else if (cpu->fp_reg_size == 80)
+	else if (size == 80)
 		format = F_FLOAT80;
-	else if (cpu->fp_reg_size == 128)
+	else if (size == 128)
 		format = F_FLOAT128;
 
 	return format;
@@ -595,9 +601,9 @@ idbg_init(cpu_t *cpu, debug_function_t debug_func, idbg_t *ctx)
 	ctx->cpu = cpu;
 	ctx->debug_function = debug_func;
 
-	ctx->reg_format = reg_size_to_type(cpu);
-	ctx->fp_reg_format = fp_reg_size_to_type(cpu);
-	
+	ctx->gpr_format = gpr_size_to_type(cpu);
+	ctx->fpr_format = fpr_size_to_type(cpu);
+
 	//
 	// Allocate memory to compute register differences.
 	//
@@ -610,16 +616,16 @@ idbg_init(cpu_t *cpu, debug_function_t debug_func, idbg_t *ctx)
 	// the architecture.
 	for (size_t n = 0; ; n++) {
 		uint64_t v;
-		if (cpu->f.get_reg(cpu, cpu->reg, n, &v)) {
-			ctx->reg_count = n;
+		if (cpu->f.get_reg(cpu, cpu->rf.grf, n, &v)) {
+			ctx->gpr_count = n;
 			break;
 		}
 	}
 
 	for (size_t n = 0; ; n++) {
 		fp128_reg_t v;
-		if (cpu->f.get_fp_reg(cpu, cpu->fp_reg, n, &v)) {
-			ctx->fp_reg_count = n;
+		if (cpu->f.get_fp_reg(cpu, cpu->rf.frf, n, &v)) {
+			ctx->fpr_count = n;
 			break;
 		}
 	}
@@ -627,12 +633,12 @@ idbg_init(cpu_t *cpu, debug_function_t debug_func, idbg_t *ctx)
 	ctx->saved_pc = 0;
 	ctx->saved_psr = 0;
 
-	if (ctx->reg_count != 0) {
-		ctx->saved_regs = (uint64_t *)malloc(sizeof(uint64_t) * ctx->reg_count);
+	if (ctx->gpr_count != 0) {
+		ctx->saved_regs = (uint64_t *)malloc(sizeof(uint64_t) * ctx->gpr_count);
 		assert(ctx->saved_regs != NULL);
 	}
-	if (ctx->fp_reg_count != 0) {
-		ctx->saved_fp_regs = (fp128_reg_t *)malloc(sizeof(fp128_reg_t) * ctx->fp_reg_count);
+	if (ctx->fpr_count != 0) {
+		ctx->saved_fp_regs = (fp128_reg_t *)malloc(sizeof(fp128_reg_t) * ctx->fpr_count);
 		assert(ctx->saved_fp_regs != NULL);
 	}
 
@@ -667,17 +673,17 @@ idbg_save_registers(idbg_t *ctx)
   	size_t n;
   	cpu_t *cpu = ctx->cpu;
 
-	// save pc & psr
-  	ctx->saved_pc = cpu->f.get_pc(cpu, cpu->reg);
-	ctx->saved_psr = cpu->f.get_psr(cpu, cpu->reg);
+    // save pc & psr
+  	ctx->saved_pc = cpu->f.get_pc(cpu, cpu->rf.grf);
+    ctx->saved_psr = cpu->f.get_psr(cpu, cpu->rf.grf);
 
-	// save gpr
-	for (n = 0; n < ctx->reg_count; n++)
-		cpu->f.get_reg(cpu, cpu->reg, n, ctx->saved_regs + n);
+    // save gpr
+    for (n = 0; n < ctx->gpr_count; n++)
+		cpu->f.get_reg(cpu, cpu->rf.grf, n, ctx->saved_regs + n);
 
-	// save fpr
-	for (n = 0; n < ctx->fp_reg_count; n++)
-		cpu->f.get_fp_reg(cpu, cpu->fp_reg, n, ctx->saved_fp_regs + n);
+    // save fpr
+    for (n = 0; n < ctx->fpr_count; n++)
+		cpu->f.get_fp_reg(cpu, cpu->rf.frf, n, ctx->saved_fp_regs + n);
 }
 
 static void
@@ -686,7 +692,7 @@ idbg_diff_registers(idbg_t *ctx)
   	size_t n;
 	cpu_t *cpu = ctx->cpu;
 
-	uint64_t pc = cpu->f.get_pc(cpu, cpu->reg);
+	uint64_t pc = cpu->f.get_pc(cpu, cpu->rf.grf);
 	if (pc != ctx->saved_pc) {
 		fprintf(stdout, "pc:\t");
 		idbg_print_address(ctx, ctx->saved_pc);
@@ -695,7 +701,7 @@ idbg_diff_registers(idbg_t *ctx)
 		fprintf(stdout, "\n");
 	}
 
-	uint64_t psr = cpu->f.get_psr(cpu, cpu->reg);
+	uint64_t psr = cpu->f.get_psr(cpu, cpu->rf.grf);
 	if (psr != ctx->saved_psr) {
 		fprintf(stdout, "psr:\t");
 		idbg_print_address(ctx, ctx->saved_psr);
@@ -704,9 +710,9 @@ idbg_diff_registers(idbg_t *ctx)
 		fprintf(stdout, "\n");
 	}
 
-	for (n = 0; n < ctx->reg_count; n++) {
+	for (n = 0; n < ctx->gpr_count; n++) {
 		uint64_t v;
-		cpu->f.get_reg(cpu, cpu->reg, n, &v);
+		cpu->f.get_reg(cpu, cpu->rf.grf, n, &v);
 		if (v != ctx->saved_regs[n]) {
 			fprintf(stdout, "r%u:\t", (unsigned)n);
 			idbg_print_address(ctx, ctx->saved_regs[n]);
@@ -718,10 +724,10 @@ idbg_diff_registers(idbg_t *ctx)
 	}
 
 #if 0
-	for (n = 0; n < ctx->fp_reg_count; n++) {
+	for (n = 0; n < ctx->fpr_count; n++) {
 		fp128_reg_t v;
 
-		cpu->f.get_fp_reg(cpu, cpu->fp_reg, n, &v);
+		cpu->f.get_fp_reg(cpu, cpu->frf, n, &v);
 		if (memcmp(&v, cpu->saved_fp_regs + n, sizeof(v)) != 0) {
 			fprintf(stdout, "f%u:\t", n);
 			idbg_print_float(ctx, &ctx->saved_fp_regs[n]);
@@ -881,13 +887,13 @@ idbg_address_operand(idbg_t *ctx, char const *token, addr_t *address)
 		if (*token == '\0')
 			return (-1);
 		if (strncmp(token, "pc", 2) == 0)
-			value = cpu->f.get_pc((cpu_t *)cpu, cpu->reg);
+			value = cpu->f.get_pc((cpu_t *)cpu, cpu->rf.grf);
 		else if (*token == 'r' || isdigit(*token)) {
 			if (!isdigit(*token))
 				token++;
 			if (!isdigit(*token))
 				return (-1);
-			if (cpu->f.get_reg((cpu_t *)cpu, cpu->reg, atoi(token), &value))
+			if (cpu->f.get_reg((cpu_t *)cpu, cpu->rf.grf, atoi(token), &value))
 				return (-1);
 		} else
 			return (-1);
@@ -916,11 +922,11 @@ idbg_register_operand(idbg_t *ctx, char const *token, unsigned *type, int *index
 			return (-1);
 		if (strncmp(token, "pc", 2) == 0) {
 			*index = -1;
-			*(uint64_t *)value = cpu->f.get_pc((cpu_t *)cpu, cpu->reg);
+			*(uint64_t *)value = cpu->f.get_pc((cpu_t *)cpu, cpu->rf.grf);
 			*type = R_GPR;
 		} else if (strncmp(token, "psr", 2) == 0) {
 			*index = -2;
-			*(uint64_t *)value = cpu->f.get_psr((cpu_t *)cpu, cpu->reg);
+			*(uint64_t *)value = cpu->f.get_psr((cpu_t *)cpu, cpu->rf.grf);
 			*type = R_GPR;
 		} else if (*token == 'r' || isdigit(*token)) {
 			if (!isdigit(*token))
@@ -928,7 +934,7 @@ idbg_register_operand(idbg_t *ctx, char const *token, unsigned *type, int *index
 			if (!isdigit(*token))
 				return (-1);
 			*index = atoi(token);
-			if (cpu->f.get_reg(cpu, cpu->reg, *index, (uint64_t *)value))
+			if (cpu->f.get_reg(cpu, cpu->rf.grf, *index, (uint64_t *)value))
 				return (-1);
 			*type = R_GPR;
 		} else if (*token == 'f') {
@@ -936,7 +942,8 @@ idbg_register_operand(idbg_t *ctx, char const *token, unsigned *type, int *index
 			if (!isdigit(*token))
 				return (-1);
 			*index = atoi(token);
-			if (cpu->f.get_fp_reg(cpu, cpu->fp_reg, *index, (fp128_reg_t *)value))
+			if (cpu->f.get_fp_reg(cpu, cpu->rf.frf, *index,
+				  (fp128_reg_t *)value))
 				return (-1);
 			*type = R_FPR;
 		}
@@ -1043,7 +1050,7 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 	idbg_init(cpu, debug_function, &ctx);
 
 	idbg_input_init();
-	format = ctx.reg_format;
+	format = ctx.gpr_format;
 	mode = M_HEX;
 	for (;;) {
 		char const *p;

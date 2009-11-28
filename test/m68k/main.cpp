@@ -172,7 +172,7 @@ asm("nop");
 
 static void
 debug_function(cpu_t *cpu) {
-	reg_m68k_t *reg = (reg_m68k_t*)cpu->reg;
+	reg_m68k_t *reg = (reg_m68k_t*)cpu->rf.grf;
 	fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
 }
 
@@ -187,12 +187,10 @@ main(int argc, char **argv) {
 	int ramsize = 65536;
 	RAM = (uint8_t*)malloc(ramsize);
 
-	cpu = cpu_new(CPU_ARCH_M68K);
+	cpu = cpu_new(CPU_ARCH_M68K, 0, 0);
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
 	cpu_set_ram(cpu, RAM);
-
-	cpu_init(cpu);
 
 /* parameter parsing */
 	if (argc<2) {
@@ -234,12 +232,12 @@ main(int argc, char **argv) {
 
 	printf("*** Executing...\n");
 
-#define PC (((reg_6502_t*)cpu->reg)->pc)
-#define A (((reg_6502_t*)cpu->reg)->a)
-#define X (((reg_6502_t*)cpu->reg)->x)
-#define Y (((reg_6502_t*)cpu->reg)->y)
-#define S (((reg_6502_t*)cpu->reg)->s)
-#define P (((reg_6502_t*)cpu->reg)->p)
+#define PC (((reg_6502_t*)cpu->rf.grf)->pc)
+#define A (((reg_6502_t*)cpu->rf.grf)->a)
+#define X (((reg_6502_t*)cpu->rf.grf)->x)
+#define Y (((reg_6502_t*)cpu->rf.grf)->y)
+#define S (((reg_6502_t*)cpu->rf.grf)->s)
+#define P (((reg_6502_t*)cpu->rf.grf)->p)
 
 	PC = cpu->code_entry;
 	S = 0xFF;

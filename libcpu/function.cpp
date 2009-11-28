@@ -4,23 +4,32 @@
  * Create the master function and fill it with the helper
  * basic blocks
  */
-//XXX this is MESSY!
+
 #include "libcpu.h"
+
+//////////////////////////////////////////////////////////////////////
+// function
+//////////////////////////////////////////////////////////////////////
 
 static StructType *
 get_struct_reg(cpu_t *cpu) {
 	std::vector<const Type*>type_struct_reg_t_fields;
 
-	for (uint32_t i = 0; i < cpu->count_regs_i8; i++) /* 8 bit registers */
-		type_struct_reg_t_fields.push_back(getIntegerType(8));
-	for (uint32_t i = 0; i < cpu->count_regs_i16; i++) /* 16 bit registers */
-		type_struct_reg_t_fields.push_back(getIntegerType(16));
-	for (uint32_t i = 0; i < cpu->count_regs_i32; i++) /* 32 bit registers */
-		type_struct_reg_t_fields.push_back(getIntegerType(32));
-	for (uint32_t i = 0; i < cpu->count_regs_i64; i++) /* 64 bit registers */
-		type_struct_reg_t_fields.push_back(getIntegerType(64));
+	uint32_t count, size;
+	
+	// GPRs
+	count = cpu->info.register_count[CPU_REG_GPR];
+	size  = cpu->info.register_size[CPU_REG_GPR];
+	for (uint32_t n = 0; n < count; n++)
+		type_struct_reg_t_fields.push_back(getIntegerType(size));
 
-	type_struct_reg_t_fields.push_back(getIntegerType(cpu->pc_width)); /* PC */
+	// XRs
+	count = cpu->info.register_count[CPU_REG_XR];
+	size  = cpu->info.register_size[CPU_REG_XR];
+	for (uint32_t n = 0; n < count; n++)
+		type_struct_reg_t_fields.push_back(getIntegerType(size));
+
+//	type_struct_reg_t_fields.push_back(getIntegerType(cpu->info.address_size)); /* PC */
 
 	return getStructType(type_struct_reg_t_fields, /*isPacked=*/true);
 }
@@ -29,26 +38,30 @@ static StructType *
 get_struct_fp_reg(cpu_t *cpu) {
 	std::vector<const Type*>type_struct_fp_reg_t_fields;
 
-	for (uint32_t i = 0; i < cpu->count_regs_f32; i++) /* 32 bit registers */
-		type_struct_fp_reg_t_fields.push_back(getFloatType(32));
-	for (uint32_t i = 0; i < cpu->count_regs_f64; i++) /* 64 bit registers */
-		type_struct_fp_reg_t_fields.push_back(getFloatType(64));
-	for (uint32_t i = 0; i < cpu->count_regs_f80; i++) { /* 80 bit registers */
-		if (cpu->flags & CPU_FLAG_FP80)
-			type_struct_fp_reg_t_fields.push_back(getFloatType(80));
-		else {
-			/* two 64bits words hold the data */
-			type_struct_fp_reg_t_fields.push_back(getIntegerType(64));
-			type_struct_fp_reg_t_fields.push_back(getIntegerType(64));
-		}
-	}
-	for (uint32_t i = 0; i < cpu->count_regs_f128; i++) { /* 128 bit registers */
-		if (cpu->flags & CPU_FLAG_FP128)
-			type_struct_fp_reg_t_fields.push_back(getFloatType(128));
-		else {
-			/* two 64bits words hold the data */
-			type_struct_fp_reg_t_fields.push_back(getIntegerType(64));
-			type_struct_fp_reg_t_fields.push_back(getIntegerType(64));
+	uint32_t count, size;
+
+	count = cpu->info.register_count[CPU_REG_FPR];
+	size  = cpu->info.register_size[CPU_REG_FPR];
+	for (uint32_t n = 0; n < count; n++) {
+		if (size == 80) {
+			if ((cpu->flags & CPU_FLAG_FP80) == 0) {
+				/* two 64bits words hold the data */
+				type_struct_fp_reg_t_fields.push_back(getIntegerType(64));
+				type_struct_fp_reg_t_fields.push_back(getIntegerType(64));
+			} else {
+				// XXX ensure it is aligned to 16byte boundary!
+				type_struct_fp_reg_t_fields.push_back(getFloatType(80));
+			}
+		} else if (size == 128) {
+			if ((cpu->flags & CPU_FLAG_FP128) == 0) {
+				/* two 64bits words hold the data */
+				type_struct_fp_reg_t_fields.push_back(getIntegerType(64));
+				type_struct_fp_reg_t_fields.push_back(getIntegerType(64));
+			} else {
+				type_struct_fp_reg_t_fields.push_back(getFloatType(128));
+			}
+		} else {
+			type_struct_fp_reg_t_fields.push_back(getFloatType(size));
 		}
 	}
 
@@ -67,21 +80,25 @@ get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
 }
 
 static void
-emit_decode_reg_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb) {
+emit_decode_reg_helper(cpu_t *cpu, uint32_t count, uint32_t width,
+	uint32_t offset, Value *rf, Value **in_ptr_r, Value **ptr_r,
+	char const *rcname, BasicBlock *bb)
+{
 #ifdef OPT_LOCAL_REGISTERS
 	// decode struct reg and copy the registers into local variables
-	for (int i = 0; i < count; i++) {
+	for (uint32_t i = 0; i < count; i++) {
 		char reg_name[16];
-		snprintf(reg_name, sizeof(reg_name), "gpr_%u", i);
-		in_ptr_r[i] = get_struct_member_pointer(cpu->ptr_reg, i, bb);
+		snprintf(reg_name, sizeof(reg_name), "%s_%u", rcname, i);
+
+		in_ptr_r[i] = get_struct_member_pointer(rf, i + offset, bb);
 		ptr_r[i] = new AllocaInst(getIntegerType(width), reg_name, bb);
 		LoadInst* v = new LoadInst(in_ptr_r[i], "", false, bb);
 		new StoreInst(v, ptr_r[i], false, bb);
 	}
 #else
 	// just decode struct reg
-	for (int i = 0; i < count; i++) 
-		ptr_r[i] = get_struct_member_pointer(cpu->ptr_reg, i, bb);
+	for (uint32_t i = 0; i < count; i++) 
+		ptr_r[i] = get_struct_member_pointer(rf, i + offset, bb);
 #endif
 }
 
@@ -91,31 +108,31 @@ fp_alignment(unsigned width) {
 }
 
 static void
-emit_decode_fp_reg_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r,
-	Value **ptr_r, BasicBlock *bb)
+emit_decode_fp_reg_helper(cpu_t *cpu, uint32_t count, uint32_t width,
+	Value **in_ptr_r, Value **ptr_r, BasicBlock *bb)
 {
 #ifdef OPT_LOCAL_REGISTERS
 	// decode struct reg and copy the registers into local variables
-	for (int i = 0; i < count; i++) {
+	for (uint32_t i = 0; i < count; i++) {
 		char reg_name[16];
 		if ((width == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) ||
 			(width == 128 && (cpu->flags & CPU_FLAG_FP128) == 0)) {
 			snprintf(reg_name, sizeof(reg_name), "fpr_%u_0", i);
 
-			in_ptr_r[i*2+0] = get_struct_member_pointer(cpu->ptr_fp_reg, i*2+0, bb);
+			in_ptr_r[i*2+0] = get_struct_member_pointer(cpu->ptr_frf, i*2+0, bb);
 			ptr_r[i*2+0] = new AllocaInst(getIntegerType(64), 0, 0, reg_name, bb);
 			LoadInst* v = new LoadInst(in_ptr_r[i*2+0], "", false, 0, bb);
 			new StoreInst(v, ptr_r[i*2+0], false, 0, bb);
 
 			snprintf(reg_name, sizeof(reg_name), "fpr_%u_1", i);
 
-			in_ptr_r[i*2+1] = get_struct_member_pointer(cpu->ptr_fp_reg, i*2+1, bb);
+			in_ptr_r[i*2+1] = get_struct_member_pointer(cpu->ptr_frf, i*2+1, bb);
 			ptr_r[i*2+1] = new AllocaInst(getIntegerType(64), 0, 0, reg_name, bb);
 			v = new LoadInst(in_ptr_r[i*2+1], "", false, 0, bb);
 			new StoreInst(v, ptr_r[i*2+1], false, 0, bb);
 		} else {
 			snprintf(reg_name, sizeof(reg_name), "fpr_%u", i);
-			in_ptr_r[i] = get_struct_member_pointer(cpu->ptr_fp_reg, i, bb);
+			in_ptr_r[i] = get_struct_member_pointer(cpu->ptr_frf, i, bb);
 			ptr_r[i] = new AllocaInst(getFloatType(width), 0, fp_alignment(width), reg_name, bb);
 			LoadInst* v = new LoadInst(in_ptr_r[i], "", false, fp_alignment(width), bb);
 			new StoreInst(v, ptr_r[i], false, fp_alignment(width), bb);
@@ -123,40 +140,47 @@ emit_decode_fp_reg_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r,
 	}
 #else
 	// just decode struct reg
-	for (int i = 0; i < count; i++) 
-		ptr_r[i] = get_struct_member_pointer(cpu->ptr_fp_reg, i, bb);
+	for (uint32_t i = 0; i < count; i++) 
+		ptr_r[i] = get_struct_member_pointer(cpu->ptr_frf, i, bb);
 #endif
 }
 
 static void
 emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
-	emit_decode_reg_helper(cpu, cpu->count_regs_i8,   8, cpu->in_ptr_r8,  cpu->ptr_r8,  bb);
-	emit_decode_reg_helper(cpu, cpu->count_regs_i16, 16, cpu->in_ptr_r16, cpu->ptr_r16, bb);
-	emit_decode_reg_helper(cpu, cpu->count_regs_i32, 32, cpu->in_ptr_r32, cpu->ptr_r32, bb);
-	emit_decode_reg_helper(cpu, cpu->count_regs_i64, 64, cpu->in_ptr_r64, cpu->ptr_r64, bb);
+	// GPRs
+	emit_decode_reg_helper(cpu, cpu->info.register_count[CPU_REG_GPR],
+		cpu->info.register_size[CPU_REG_GPR], 0, cpu->ptr_grf,
+		cpu->in_ptr_gpr, cpu->ptr_gpr, "gpr", bb);
 
-	emit_decode_fp_reg_helper(cpu, cpu->count_regs_f32, 32, cpu->in_ptr_f32, cpu->ptr_f32, bb);
-	emit_decode_fp_reg_helper(cpu, cpu->count_regs_f64, 64, cpu->in_ptr_f64, cpu->ptr_f64, bb);
-	emit_decode_fp_reg_helper(cpu, cpu->count_regs_f80, 80, cpu->in_ptr_f80, cpu->ptr_f80, bb);
-	emit_decode_fp_reg_helper(cpu, cpu->count_regs_f128, 128, cpu->in_ptr_f128, cpu->ptr_f128, bb);
+	// XRs
+	emit_decode_reg_helper(cpu, cpu->info.register_count[CPU_REG_XR],
+		cpu->info.register_size[CPU_REG_XR],
+		cpu->info.register_count[CPU_REG_GPR], cpu->ptr_grf,
+		cpu->in_ptr_xr, cpu->ptr_xr, "xr", bb);
 
-	uint32_t pc_index = 
-		cpu->count_regs_i8 +
-		cpu->count_regs_i16+
-		cpu->count_regs_i32+
-		cpu->count_regs_i64;
-	cpu->ptr_PC = get_struct_member_pointer(cpu->ptr_reg, pc_index, bb);
+	// FPRs
+	emit_decode_fp_reg_helper(cpu, cpu->info.register_count[CPU_REG_FPR],
+		cpu->info.register_size[CPU_REG_FPR], cpu->in_ptr_fpr,
+		cpu->ptr_fpr, bb);
 
-	if (cpu->f.emit_decode_reg) /* cpu specific part */
+	// PC pointer.
+	Type const *intptr_type = cpu->exec_engine->getTargetData()->getIntPtrType(_CTX());
+	Constant *v_pc = ConstantInt::get(intptr_type, (uintptr_t)cpu->rf.pc);
+	cpu->ptr_PC = ConstantExpr::getIntToPtr(v_pc, PointerType::getUnqual(getIntegerType(cpu->info.address_size)));
+	cpu->ptr_PC->setName("pc");
+	
+	// frontend specific part
+	if (cpu->f.emit_decode_reg != NULL)
 		cpu->f.emit_decode_reg(cpu, bb);
 }
 
 static void
-spill_reg_state_helper(int count, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb)
+spill_reg_state_helper(uint32_t count, Value **in_ptr_r, Value **ptr_r,
+	BasicBlock *bb)
 {
 #ifdef OPT_LOCAL_REGISTERS
-	for (int i=0; i<count; i++) {
+	for (uint32_t i = 0; i < count; i++) {
 		LoadInst* v = new LoadInst(ptr_r[i], "", false, bb);
 		new StoreInst(v, in_ptr_r[i], false, bb);
 	}
@@ -164,11 +188,11 @@ spill_reg_state_helper(int count, Value **in_ptr_r, Value **ptr_r, BasicBlock *b
 }
 
 static void
-spill_fp_reg_state_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r,
-	Value **ptr_r, BasicBlock *bb)
+spill_fp_reg_state_helper(cpu_t *cpu, uint32_t count, uint32_t width,
+	Value **in_ptr_r, Value **ptr_r, BasicBlock *bb)
 {
 #ifdef OPT_LOCAL_REGISTERS
-	for (int i=0; i<count; i++) {
+	for (uint32_t i = 0; i < count; i++) {
 		if ((width == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) ||
 			(width == 128 && (cpu->flags & CPU_FLAG_FP128) == 0)) {
 			LoadInst* v = new LoadInst(ptr_r[i*2+0], "", false, 0, bb);
@@ -177,7 +201,8 @@ spill_fp_reg_state_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r,
 			v = new LoadInst(ptr_r[i*2+1], "", false, 0, bb);
 			new StoreInst(v, in_ptr_r[i*2+1], false, 0, bb);
 		} else {
-			LoadInst* v = new LoadInst(ptr_r[i], "", false, fp_alignment(width), bb);
+			LoadInst* v = new LoadInst(ptr_r[i], "", false,
+				fp_alignment(width), bb);
 			new StoreInst(v, in_ptr_r[i], false, fp_alignment(width), bb);
 		}
 	}
@@ -187,18 +212,22 @@ spill_fp_reg_state_helper(cpu_t *cpu, int count, int width, Value **in_ptr_r,
 static void
 spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
-	if (cpu->f.spill_reg_state) /* cpu specific part */
+	// frontend specific part.
+	if (cpu->f.spill_reg_state != NULL)
 		cpu->f.spill_reg_state(cpu, bb);
 
-	spill_reg_state_helper(cpu->count_regs_i8,  cpu->in_ptr_r8,  cpu->ptr_r8,  bb);
-	spill_reg_state_helper(cpu->count_regs_i16, cpu->in_ptr_r16, cpu->ptr_r16, bb);
-	spill_reg_state_helper(cpu->count_regs_i32, cpu->in_ptr_r32, cpu->ptr_r32, bb);
-	spill_reg_state_helper(cpu->count_regs_i64, cpu->in_ptr_r64, cpu->ptr_r64, bb);
+	// GPRs
+	spill_reg_state_helper(cpu->info.register_count[CPU_REG_GPR],
+		cpu->in_ptr_gpr, cpu->ptr_gpr, bb);
 
-	spill_fp_reg_state_helper(cpu, cpu->count_regs_f32, 32, cpu->in_ptr_f32, cpu->ptr_f32, bb);
-	spill_fp_reg_state_helper(cpu, cpu->count_regs_f64, 64, cpu->in_ptr_f64, cpu->ptr_f64, bb);
-	spill_fp_reg_state_helper(cpu, cpu->count_regs_f80, 80, cpu->in_ptr_f80, cpu->ptr_f80, bb);
-	spill_fp_reg_state_helper(cpu, cpu->count_regs_f128, 128, cpu->in_ptr_f128, cpu->ptr_f128, bb);
+	// XRs
+	spill_reg_state_helper(cpu->info.register_count[CPU_REG_XR],
+		cpu->in_ptr_xr, cpu->ptr_xr, bb);
+
+	// FPRs
+	spill_fp_reg_state_helper(cpu, cpu->info.register_count[CPU_REG_FPR],
+		cpu->info.register_size[CPU_REG_FPR], cpu->in_ptr_fpr,
+		cpu->ptr_fpr, bb);
 }
 
 Function*
@@ -266,10 +295,10 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	Function::arg_iterator args = func->arg_begin();
 	cpu->ptr_RAM = args++;
 	cpu->ptr_RAM->setName("RAM");
-	cpu->ptr_reg = args++;
-	cpu->ptr_reg->setName("reg");	
-	cpu->ptr_fp_reg = args++;
-	cpu->ptr_fp_reg->setName("fp_reg");	
+	cpu->ptr_grf = args++;
+	cpu->ptr_grf->setName("grf");
+	cpu->ptr_frf = args++;
+	cpu->ptr_frf->setName("frf");
 	cpu->ptr_func_debug = args++;
 	cpu->ptr_func_debug->setName("debug");
 
@@ -305,4 +334,3 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	*p_label_entry = label_entry;
 	return func;
 }
-

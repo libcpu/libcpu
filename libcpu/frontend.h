@@ -49,7 +49,7 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define CONST32(v) CONSTs(32,v)
 #define CONST64(v) CONSTs(64,v)
 
-#define CONST(v) CONSTs(cpu->reg_size,v)
+#define CONST(v) CONSTs(cpu->info.word_size,v)
 
 #define TRUE CONST1(1)
 #define FALSE CONST1(0)
@@ -109,7 +109,7 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define FPCONST80(v) CONSTs(80,v)
 #define FPCONST128(v) CONSTs(128,v)
 
-#define FPCONST(v) FPCONSTs(cpu->reg_size,v)
+#define FPCONST(v) FPCONSTs(cpu->info.float_size,v)
 
 #define FPTRUNC(s,v) new FPTruncInst(v, getFloatType(s), "", bb)
 #define FPEXT(s,v) new FPExtInst(v, getFloatType(s), "", bb)

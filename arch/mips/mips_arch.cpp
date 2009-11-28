@@ -2,53 +2,78 @@
 #include "mips_internal.h"
 #include "frontend.h"
 
-void
-arch_mips_init(cpu_t *cpu)
+static void
+arch_mips_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
-	cpu->reg_size = (cpu->flags_arch & CPU_MIPS_IS_64BIT)? 64:32;
-	cpu->is_little_endian = !!(cpu->flags_arch & CPU_MIPS_IS_LE);
-	cpu->has_special_r0 = true;
-	cpu->fp_reg_size = 64;
-	cpu->has_special_fr0 = true;
+	// Basic Information
+	info->name = "mips";
+	info->full_name = "MIPS R4000";
 
-	if (cpu->reg_size == 64) {
+	// This architecture is biendian, accept whatever the
+	// client wants, override other flags.
+	info->common_flags &= CPU_FLAG_ENDIAN_MASK;
+	// Both r0 and x0 are hardwired to zero.
+	info->common_flags |= CPU_FLAG_HARDWIRE_GPR0;
+	info->common_flags |= CPU_FLAG_HARDWIRE_FPR0;
+	// The byte size is 8bits.
+	// The float size is 64bits.
+	info->byte_size = 8;
+	info->float_size = 80;
+	if (info->arch_flags & CPU_MIPS_IS_64BIT) {
+  		// The word size is 64bits.
+		// The address size is 64bits.
+		info->word_size = 64;
+		info->address_size = 64; //XXX actually it's 32!
+	} else {
+  		// The word size is 32bits.
+		// The address size is 32bits.
+		info->word_size = 32;
+		info->address_size = 32;
+	}
+	// Page size is 4K or 16M
+	info->min_page_size = 4096;
+	info->max_page_size = 16777216;
+	info->default_page_size = 4096;
+	// There are 32 32-bit GPRs 
+	info->register_count[CPU_REG_GPR] = 32;
+	info->register_size[CPU_REG_GPR] = info->word_size;
+	// There are 2 extra registers, HI/LO for MUL/DIV insn.
+	info->register_count[CPU_REG_XR] = 2;
+	info->register_size[CPU_REG_XR] = info->word_size;
+
+	if (info->arch_flags & CPU_MIPS_IS_64BIT) {
 		reg_mips64_t *reg;
 		reg = (reg_mips64_t*)malloc(sizeof(reg_mips64_t));
 		for (int i=0; i<32; i++) 
 			reg->r[i] = 0;
 		reg->pc = 0;
-		cpu->reg = reg;
-		cpu->pc_width = 64; //XXX actually it's 32!
-		cpu->count_regs_i32 = 0;
-		cpu->count_regs_i64 = 32;
+
+		cpu->rf.pc = &reg->pc;
+		cpu->rf.grf = reg;
 	} else {
 		reg_mips32_t *reg;
 		reg = (reg_mips32_t*)malloc(sizeof(reg_mips32_t));
 		for (int i=0; i<32; i++) 
 			reg->r[i] = 0;
 		reg->pc = 0;
-		cpu->reg = reg;
-		cpu->pc_width = 32;
-		cpu->count_regs_i32 = 32;
-		cpu->count_regs_i64 = 0;
+
+		cpu->rf.pc = &reg->pc;
+		cpu->rf.grf = reg;
 	}
 
-	cpu->count_regs_i8 = 0;
-	cpu->count_regs_i16 = 0;
-
-	cpu->fp_reg = NULL;
-	cpu->count_regs_f32 = 0;
-	cpu->count_regs_f64 = 0;
-	cpu->count_regs_f80 = 0;
-	cpu->count_regs_f128 = 0;
-
-	log("%d bit MIPS initialized.\n", cpu->reg_size);
+	log("%d bit MIPS initialized.\n", info->word_size);
 }
 
-addr_t
+static void
+arch_mips_done(cpu_t *cpu)
+{
+	free(cpu->rf.grf);
+}
+
+static addr_t
 arch_mips_get_pc(cpu_t *cpu, void *reg)
 {
-	if (cpu->reg_size == 64)
+	if (cpu->info.arch_flags & CPU_MIPS_IS_64BIT)
 		return ((reg_mips64_t*)reg)->pc;
 	else
 		return ((reg_mips32_t*)reg)->pc;
@@ -56,7 +81,7 @@ arch_mips_get_pc(cpu_t *cpu, void *reg)
 
 arch_func_t arch_func_mips = {
 	arch_mips_init,
-	NULL,
+	arch_mips_done,
 	arch_mips_get_pc,
 	NULL, /* emit_decode_reg */
 	NULL, /* spill_reg_state */

@@ -252,7 +252,7 @@ arch_mips_get_imm(cpu_t *cpu, uint32_t instr, uint32_t bits, bool sext,
 	else
 		imm = (uint64_t)(uint16_t)GetImmediate;
 
-	return ConstantInt::get(getIntegerType(bits? bits : cpu->reg_size), imm);
+	return ConstantInt::get(getIntegerType(bits? bits : cpu->info.word_size), imm);
 }
 
 #define IMM arch_mips_get_imm(cpu, instr, 0, true, bb)
@@ -263,7 +263,7 @@ arch_mips_get_imm(cpu_t *cpu, uint32_t instr, uint32_t bits, bool sext,
 
 Value *
 arch_mips_get_sa(cpu_t *cpu, uint32_t instr, uint32_t bits, BasicBlock *bb) {
-	return ConstantInt::get(getIntegerType(bits? bits : cpu->reg_size), GetSA);
+	return ConstantInt::get(getIntegerType(bits? bits : cpu->info.word_size), GetSA);
 }
 
 #define SA arch_mips_get_sa(cpu, instr, 0, bb)
