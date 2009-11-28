@@ -337,6 +337,7 @@ main(int ac, char **av, char **ep)
 	cpu_set_flags_arch(cpu, CPU_M88K_IS_32BIT | CPU_M88K_IS_BE);
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);
+	cpu_set_flags_hint(cpu, CPU_HINT_TRAP_RETURNS_TWICE);
 	cpu_set_ram(cpu, RAM);
 
 	cpu_init(cpu);

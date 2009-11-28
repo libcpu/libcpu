@@ -75,8 +75,31 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 		if (tag & TAG_CONDITIONAL)
 			or_tag(cpu, next_pc, TAG_AFTER_COND);
 
-		if (tag & TAG_TRAP)	/* code ends here and continues at the next instruction */
+		if (tag & TAG_TRAP)	{
+			/* regular trap - no code after it */
+			if (!(cpu->flags_hint & (CPU_HINT_TRAP_RETURNS | CPU_HINT_TRAP_RETURNS_TWICE)))
+				return;
+			/*
+			 * client hints that a trap will likely return,
+			 * so tag code after it (optimization for usermode
+			 * code that makes syscalls)
+			 */
 			or_tag(cpu, next_pc, TAG_AFTER_TRAP);
+			/*
+			 * client hints that a trap will likely return
+			 * - to the next instruction AND
+			 * - to the instruction after that
+			 * OpenBSD on M88K skips an instruction on a trap
+			 * return if there was an error.
+			 */
+			if (cpu->flags_hint & CPU_HINT_TRAP_RETURNS_TWICE) {
+				tag_t dummy1;
+				addr_t next_pc2, dummy2;
+				next_pc2 = next_pc + cpu->f.tag_instr(cpu, next_pc, &dummy1, &dummy2, &dummy2);
+				or_tag(cpu, next_pc2, TAG_AFTER_TRAP);
+				tag_recursive(cpu, next_pc2, level+1);
+			}
+		}
 
 		if (tag & TAG_CALL) {
 			/* tag subroutine, then continue with next instruction */

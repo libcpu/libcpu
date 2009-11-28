@@ -63,6 +63,12 @@ cpu_new(cpu_arch_t arch)
 	cpu->code_entry = 0;
 	cpu->tag = NULL;
 
+	cpu->flags_optimize = CPU_OPTIMIZE_NONE;
+	cpu->flags_debug = CPU_DEBUG_NONE;
+	cpu->flags_hint = CPU_HINT_NONE;
+	cpu->flags = 0;
+	cpu->flags_arch = 0;
+
 	cpu->fp = NULL;
 	cpu->reg = NULL;
 	cpu->mod = new Module(cpu->name, _CTX());
@@ -104,6 +110,12 @@ void
 cpu_set_flags_debug(cpu_t *cpu, uint32_t f)
 {
 	cpu->flags_debug = f;
+}
+
+void
+cpu_set_flags_hint(cpu_t *cpu, uint32_t f)
+{
+	cpu->flags_hint = f;
 }
 
 void

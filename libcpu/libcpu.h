@@ -91,8 +91,9 @@ typedef struct cpu {
 	addr_t code_entry;
 	uint64_t flags_optimize;
 	uint32_t flags_debug;
-	uint32_t flags_arch;
+	uint32_t flags_hint;
 	uint32_t flags;
+	uint32_t flags_arch;
 	tag_t *tag; /* array of flags, one per byte of code */
 	Module *mod;
 	Function *func_jitmain;
@@ -154,6 +155,13 @@ enum {
 #define CPU_DEBUG_ALL 0xFFFFFFFF
 
 //////////////////////////////////////////////////////////////////////
+// hints
+//////////////////////////////////////////////////////////////////////
+#define CPU_HINT_NONE 0x00000000
+#define CPU_HINT_TRAP_RETURNS		(1<<0)
+#define CPU_HINT_TRAP_RETURNS_TWICE	(1<<1)
+
+//////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
 /*
@@ -166,6 +174,7 @@ typedef void (*debug_function_t)(cpu_t*);
 
 cpu_t *cpu_new(cpu_arch_t arch);
 void cpu_set_flags_optimize(cpu_t *cpu, uint64_t f);
+void cpu_set_flags_hint(cpu_t *cpu, uint32_t f);
 void cpu_set_flags_debug(cpu_t *cpu, uint32_t f);
 void cpu_tag(cpu_t *cpu, addr_t pc);
 int cpu_run(cpu_t *cpu, debug_function_t debug_function);
