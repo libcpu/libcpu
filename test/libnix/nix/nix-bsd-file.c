@@ -1,5 +1,6 @@
 #include "nix-config.h"
 
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -7,6 +8,7 @@
 #include <unistd.h>
 
 #include "nix.h"
+#include "nix-fd.h"
 
 int
 nix_bsd_revoke(char const *path, nix_env_t *env)

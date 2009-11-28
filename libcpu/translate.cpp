@@ -20,8 +20,8 @@ translate_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 	BasicBlock *bb_next,	/* non-taken for conditional */
 	BasicBlock *cur_bb)
 {
-	BasicBlock *bb_cond;
-	BasicBlock *bb_delay;
+	BasicBlock *bb_cond = NULL;
+	BasicBlock *bb_delay = NULL;
 
 	/* create internal basic blocks if needed */
 	if (tag & TAG_CONDITIONAL)
@@ -56,7 +56,6 @@ translate_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 	/* no delay slot */
 	if (tag & TAG_CONDITIONAL) {
 		// cur_bb:  if (cond) goto b_cond; else goto bb_next;
-		addr_t delay_pc;
 		Value *c = cpu->f.translate_cond(cpu, pc, cur_bb);
 		BranchInst::Create(bb_cond, bb_next, c, cur_bb);
 		cur_bb = bb_cond;

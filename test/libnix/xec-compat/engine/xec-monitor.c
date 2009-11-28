@@ -64,7 +64,7 @@ xec_monitor_event (xec_monitor_t      *xmon,
 }
 
 void
-xec_monitor_get_guest_info (xec_monitor_t *xmon,
+xec_monitor_get_guest_info (xec_monitor_t const *xmon,
                             xec_guest_info_t *guest_info)
 {
   *guest_info = xmon->guest_info;

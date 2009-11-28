@@ -79,6 +79,25 @@ arch_mips_get_pc(cpu_t *cpu, void *reg)
 		return ((reg_mips32_t*)reg)->pc;
 }
 
+static uint64_t
+arch_mips_get_psr(cpu_t *, void *)
+{
+	return 0;
+}
+
+static int
+arch_mips_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
+{
+	if (reg_no > 31)
+		return (-1);
+
+	if (cpu->info.arch_flags & CPU_MIPS_IS_64BIT)
+		*value = ((reg_mips64_t*)reg)->r[reg_no];
+	else
+		*value = ((reg_mips32_t*)reg)->r[reg_no];
+	return (0);
+}
+
 arch_func_t arch_func_mips = {
 	arch_mips_init,
 	arch_mips_done,
@@ -88,5 +107,9 @@ arch_func_t arch_func_mips = {
 	arch_mips_tag_instr,
 	arch_mips_disasm_instr,
 	arch_mips_translate_cond,
-	arch_mips_translate_instr
+	arch_mips_translate_instr,
+	// idbg support
+	arch_mips_get_psr,
+	arch_mips_get_reg,
+	NULL
 };

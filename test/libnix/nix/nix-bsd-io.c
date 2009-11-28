@@ -8,8 +8,10 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "nix.h"
+#include "nix-fd.h"
 
 int
 nix_bsd_closefrom(int fd, nix_env_t *env)

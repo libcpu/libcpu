@@ -1,9 +1,12 @@
+#include "nix-config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
+#include <signal.h>
 
 #include "nix.h"
 #include "xec-mem.h"

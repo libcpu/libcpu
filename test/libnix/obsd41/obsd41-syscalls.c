@@ -17,6 +17,7 @@
 #include "obsd41-us-syscall-priv.h"
 
 #include "nix.h"
+#include "nix-fd.h"
 #include "openbsd41.h"
 #include "arc4random.h"
 

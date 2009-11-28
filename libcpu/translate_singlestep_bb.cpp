@@ -20,7 +20,7 @@ cpu_translate_singlestep_bb(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	BasicBlock *cur_bb = create_basicblock(cpu, pc, cpu->func_jitmain, BB_TYPE_NORMAL);
 
 	tag_t tag;
-	BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_delay = NULL, *bb_cont = NULL;
+	BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_cont = NULL;
 	do {
 //printf("%s:%d\n", __func__, __LINE__);
 		addr_t new_pc, next_pc;

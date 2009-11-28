@@ -1,5 +1,7 @@
 #include "nix-config.h"
 
+#include <sys/time.h>
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>

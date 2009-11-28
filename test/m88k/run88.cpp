@@ -112,18 +112,14 @@ openbsd_m88k_setup_uframe(cpu_t           *cpu,
 						  char           **envp,
 						  m88k_uintptr_t  *stack_top)
 {
-	char          **p;
-	char           *base;
-	char           *ptr;
-	char           *ap; /* arg */
-	int             n;
-	xec_mem_flg_t   mf;
-	int             envc   = 0;
-	size_t          arglen = 0;
-	size_t          envlen = 0;
-	size_t          totlen = 0;
-	size_t          frmlen = 0;
-	m88k_uintptr_t  stack_base = 0;
+	char    **p;
+	char     *ap; /* arg */
+	int       n;
+	int       envc   = 0;
+	size_t    arglen = 0;
+	size_t    envlen = 0;
+	size_t    totlen = 0;
+	size_t    frmlen = 0;
 	struct uframe {
 		int32_t argc;
 		m88k_uintptr_t argv[1];
@@ -460,16 +456,15 @@ main(int ac, char **av, char **ep)
 
 			default:
 				printf("unknown return code: %d\n", rc);
-				break;
+				goto exit_loop;
 		}
 
 		if (cpu->flags_debug & (CPU_DEBUG_SINGLESTEP | CPU_DEBUG_SINGLESTEP_BB))
 			cpu_flush(cpu);
 	}
 
-double_break:
+exit_loop:
+	cpu_free(cpu);
 
-	fprintf(stderr, "yatta!\n");
-
-	exit(EXIT_SUCCESS);
+	exit(EXIT_FAILURE);
 }

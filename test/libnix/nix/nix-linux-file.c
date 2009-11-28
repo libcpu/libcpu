@@ -7,11 +7,17 @@
 #include <unistd.h>
 
 #include "nix.h"
+#include "nix-fd.h"
 
 int
 nix_linux_fdatasync(int fd, nix_env_t *env)
 {
-#ifdef HAVE_FDATASYNC
+	/* XXX
+	 * It appears Darwin has fdatasync syscall, but is
+	 * not declared in the headers; assume it is unstable.
+	 * 2009/11/28 --orlando
+	 */
+#if defined(HAVE_FDATASYNC) && !defined(__APPLE__)
 	int rfd;
 
 	if ((rfd = nix_fd_get(fd)) < 0) {

@@ -562,7 +562,7 @@ static inline unsigned
 gpr_size_to_type(cpu_t *cpu)
 {
 	unsigned format = F_INVALID;
-  uint32_t size = cpu->info.register_size[CPU_REG_GPR];
+	uint32_t size = cpu->info.register_size[CPU_REG_GPR];
 
 	if (size <= 8)
 		format = F_BYTE;
@@ -582,7 +582,7 @@ static inline unsigned
 fpr_size_to_type(cpu_t *cpu)
 {
 	unsigned format = F_INVALID;
-  uint32_t size = cpu->info.register_size[CPU_REG_FPR];
+	uint32_t size = cpu->info.register_size[CPU_REG_FPR];
 
 	if (size == 32)
 		format = F_FLOAT32;
@@ -671,26 +671,26 @@ idbg_done(idbg_t *ctx)
 static void
 idbg_save_registers(idbg_t *ctx)
 {
-  	size_t n;
-  	cpu_t *cpu = ctx->cpu;
+	size_t n;
+	cpu_t *cpu = ctx->cpu;
 
-    // save pc & psr
-  	ctx->saved_pc = cpu->f.get_pc(cpu, cpu->rf.grf);
-    ctx->saved_psr = cpu->f.get_psr(cpu, cpu->rf.grf);
+	// save pc & psr
+	ctx->saved_pc = cpu->f.get_pc(cpu, cpu->rf.grf);
+	ctx->saved_psr = cpu->f.get_psr(cpu, cpu->rf.grf);
 
-    // save gpr
-    for (n = 0; n < ctx->gpr_count; n++)
+	// save gpr
+	for (n = 0; n < ctx->gpr_count; n++)
 		cpu->f.get_reg(cpu, cpu->rf.grf, n, ctx->saved_regs + n);
 
-    // save fpr
-    for (n = 0; n < ctx->fpr_count; n++)
+	// save fpr
+	for (n = 0; n < ctx->fpr_count; n++)
 		cpu->f.get_fp_reg(cpu, cpu->rf.frf, n, ctx->saved_fp_regs + n);
 }
 
 static void
 idbg_diff_registers(idbg_t *ctx)
 {
-  	size_t n;
+	size_t n;
 	cpu_t *cpu = ctx->cpu;
 
 	uint64_t pc = cpu->f.get_pc(cpu, cpu->rf.grf);
@@ -793,13 +793,16 @@ elements_per_line(unsigned format)
 		case F_FLOAT80:
 		case F_FLOAT128:
 			return 2;
+
+		default:
+			return 0;
 	}
 }
 
 static inline size_t
 elements_per_line(unsigned format, unsigned mode)
 {
-	size_t n, nelem = elements_per_line(format);
+	size_t nelem = elements_per_line(format);
 	switch (format) {
 		case F_BYTE:
 		case F_HWORD:
@@ -1041,7 +1044,6 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 	idbg_t   ctx;
 	unsigned format;
 	unsigned mode;
-	unsigned output = 1;
 	int      last_command = 0;
 	addr_t   last_address = 0;
 	ssize_t  last_count = 0;
@@ -1054,7 +1056,7 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 	format = ctx.gpr_format;
 	mode = M_HEX;
 	for (;;) {
-		char const *p;
+		char const *p = NULL;
 		
 		if (interactive)
 			p = idbg_input_read("idbg% ");
@@ -1100,9 +1102,9 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 				fp128_reg_t fp_value;
 			} rv;
 			static char reg_type[] = { 'r', 'f', 'v', '\0' };
-			unsigned type;
+			unsigned type = 0;
 			unsigned mode = M_HEX;
-			int index;
+			int index = 0;
 
 			p++;
 			if (*p == '/') {
@@ -1138,7 +1140,7 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 			}
 
 			if (!isspace(*p)) {
-				fprintf(stderr, "IDBG ERROR: Invalid syntax.\n", *p);
+				fprintf(stderr, "IDBG ERROR: Invalid syntax.\n");
 				continue;
 			}
 
@@ -1244,7 +1246,7 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 					}
 				}
 				if (!isspace(*p)) {
-					fprintf(stderr, "IDBG ERROR: Invalid syntax.\n", *p);
+					fprintf(stderr, "IDBG ERROR: Invalid syntax.\n");
 					continue;
 				}
 

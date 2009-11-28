@@ -44,7 +44,7 @@ get_ctype_for_param (param_t *p)
     }
 
   xec_param_t xp;
-  XEC_ASSERT0 (dsize > 0 && dsize <= (sizeof (xp.value.tnosign.u64) << 3));
+  XEC_ASSERT0 (dsize > 0 && dsize <= (int)(sizeof (xp.value.tnosign.u64) << 3));
   switch (p->type)
     {
     case XEC_PARAM_BYTE:
@@ -161,9 +161,8 @@ call_get_param_format (param_t *p)
 static char *
 call_get_params_format (param_list_t *pl)
 {
-  char     buf[32], *bp = buf;
   param_t *p;
-  size_t   np = param_list_count (pl);
+  char     buf[32], *bp = buf;
 
   if (pl != NULL)
     {
@@ -341,7 +340,7 @@ get_param_type_size_name (param_t const *p)
     case XEC_PARAM_VECTOR:   return "vector";
     case XEC_PARAM_POINTER:  return "ptr";
     case XEC_PARAM_INTPTR:   return "intptr";
-    default:                 XEC_ASSERT0 (0); break;
+    default:                 XEC_ASSERT0 (0); return NULL; break;
     }
 }
 
@@ -375,7 +374,7 @@ dump_defs (FILE    *out,
 
   fprintf (out, "#define %s_SYS_last %d\n\n", g_gbl_NS, g_gbl_limit);
 
-  for (n = m = 0; n < g_gbl_limit; n++)
+  for (n = m = 0; n < (size_t)g_gbl_limit; n++)
     {
       if (calls[n] != NULL)
         {
@@ -391,7 +390,7 @@ dump_cb_protos (FILE    *out,
                 call_t **calls)
 {
   size_t n;
-  for (n = 0; n < g_gbl_limit; n++)
+  for (n = 0; n < (size_t)g_gbl_limit; n++)
     {
       if (calls[n] != NULL)
         {
@@ -413,7 +412,7 @@ dump_func_protos (FILE    *out,
                   call_t **calls)
 {
   size_t n;
-  for (n = 0; n < g_gbl_limit; n++)
+  for (n = 0; n < (size_t)g_gbl_limit; n++)
     {
       if (calls[n] != NULL)
         {
@@ -439,7 +438,7 @@ dump_func_decls (FILE    *out,
                   call_t **calls)
 {
   size_t n;
-  for (n = 0; n < g_gbl_limit; n++)
+  for (n = 0; n < (size_t)g_gbl_limit; n++)
     {
       if (calls[n] != NULL)
         {
@@ -507,7 +506,7 @@ dump_typedefs (FILE    *out,
   
   fprintf (out, "/* %s System Calls Arguments Data Structures */\n\n", g_gbl_name);
 
-  for (n = m = 0; n < g_gbl_limit; n++)
+  for (n = m = 0; n < (size_t)g_gbl_limit; n++)
     {
       if (calls[n] != NULL)
         {
@@ -524,7 +523,7 @@ dump_cb_decls (FILE    *out,
 {
   size_t n, m;
 
-  for (n = m = 0; n < g_gbl_limit; n++)
+  for (n = m = 0; n < (size_t)g_gbl_limit; n++)
     {
       if (calls[n] != NULL)
         {
@@ -571,7 +570,7 @@ dump_cb_decls (FILE    *out,
                 {
                   if (p->ellipsis)
                     {
-                      fprintf (out, "  args.ap = _args + %zu;\n", arg, arg);
+                      fprintf (out, "  args.ap = _args + %zu;\n", arg);
                       break;
                     }
 
@@ -640,7 +639,7 @@ dump_sc_table (FILE    *out,
   fprintf (out, "static xec_us_syscall_desc_t const g_%s_us_syscall_descs[] =\n", g_gbl_ns);
   fprintf (out, "  {\n");
 
-  for (n = 0; n < g_gbl_limit; n++)
+  for (n = 0; n < (size_t)g_gbl_limit; n++)
     {
       fprintf (out, "    ");
       call_emit (out, calls[n]);

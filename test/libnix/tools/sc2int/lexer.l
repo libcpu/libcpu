@@ -8,6 +8,8 @@
 #include "sc2int_parser.h"
 %}
 
+%option nounput
+
 %%
 
 "#"[^\n]*   { printf ("aaa\n") ;}

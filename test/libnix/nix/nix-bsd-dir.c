@@ -1,9 +1,12 @@
+#include "nix-config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
 
+#include "nix.h"
 #include "nix-types.h"
 #include "nix-fd.h"
 

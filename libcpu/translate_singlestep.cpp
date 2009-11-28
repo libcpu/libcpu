@@ -30,8 +30,6 @@ cpu_translate_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	tag_t tag;
 	BasicBlock *cur_bb = NULL, *bb_target = NULL, *bb_next = NULL, *bb_cont = NULL;
 	addr_t next_pc, pc = cpu->f.get_pc(cpu, cpu->rf.grf);
-	tag_t dummy1;
-	addr_t dummy2;
 
 	cur_bb = BasicBlock::Create(_CTX(), "instruction", cpu->func_jitmain, 0);
 

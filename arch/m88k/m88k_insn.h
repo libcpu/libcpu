@@ -124,6 +124,8 @@ public:
 					case M88K_TFMT_XREG:
 						fmt = M88K_TFMT_XREGS;
 						break;
+					default:
+						break;
 				}
 			}
 			return fmt;

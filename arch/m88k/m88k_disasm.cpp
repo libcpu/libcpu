@@ -399,10 +399,9 @@ int
 arch_m88k_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 {
 	strbuf_t	strbuf;
-	tag_t			dummy1;
+	tag_t		dummy1;
 	addr_t		dummy2, dummy3;
 	int			bytes;
-	bool		delaying;
 	
 	bytes = arch_m88k_tag_instr(cpu, pc, &dummy1, &dummy2, &dummy3);
 

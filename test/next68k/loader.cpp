@@ -232,8 +232,8 @@ void LdrFakeDyld(struct segment_command *segment_command, void *buf, struct nlis
 				*((uint32_t*)&(((unsigned char*)buf)[current_sect->addr+0x10])) = 0x0;
 			}
 			
-			uint32_t section_type = current_sect->flags & SECTION_TYPE;
 #if 0
+			uint32_t section_type = current_sect->flags & SECTION_TYPE;
 			if(section_type == S_NON_LAZY_SYMBOL_POINTERS) {
 				int n = current_sect->reserved1;
 				unsigned int j;
@@ -580,9 +580,9 @@ int LdrLoadDylib (struct dylib_command *dylib_command, void **buf, unsigned long
 		liboffset++;
 
 	unsigned int i;
-	struct nlist *symtab;
-	char *strtab;
-	uint32_t *idrsymtab;
+	struct nlist *symtab = NULL;
+	char *strtab = NULL;
+	uint32_t *idrsymtab = NULL;
 
 	for(i=0;i<mach_header.ncmds;i++) {
 		/* We'll go thorugh the load commands and try to handle them */
@@ -756,8 +756,7 @@ unsigned long LdrGetArchOffset(cpu_type_t cputype, FILE *machfile) {
 	if(!fread(&fat_header, sizeof(struct fat_header), 1, machfile))
 		return 0;
 	
-	uint32_t nfat_arch = BE32_toHost(fat_header.nfat_arch);
-	int i;
+	uint32_t i, nfat_arch = BE32_toHost(fat_header.nfat_arch);
 	
 	/* Search the fat_arch structures for the specified cputype */
 	for(i=0;i<nfat_arch;i++) {
@@ -902,6 +901,7 @@ int LdrLoadNativeLibJumps(void **buf, unsigned long *buflen) {
 	
 	return 1;
 #endif
+	return 0;
 }
 
 /* Debug printout of LLFunctions */

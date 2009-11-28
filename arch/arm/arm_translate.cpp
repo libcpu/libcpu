@@ -117,6 +117,9 @@ arch_arm_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 			return NULL; /* no condition; this should never happen */
 		case 0xF: /* NV */
 			return FALSE;
+		default:
+			assert(0 && "Cannot happen");
+      return FALSE;
 	}
 }
 

@@ -57,10 +57,9 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 		pc = strtol(cstr+1, (char **)NULL, 16);
 log("basicblock: L%08llx\n", (unsigned long long)pc);
 		tag_t tag;
-		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_delay = NULL, *bb_cont = NULL;
+		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_cont = NULL;
 		do {
 			tag_t dummy1;
-			addr_t dummy2;
 
 			if (LOGGING)
 				disasm_instr(cpu, pc);

@@ -42,13 +42,11 @@ main(int argc, char **argv)
 {
 	char *s_arch;
 	char *executable;
-	char *entries;
 	cpu_arch_t arch;
 	cpu_t *cpu;
 	uint8_t *RAM;
 	FILE *f;
 	int ramsize;
-	int i;
 	int r1, r2;
 	uint64_t t1, t2, t3, t4;
 	unsigned start_no = START_NO;
@@ -122,6 +120,9 @@ main(int argc, char **argv)
 			reg_param = &((reg_arm_t*)cpu->rf.grf)->r[0];
 			reg_result = &((reg_arm_t*)cpu->rf.grf)->r[0];
 			break;
+		default:
+			fprintf(stderr, "architecture %u not handled.\n", arch);
+			exit(EXIT_FAILURE);
 	}
 
 	*reg_pc = cpu->code_entry;

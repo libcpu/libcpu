@@ -5244,7 +5244,7 @@ char *Thumb9DASM(u32 op)
 
 void ARM9DASMun(u32 op)
 {
-    sprintf(arm9dasmstr,"");
+    *arm9dasmstr = '\0';
 }
 
 //---Branching-------------------------------------------------------------
@@ -5846,7 +5846,7 @@ void Thumb9DASMreg(u32 op)
 
 void Thumb9DASMund(u32 op)
 {
-    sprintf(arm9dasmstr,"");
+    *arm9dasmstr = '\0';
 }
 
 void Thumb9DASMpc(u32 op)
@@ -5861,7 +5861,7 @@ void Thumb9DASMsp(u32 op)
 
 void Thumb9DASMbkpt(u32 op)
 {
-    sprintf(arm9dasmstr,"");
+    *arm9dasmstr = '\0';
 }
 
 void Thumb9DASMswi(u32 op)

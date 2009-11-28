@@ -187,7 +187,7 @@ Value *
 arch_load_fp_reg(cpu_t *cpu, uint32_t index, uint32_t bits,
 	BasicBlock *bb)
 {
-	Value *v;
+	Value *v = NULL;
 	uint32_t size = cpu->info.register_size[CPU_REG_FPR];
 
 	if (size == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) {
@@ -322,4 +322,3 @@ arch_cast_fp128(cpu_t *cpu, Value *v, BasicBlock *bb)
 
 	return v;
 }
-

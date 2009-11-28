@@ -121,7 +121,6 @@ aout_process(xec_mem_if_t *mem_if, xec_mmap_t *mm, aout_header_t const *ah)
 static int
 coff_process(xec_mem_if_t *mem_if, xec_mmap_t *mm, struct coff_filehdr const *fh)
 {
-	int                        rc;
 	struct coff_aouthdr const *ah;
 	struct coff_secthdr const *sh;
 	uint8_t const             *data;

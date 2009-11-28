@@ -33,6 +33,7 @@
 #endif
 
 #include "nix.h"
+#include "nix-fd.h"
 #include "xec-mem.h"
 
 #if defined(HAVE_FSTATFS) && defined(HAVE_STATFS)

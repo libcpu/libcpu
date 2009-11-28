@@ -64,8 +64,6 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 	int bytes;
 	tag_t tag;
 	addr_t new_pc, next_pc;
-	tag_t dummy1;
-	addr_t dummy2;
 
 	for(;;) {
 		if (!is_inside_code_area(cpu, pc))

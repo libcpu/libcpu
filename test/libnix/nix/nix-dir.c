@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "nix.h"
+#include "nix-fd.h"
 
 int
 nix_fchdir(int fd, nix_env_t *env)

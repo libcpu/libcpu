@@ -198,7 +198,7 @@ xec_mmap_create_with_file (char const *path,
 
       size = (size + pagesize) & -pagesize; /* Round to ceil */
 
-      if (offset + size >= st.st_size)
+      if ((off_t)(offset + size) >= (off_t)st.st_size)
         size = st.st_size - offset;
 
       size = (size + pagesize) & -pagesize; /* Round to ceil */

@@ -78,10 +78,11 @@ static double
 ieee754_fp80_to_double(fp80_reg_t reg)
 {
 #if defined(__i386__) || defined(__x86_64__)
+#if 0
 	uint32_t sign      = (reg.i.hi & 0x8000) != 0;
 	uint32_t exp       = reg.i.hi & 0x7fff;
 	uint64_t mantissa  = reg.i.lo;
-
+#endif
 	return (double)reg.f;
 #else
 	uint32_t sign      = (reg.i.hi & 0x8000) != 0;
@@ -97,6 +98,7 @@ ieee754_fp80_to_double(fp80_reg_t reg)
 #endif
 }
 
+#if 0
 static void
 ieee754_fp80_set_d(fp80_reg_t *reg, double v)
 {
@@ -117,7 +119,7 @@ ieee754_fp80_set_d(fp80_reg_t *reg, double v)
 	reg->i.lo = mantissa;
 #endif
 }
-
+#endif
 
 static void
 dump_state(uint8_t *RAM, m88k_grf_t *reg, m88k_xrf_t *xrf)
@@ -319,7 +321,7 @@ main(int argc, char **argv)
 			case JIT_RETURN_FUNCNOTFOUND:
 				dump_state(RAM, (m88k_grf_t*)cpu->rf.grf, (m88k_xrf_t*)cpu->rf.frf);
 
-				if (PC == -1)
+				if (PC == (uint32_t)(-1))
 					goto double_break;
 
 				// bad :(

@@ -172,7 +172,7 @@ asm("nop");
 
 static void
 debug_function(cpu_t *cpu) {
-	reg_m68k_t *reg = (reg_m68k_t*)cpu->rf.grf;
+	//reg_m68k_t *reg = (reg_m68k_t*)cpu->rf.grf;
 	fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
 }
 

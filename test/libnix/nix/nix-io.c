@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include "nix.h"
+#include "nix-fd.h"
 #include "nix-structs.h"
 #include "xec-mem.h"
 #include "xec-debug.h"

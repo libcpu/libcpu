@@ -1,5 +1,7 @@
 %{
 #include "sc2int.h"
+
+extern int yylex(void);
 %}
 
 %union {

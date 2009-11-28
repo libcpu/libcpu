@@ -91,7 +91,7 @@ asm("nop");
 
 static void
 debug_function(cpu_t *cpu) {
-	reg_m68k_t *reg = (reg_m68k_t*)cpu->rf.grf;
+	//reg_m68k_t *reg = (reg_m68k_t*)cpu->rf.grf;
 	fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
 }
 
@@ -128,8 +128,6 @@ main(int argc, char **argv) {
 		entries = 0;
 
 /* load code */
-
-	FILE *f;
 
 	cpu->code_entry = (addr_t)LdrLoadMachO(executable, 0, (char*)RAM);
 	cpu->code_start = 0;

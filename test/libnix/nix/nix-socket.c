@@ -12,6 +12,7 @@
 #endif
 
 #include "nix.h"
+#include "nix-fd.h"
 #include "xec-debug.h"
 
 #ifndef min

@@ -257,7 +257,7 @@ main(int argc, char **argv)
 			case JIT_RETURN_FUNCNOTFOUND:
 				dump_state(RAM, (reg_mips32_t*)cpu->rf.grf);
 
-				if (PC == -1)
+				if (PC == (-1U))
 					goto double_break;
 
 				// bad :(

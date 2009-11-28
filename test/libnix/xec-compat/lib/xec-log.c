@@ -16,6 +16,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/time.h>
 
 #include "xec-debug.h"
 #include "xec-mem.h"

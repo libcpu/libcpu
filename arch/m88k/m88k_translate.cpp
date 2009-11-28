@@ -214,6 +214,8 @@ arch_m88k_get_fpr(cpu_t *cpu, bool xfr, m88k_reg_t r, uint32_t t,
 			case 2: abort(); // can't happen
 		}
 	}
+	abort(); // can't happen
+	return NULL;
 }
 
 static void
@@ -361,6 +363,10 @@ arch_m88k_bcnd_cond(cpu_t *cpu, Value *src1, m88k_bcnd_t cond, BasicBlock *bb)
 
 		case M88K_BCND_NEVER:
 		case M88K_BCND_ALWAYS:
+			return NULL;
+
+		default:
+			assert(0 && "Cannot happen");
 			return NULL;
 	}
 }
@@ -1049,6 +1055,8 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 					else
 						SET_FPR(false, instr.rd(), instr.td(), GET_FPR(true, instr.rs2(), 2));
 					break;
+				default:
+					assert(0 && "Cannot happen");
 			}
 			break;
 

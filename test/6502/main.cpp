@@ -100,8 +100,8 @@ main(int argc, char **argv) {
 		| (print_ir? CPU_DEBUG_PRINT_IR : 0)
 		| (print_ir? CPU_DEBUG_PRINT_IR_OPTIMIZED : 0)
 		| (log? CPU_DEBUG_LOG :0)
-		| (SINGLESTEP_STEP? CPU_DEBUG_SINGLESTEP    : 0)
-		| (SINGLESTEP_BB?   CPU_DEBUG_SINGLESTEP_BB : 0)
+		| (singlestep == SINGLESTEP_STEP? CPU_DEBUG_SINGLESTEP    : 0)
+		| (singlestep == SINGLESTEP_BB?   CPU_DEBUG_SINGLESTEP_BB : 0)
 		);
 	cpu_set_ram(cpu, RAM);
 

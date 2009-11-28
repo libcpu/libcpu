@@ -16,14 +16,6 @@ xec_mem_if_t *nix_env_get_memory(nix_env_t const *env);
 void nix_env_set_memory(nix_env_t *env, xec_mem_if_t *memif);
 /* nix-common.c */
 int nix_nosys(nix_env_t *env);
-/* nix-fd.c */
-int nix_fd_init(size_t count);
-int nix_fd_alloc(int fd, nix_env_t *env);
-int nix_fd_alloc_at(int gfd, int fd, nix_env_t *env);
-int nix_fd_release(int fd, nix_env_t *env);
-int nix_fd_get(int fd);
-int nix_fd_get_nearest(nix_env_t *env, int fd, int dir);
-int nix_getdtablesize(void);
 /* nix-file.c */
 nix_mode_t nix_umask(nix_mode_t mode, nix_env_t *env);
 int nix_open(char const *path, int flags, int mode, nix_env_t *env);
