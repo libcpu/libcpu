@@ -11,6 +11,8 @@
 #include "libcpu.h"
 #include "tag.h"
 #include "disasm.h"
+#include "translate.h"
+#include "basicblock.h"
 #include "arch.h"
 #include "optimize.h"
 
@@ -124,75 +126,6 @@ cpu_set_flags_arch(cpu_t *cpu, uint32_t f)
 }
 
 //////////////////////////////////////////////////////////////////////
-// disassemble
-//////////////////////////////////////////////////////////////////////
-void disasm_instr(cpu_t *cpu, addr_t pc) {
-	char disassembly_line1[MAX_DISASSEMBLY_LINE];
-	char disassembly_line2[MAX_DISASSEMBLY_LINE];
-	int bytes, i;
-
-	bytes = cpu->f.disasm_instr(cpu, pc, disassembly_line1, sizeof(disassembly_line1));
-
-	log(".,%04llx ", (unsigned long long)pc);
-	for (i=0; i<bytes; i++) {
-		log("%02X ", cpu->RAM[pc+i]);
-	}
-	log("%*s", (18-3*bytes)+1, ""); /* TODO make this arch neutral */
-
-	/* delay slot */
-	tag_t tag;
-	addr_t dummy, dummy2;
-	cpu->f.tag_instr(cpu, pc, &tag, &dummy, &dummy2);
-	if (tag & TAG_DELAY_SLOT)
-		bytes = cpu->f.disasm_instr(cpu, pc + bytes, disassembly_line2, sizeof(disassembly_line2));
-
-	if (tag & TAG_DELAY_SLOT)
-		log("%-23s [%s]\n", disassembly_line1, disassembly_line2);
-	else
-		log("%-23s\n", disassembly_line1);
-
-}
-
-//////////////////////////////////////////////////////////////////////
-// generic code
-//////////////////////////////////////////////////////////////////////
-static bool
-is_start_of_basicblock(cpu_t *cpu, addr_t a)
-{
-	return !!(get_tag(cpu, a) &
-		(TAG_BRANCH_TARGET |	/* someone jumps/branches here */
-		 TAG_SUBROUTINE |		/* someone calls this */
-		 TAG_AFTER_CALL |		/* instruction after a call */
-		 TAG_AFTER_COND |		/* instruction after a branch */
-		 TAG_AFTER_TRAP |		/* instruction after a trap */
-		 TAG_ENTRY));			/* client wants to enter guest code here */
-}
-
-static bool
-needs_dispatch_entry(cpu_t *cpu, addr_t a)
-{
-	return !!(get_tag(cpu, a) &
-		(TAG_ENTRY |			/* client wants to enter guest code here */
-		 TAG_AFTER_CALL |		/* instruction after a call */
-		 TAG_AFTER_TRAP));		/* instruction after a call */
-}
-
-enum {
-	BB_TYPE_NORMAL   = 'L', /* basic block for instructions */
-	BB_TYPE_COND     = 'C', /* basic block for "taken" case of cond. execution */
-	BB_TYPE_DELAY    = 'D', /* basic block for delay slot in non-taken case of cond. exec. */
-	BB_TYPE_EXTERNAL = 'E'  /* basic block for unknown addresses; just traps */
-};
-
-BasicBlock *
-create_basicblock(cpu_t *cpu, addr_t addr, Function *f, uint8_t bb_type) {
-	char label[17];
-	snprintf(label, sizeof(label), "%c%08llx", bb_type, (unsigned long long)addr);
-log("creating basic block %s\n", label);
-	return BasicBlock::Create(_CTX(), label, f, 0);
-}
-
-//////////////////////////////////////////////////////////////////////
 // translate one instruction
 //////////////////////////////////////////////////////////////////////
 void
@@ -207,73 +140,6 @@ emit_store_pc_return(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc, BasicBloc
 {
 	emit_store_pc(cpu, bb_branch, new_pc);
 	BranchInst::Create(bb_ret, bb_branch);
-}
-
-/*
- * returns the basic block where code execution continues, or
- * NULL if the instruction always branches away
- * (The caller needs this to link the basic block)
- */
-static BasicBlock *
-translate_instr(cpu_t *cpu, addr_t pc, tag_t tag,
-	BasicBlock *bb_target,
-	BasicBlock *bb_next,
-	BasicBlock *bb_trap,
-	BasicBlock *cur_bb)
-{
-	BasicBlock *bb_cond;
-	BasicBlock *bb_delay;
-
-	/* create internal basic blocks if needed */
-	if (tag & TAG_CONDITIONAL)
-		bb_cond = create_basicblock(cpu, pc, cpu->func_jitmain, BB_TYPE_COND);
-	if ((tag & TAG_DELAY_SLOT) && (tag & TAG_CONDITIONAL))
-		bb_delay = create_basicblock(cpu, pc, cpu->func_jitmain, BB_TYPE_DELAY);
-
-	/* special case: delay slot */
-	if (tag & TAG_DELAY_SLOT) {
-		if (tag & TAG_CONDITIONAL) {
-			addr_t delay_pc;
-			// cur_bb:  if (cond) goto b_cond; else goto bb_delay;
-			Value *c = cpu->f.translate_cond(cpu, pc, cur_bb);
-			BranchInst::Create(bb_cond, bb_delay, c, cur_bb);
-			// bb_cond: instr; delay; goto bb_target;
-			pc += cpu->f.translate_instr(cpu, pc, bb_cond);
-			delay_pc = pc;
-			cpu->f.translate_instr(cpu, pc, bb_cond);
-			BranchInst::Create(bb_target, bb_cond);
-			// bb_cond: delay; goto bb_next;
-			cpu->f.translate_instr(cpu, delay_pc, bb_delay);
-			BranchInst::Create(bb_next, bb_delay);
-		} else {
-			// cur_bb:  instr; delay; goto bb_target;
-			pc += cpu->f.translate_instr(cpu, pc, cur_bb);
-			cpu->f.translate_instr(cpu, pc, cur_bb);
-			BranchInst::Create(bb_target, cur_bb);
-		}
-		return NULL; /* don't link */
-	}
-
-	/* no delay slot */
-	if (tag & TAG_CONDITIONAL) {
-		// cur_bb:  if (cond) goto b_cond; else goto bb_next;
-		addr_t delay_pc;
-		Value *c = cpu->f.translate_cond(cpu, pc, cur_bb);
-		BranchInst::Create(bb_cond, bb_next, c, cur_bb);
-		cur_bb = bb_cond;
-	}
-
-	cpu->f.translate_instr(cpu, pc, cur_bb);
-
-	if (tag & (TAG_BRANCH | TAG_CALL | TAG_RET))
-		BranchInst::Create(bb_target, cur_bb);
-	else if (tag & TAG_TRAP)
-		BranchInst::Create(bb_trap, cur_bb);
-
-	if (tag & TAG_CONTINUE)
-		return cur_bb;
-	else
-		return NULL;
 }
 
 //////////////////////////////////////////////////////////////////////

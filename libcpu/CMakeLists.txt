@@ -2,6 +2,9 @@ PROJECT(libcpu)
 
 ADD_LIBRARY(cpu SHARED
 			cpu_generic.cpp
+			disasm.cpp
+			basicblock.cpp
+			translate.cpp
 			tag.cpp
 			optimize.cpp
 			fp.cpp

@@ -1,1 +1,1 @@
-#define MAX_DISASSEMBLY_LINE 80
+void disasm_instr(cpu_t *cpu, addr_t pc);
