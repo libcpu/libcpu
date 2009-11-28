@@ -88,31 +88,31 @@ arch_arm_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		case 0x0: /* EQ */
 			return LOAD(ptr_Z);
 		case 0x1: /* NE */
-			return NOT1(LOAD(ptr_Z));
+			return NOT(LOAD(ptr_Z));
 		case 0x2: /* CS */
 			return LOAD(ptr_C);
 		case 0x3: /* CC */
-			return NOT1(LOAD(ptr_C));
+			return NOT(LOAD(ptr_C));
 		case 0x4: /* MI */
 			return LOAD(ptr_N);
 		case 0x5: /* PL */
-			return NOT1(LOAD(ptr_N));
+			return NOT(LOAD(ptr_N));
 		case 0x6: /* VS */
 			return LOAD(ptr_V);
 		case 0x7: /* VC */
-			return NOT1(LOAD(ptr_V));
+			return NOT(LOAD(ptr_V));
 		case 0x8: /* HI */
-			return AND(LOAD(ptr_C),NOT1(LOAD(ptr_Z)));
+			return AND(LOAD(ptr_C),NOT(LOAD(ptr_Z)));
 		case 0x9: /* LS */
-			return NOT1(AND(LOAD(ptr_C),NOT1(LOAD(ptr_Z))));
+			return NOT(AND(LOAD(ptr_C),NOT(LOAD(ptr_Z))));
 		case 0xA: /* GE */
 			return ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V));
 		case 0xB: /* LT */
-			return NOT1(ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V)));
+			return NOT(ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V)));
 		case 0xC: /* GT */
-			return AND(NOT1(LOAD(ptr_Z)),ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V)));
+			return AND(NOT(LOAD(ptr_Z)),ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V)));
 		case 0xD: /* LE */
-			return NOT1(AND(NOT1(LOAD(ptr_Z)),ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V))));
+			return NOT(AND(NOT(LOAD(ptr_Z)),ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V))));
 		case 0xE: /* AL */
 			return NULL; /* no condition; this should never happen */
 		case 0xF: /* NV */

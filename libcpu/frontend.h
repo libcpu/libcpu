@@ -98,8 +98,7 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define COM(x) XOR(x, CONST(-1ULL))
 #define NEGs(s, x) SUB(CONST##s(0), x)
 #define NEG(x) SUB(CONST(0), x)
-#define NOT(a) XOR(a,CONST(-1))
-#define NOT1(a) XOR(a,CONST1(1))
+#define NOT(a) XOR(a,CONST1(1))
 #define INC(a) ADD(a,CONST(1))
 #define DEC(a) SUB(a,CONST(1))
 
