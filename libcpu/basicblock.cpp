@@ -33,3 +33,18 @@ create_basicblock(cpu_t *cpu, addr_t addr, Function *f, uint8_t bb_type) {
 log("creating basic block %s\n", label);
 	return BasicBlock::Create(_CTX(), label, f, 0);
 }
+
+const BasicBlock *
+lookup_basicblock(cpu_t *cpu, Function* f, addr_t pc, uint8_t bb_type) {
+	Function::const_iterator it;
+	for (it = f->getBasicBlockList().begin(); it != f->getBasicBlockList().end(); it++) {
+		const char *cstr = (*it).getNameStr().c_str();
+		if (cstr[0] == bb_type) {
+			addr_t pc2 = strtol(cstr + 1, (char **)NULL, 16);
+			if (pc == pc2)
+				return it;
+		}
+	}
+	log("error: basic block %c%08llx not found!\n", bb_type, pc);
+	return NULL;
+}

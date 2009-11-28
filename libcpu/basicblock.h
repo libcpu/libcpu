@@ -8,3 +8,4 @@ enum {
 bool is_start_of_basicblock(cpu_t *cpu, addr_t a);
 bool needs_dispatch_entry(cpu_t *cpu, addr_t a);
 BasicBlock *create_basicblock(cpu_t *cpu, addr_t addr, Function *f, uint8_t bb_type);
+const BasicBlock *lookup_basicblock(cpu_t *cpu, Function* f, addr_t pc, uint8_t bb_type);

@@ -5,6 +5,8 @@ ADD_LIBRARY(cpu SHARED
 			disasm.cpp
 			basicblock.cpp
 			translate.cpp
+			translate_all.cpp
+			translate_singlestep.cpp
 			tag.cpp
 			optimize.cpp
 			fp.cpp

@@ -12,6 +12,8 @@
 #include "tag.h"
 #include "disasm.h"
 #include "translate.h"
+#include "translate_all.h"
+#include "translate_singlestep.h"
 #include "basicblock.h"
 #include "arch.h"
 #include "optimize.h"
@@ -123,189 +125,6 @@ void
 cpu_set_flags_arch(cpu_t *cpu, uint32_t f)
 {
 	cpu->flags_arch = f;
-}
-
-//////////////////////////////////////////////////////////////////////
-// translate one instruction
-//////////////////////////////////////////////////////////////////////
-void
-emit_store_pc(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc)
-{
-	Value *v_pc = ConstantInt::get(getIntegerType(cpu->pc_width), new_pc);
-	new StoreInst(v_pc, cpu->ptr_PC, bb_branch);
-}
-
-void
-emit_store_pc_return(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc, BasicBlock *bb_ret)
-{
-	emit_store_pc(cpu, bb_branch, new_pc);
-	BranchInst::Create(bb_ret, bb_branch);
-}
-
-//////////////////////////////////////////////////////////////////////
-// buik translate
-//////////////////////////////////////////////////////////////////////
-static const BasicBlock *
-lookup_basicblock(cpu_t *cpu, Function* f, addr_t pc, uint8_t bb_type) {
-	Function::const_iterator it;
-	for (it = f->getBasicBlockList().begin(); it != f->getBasicBlockList().end(); it++) {
-		const char *cstr = (*it).getNameStr().c_str();
-		if (cstr[0] == bb_type) {
-			addr_t pc2 = strtol(cstr + 1, (char **)NULL, 16);
-			if (pc == pc2)
-				return it;
-		}
-	}
-	log("error: basic block %c%08llx not found!\n", bb_type, pc);
-	return NULL;
-}
-
-static BasicBlock *
-cpu_translate(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
-{
-	// find all instructions that need labels and create basic blocks for them
-	int bbs = 0;
-	addr_t pc;
-	pc = cpu->code_start;
-	while (pc < cpu->code_end) {
-		//log("%04X: %d\n", pc, get_tag(cpu, pc));
-		if (is_start_of_basicblock(cpu, pc)) {
-			create_basicblock(cpu, pc, cpu->func_jitmain, BB_TYPE_NORMAL);
-			bbs++;
-		}
-		pc++;
-	}
-	log("bbs: %d\n", bbs);
-
-	// create dispatch basicblock
-	BasicBlock* bb_dispatch = BasicBlock::Create(_CTX(), "dispatch", cpu->func_jitmain, 0);
-	Value *v_pc = new LoadInst(cpu->ptr_PC, "", false, bb_dispatch);
-	SwitchInst* sw = SwitchInst::Create(v_pc, bb_ret, bbs /*XXX upper bound, not accurate count!*/, bb_dispatch);
-
-	for (pc = cpu->code_start; pc<cpu->code_end; pc++) {
-		if (needs_dispatch_entry(cpu, pc)) {
-			log("info: adding case: %llx\n", pc);
-			ConstantInt* c = ConstantInt::get(getIntegerType(cpu->pc_width), pc);
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->func_jitmain, pc, BB_TYPE_NORMAL);
-			if (!target) {
-				log("error: unknown rts target $%04llx!\n", (unsigned long long)pc);
-				exit(1);
-			} else {
-				sw->addCase(c, target);
-			}
-		}
-	}
-
-// translate basic blocks
-    Function::const_iterator it;
-    for (it = cpu->func_jitmain->getBasicBlockList().begin(); it != cpu->func_jitmain->getBasicBlockList().end(); it++) {
-		const BasicBlock *hack = it;
-		BasicBlock *cur_bb = (BasicBlock*)hack;	/* cast away const */
-		const char *cstr = (*it).getNameStr().c_str();
-		if (cstr[0] != BB_TYPE_NORMAL)
-			continue; // skip special blocks like entry, dispatch...
-		pc = strtol(cstr+1, (char **)NULL, 16);
-log("basicblock: L%08llx\n", (unsigned long long)pc);
-		tag_t tag;
-		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_delay = NULL, *bb_cont = NULL;
-		do {
-			tag_t dummy1;
-			addr_t dummy2;
-
-			if (LOGGING)
-				disasm_instr(cpu, pc);
-
-			tag = get_tag(cpu, pc);
-
-			/* get address of the following instruction */
-			addr_t new_pc, next_pc;
-			cpu->f.tag_instr(cpu, pc, &dummy1, &new_pc, &next_pc);
-
-			/* get target basic block */
-			if (tag & TAG_RET)
-				bb_target = bb_dispatch;
-			if (tag & (TAG_CALL|TAG_BRANCH)) {
-				if (new_pc == NEW_PC_NONE) { /* translate_instr() will set PC */
-					bb_target = bb_dispatch;
-				} else {
-					bb_target = (BasicBlock*)lookup_basicblock(cpu, cpu->func_jitmain, new_pc, BB_TYPE_NORMAL);
-					if (!bb_target) { /* outside of code segment */
-						bb_target = create_basicblock(cpu, new_pc, cpu->func_jitmain, BB_TYPE_EXTERNAL);
-						emit_store_pc_return(cpu, bb_target, new_pc, bb_ret);
-					}
-				}
-			}
-			/* get not-taken basic block */
-			if (tag & TAG_CONDITIONAL)
- 				bb_next = (BasicBlock*)lookup_basicblock(cpu, cpu->func_jitmain, next_pc, BB_TYPE_NORMAL);
-
-			bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
-
-			pc = next_pc;
-			
-		} while (!(is_start_of_basicblock(cpu, pc)) && /* new basic block starts here */
-				is_code(cpu, pc) && /* end of code section */
-				bb_cont); /* last intruction jumped away */
-
-		/* link with next basic block if there isn't a control flow instr. already */
-		if (bb_cont) {
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->func_jitmain, pc, BB_TYPE_NORMAL);
-			if (!target) {
-				printf("error: unknown continue $%04llx!\n", (unsigned long long)pc);
-				exit(1);
-			}
-			log("info: linking continue $%04llx!\n", (unsigned long long)pc);
-			BranchInst::Create(target, bb_cont);
-		}
-    }
-
-	return bb_dispatch;
-}
-
-//////////////////////////////////////////////////////////////////////
-// single stepping
-//////////////////////////////////////////////////////////////////////
-BasicBlock *
-create_singlestep_return_basicblock(cpu_t *cpu, addr_t new_pc, BasicBlock *bb_ret)
-{
-	BasicBlock *bb_branch = create_basicblock(cpu, new_pc, cpu->func_jitmain, BB_TYPE_NORMAL);
-	emit_store_pc_return(cpu, bb_branch, new_pc, bb_ret);
-	return bb_branch;
-}
-
-static BasicBlock *
-cpu_translate_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
-{
-	addr_t new_pc;
-	tag_t tag;
-	BasicBlock *cur_bb = NULL, *bb_target = NULL, *bb_next = NULL, *bb_cont = NULL;
-	addr_t next_pc, pc = cpu->f.get_pc(cpu, cpu->reg);
-	tag_t dummy1;
-	addr_t dummy2;
-
-	cur_bb = BasicBlock::Create(_CTX(), "instruction", cpu->func_jitmain, 0);
-
-	if (LOGGING)
-		disasm_instr(cpu, pc);
-
-	cpu->f.tag_instr(cpu, pc, &tag, &new_pc, &next_pc);
-
-	/* get target basic block */
-	if ((tag & TAG_RET) || (new_pc == NEW_PC_NONE)) /* translate_instr() will set PC */
-		bb_target = bb_ret;
-	else if (tag & (TAG_CALL|TAG_BRANCH))
-		bb_target = create_singlestep_return_basicblock(cpu, new_pc, bb_ret);
-	/* get not-taken & conditional basic block */
-	if (tag & TAG_CONDITIONAL)
-		bb_next = create_singlestep_return_basicblock(cpu, next_pc, bb_ret);
-
-	bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
-
-	/* If it's not a branch, append "store PC & return" to basic block */
-	if (bb_cont)
-		emit_store_pc_return(cpu, bb_cont, next_pc, bb_ret);
-
-	return cur_bb;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -616,7 +435,7 @@ cpu_translate_function(cpu_t *cpu)
 	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP) {
 		bb_start = cpu_translate_singlestep(cpu, bb_ret, bb_trap);
 	} else {
-		bb_start = cpu_translate(cpu, bb_ret, bb_trap);
+		bb_start = cpu_translate_all(cpu, bb_ret, bb_trap);
 	}
 
 	// entry basicblock

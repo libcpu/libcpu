@@ -68,3 +68,18 @@ translate_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 		return NULL;
 }
 
+//XXX no sure this belongs here - but where else?
+void
+emit_store_pc(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc)
+{
+	Value *v_pc = ConstantInt::get(getIntegerType(cpu->pc_width), new_pc);
+	new StoreInst(v_pc, cpu->ptr_PC, bb_branch);
+}
+
+void
+emit_store_pc_return(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc, BasicBlock *bb_ret)
+{
+	emit_store_pc(cpu, bb_branch, new_pc);
+	BranchInst::Create(bb_ret, bb_branch);
+}
+
