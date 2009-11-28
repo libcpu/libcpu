@@ -90,11 +90,11 @@ arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 	index_register_after = (am == ADDMODE_INDY)? ptr_Y : NULL;
 
 #if 0
-	printf("pc = %x\n", pc);
-	printf("index_register_before = %x\n", index_register_before);
-	printf("index_register_after = %x\n", index_register_after);
-	printf("is_indirect = %x\n", is_indirect);
-	printf("is_8bit_base = %x\n", is_8bit_base);
+	log("pc = %x\n", pc);
+	log("index_register_before = %x\n", index_register_before);
+	log("index_register_after = %x\n", index_register_after);
+	log("is_indirect = %x\n", is_indirect);
+	log("is_8bit_base = %x\n", is_8bit_base);
 #endif
 
 	/* create base constant */
@@ -221,7 +221,7 @@ arch_6502_flags_decode(Value *flags, BasicBlock *bb)
 Value *
 arch_6502_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	uint8_t opcode = cpu->RAM[pc];
-printf("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
+log("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
 
 	switch (instraddmode[opcode].instr) {
 		case INSTR_BEQ: /* Z */		return LOAD(ptr_Z);
@@ -240,8 +240,8 @@ static int
 arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	uint8_t opcode = cpu->RAM[pc];
 
-//printf("%s:%d PC=$%04X\n", __func__, __LINE__, pc);
-//	printf("\naddmode = %i\n", instraddmode[opcode].addmode);
+//log("%s:%d PC=$%04X\n", __func__, __LINE__, pc);
+//	log("\naddmode = %i\n", instraddmode[opcode].addmode);
 
 	switch (instraddmode[opcode].instr) {
 		/* flags */
@@ -333,7 +333,7 @@ arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		case INSTR_XXX:	arch_6502_trap(cpu, pc, bb);			break;
 	}
 
-//printf("%s:%d opcode=%02X, addmode=%d, length=%d\n", __func__, __LINE__, opcode, instraddmode[opcode].addmode, length[instraddmode[opcode].addmode]);
+//log("%s:%d opcode=%02X, addmode=%d, length=%d\n", __func__, __LINE__, opcode, instraddmode[opcode].addmode, length[instraddmode[opcode].addmode]);
 	return length[instraddmode[opcode].addmode]+1;
 }
 

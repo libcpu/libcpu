@@ -630,7 +630,7 @@ int
 arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 #define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0)
-#define LOG printf("%s:%d\n", __func__, __LINE__);
+#define LOG log("%s:%d\n", __func__, __LINE__);
 	m88k_insn instr = INSTR(pc);
 	m88k_opcode_t opc = instr.opcode();
 	m88k_insnfmt_t fmt = instr.format();
@@ -1054,7 +1054,7 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 			break;
 
 		default:
-			printf("INVALID %s:%d\n", __func__, __LINE__); exit(1);
+			log("INVALID %s:%d\n", __func__, __LINE__); exit(1);
 			break;
 	}
 

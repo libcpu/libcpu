@@ -117,13 +117,6 @@ load_code(char *filename, uint8_t *RAM, int ramsize, addr_t *s, addr_t *e, addr_
 	return 1;
 }
 
-#ifdef DEBUG_SYMBOLS
-const char*
-app_get_symbol_name(addr_t addr) {
-	return "";
-}
-#endif
-
 //////////////////////////////////////////////////////////////////////
 // command line parsing helpers
 //////////////////////////////////////////////////////////////////////

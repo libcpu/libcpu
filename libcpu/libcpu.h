@@ -69,7 +69,6 @@ typedef enum {
 enum {
 	CPU_FLAG_FP80  = (1 << 15), // FP80 is natively supported.
 	CPU_FLAG_FP128 = (1 << 16), // FP128 is natively supported.
-	CPU_FLAG_QUIET = (1 << 31)  // XXX !!!TEMPORARY FLAG!!! remove some debugging
 };
 
 typedef struct cpu {
@@ -152,6 +151,7 @@ enum {
 #define CPU_DEBUG_SINGLESTEP			(1<<0)
 #define CPU_DEBUG_PRINT_IR				(1<<1)
 #define CPU_DEBUG_PRINT_IR_OPTIMIZED	(1<<2)
+#define CPU_DEBUG_LOG					(1<<3)
 #define CPU_DEBUG_ALL 0xFFFFFFFF
 
 //////////////////////////////////////////////////////////////////////
@@ -160,6 +160,12 @@ enum {
 #define CPU_HINT_NONE 0x00000000
 #define CPU_HINT_TRAP_RETURNS		(1<<0)
 #define CPU_HINT_TRAP_RETURNS_TWICE	(1<<1)
+
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+
+#define LOGGING (cpu->flags_debug & CPU_DEBUG_LOG)
+#define log(...) do { if (LOGGING) printf(__VA_ARGS__); } while(0)
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////

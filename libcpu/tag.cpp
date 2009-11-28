@@ -64,10 +64,10 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 		if (is_code(cpu, pc))	/* we have already been here, ignore */
 			return;
 
-#ifdef VERBOSE
-		for (int i=0; i<level; i++) printf(" ");
-		disasm_instr(cpu, pc);
-#endif
+		if (LOGGING) {
+			for (int i=0; i<level; i++) log(" ");
+			disasm_instr(cpu, pc);
+		}
 
 		bytes = cpu->f.tag_instr(cpu, pc, &tag, &new_pc, &next_pc);
 		or_tag(cpu, pc, tag | TAG_CODE);
@@ -133,9 +133,7 @@ cpu_tag(cpu_t *cpu, addr_t pc)
 	if (!cpu->tag)
 		init_tagging(cpu);
 
-#if VERBOSE
-	printf("starting tagging at $%02llx\n", (unsigned long long)pc);
-#endif
+	log("starting tagging at $%02llx\n", (unsigned long long)pc);
 
 	or_tag(cpu, pc, TAG_ENTRY); /* client wants to enter the guest code here */
 	tag_recursive(cpu, pc, 0);

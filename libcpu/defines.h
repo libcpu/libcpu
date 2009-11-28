@@ -1,4 +1,7 @@
-/* debugging */
-#define VERBOSE 1				/* log tagging to stdout */
-#define DEBUG 1				/* disassemble while executing */
-//#define DEBUG_SYMBOLS			/* print every CALL, and resolve the symbol */
+/*
+ * Add big switches for testing here.
+ * libcpu shouldn't use many ifdefs. Consider dropping one of
+ * the alteratives or make it a runtime option (i.e. let the
+ * client decide).
+ */
+#define OPT_LOCAL_REGISTERS

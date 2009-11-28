@@ -42,7 +42,7 @@ arch_mips_init(cpu_t *cpu)
 	cpu->count_regs_f80 = 0;
 	cpu->count_regs_f128 = 0;
 
-	printf("%d bit MIPS initialized.\n", cpu->reg_size);
+	log("%d bit MIPS initialized.\n", cpu->reg_size);
 }
 
 addr_t

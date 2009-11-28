@@ -45,7 +45,7 @@ arch_m88k_init(cpu_t *cpu)
 	cpu->count_regs_f80 = 32;
 	cpu->count_regs_f128 = 0;
 
-	printf("Motorola 88100 initialized.\n");
+	log("Motorola 88100 initialized.\n");
 }
 
 static addr_t

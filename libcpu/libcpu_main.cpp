@@ -1,4 +1,3 @@
-#define OPT_LOCAL_REGISTERS
 /*
  libcpu
  (C)2007-2009 Michael Steil et al.
@@ -80,11 +79,11 @@ cpu_new(cpu_arch_t arch)
 	std::string data_layout = cpu->exec_engine->getTargetData()->getStringRepresentation();
 	//printf("Target Data Layout = %s\n", data_layout.c_str());
 	if (data_layout.find("f80") != std::string::npos) {
-		fprintf(stderr, "INFO: FP80 supported.\n");
+		log("INFO: FP80 supported.\n");
 		cpu->flags |= CPU_FLAG_FP80;
 	}
 	if (data_layout.find("f128") != std::string::npos) {
-		fprintf(stderr, "INFO: FP128 supported.\n");
+		log("INFO: FP128 supported.\n");
 		cpu->flags |= CPU_FLAG_FP128;
 	}
 
@@ -134,12 +133,12 @@ void disasm_instr(cpu_t *cpu, addr_t pc) {
 
 	bytes = cpu->f.disasm_instr(cpu, pc, disassembly_line1, sizeof(disassembly_line1));
 
-	printf(".,%04llx ", (unsigned long long)pc);
+	log(".,%04llx ", (unsigned long long)pc);
 	for (i=0; i<bytes; i++) {
-		printf("%02X ", cpu->RAM[pc+i]);
+		log("%02X ", cpu->RAM[pc+i]);
 	}
 	for (i=0; i<=18-3*bytes; i++) { /* TODO make this arch neutral */
-		printf(" ");
+		log(" ");
 	}
 
 	/* delay slot */
@@ -150,9 +149,9 @@ void disasm_instr(cpu_t *cpu, addr_t pc) {
 		bytes = cpu->f.disasm_instr(cpu, pc + bytes, disassembly_line2, sizeof(disassembly_line2));
 
 	if (tag & TAG_DELAY_SLOT)
-		printf("%-23s [%s]\n", disassembly_line1, disassembly_line2);
+		log("%-23s [%s]\n", disassembly_line1, disassembly_line2);
 	else
-		printf("%-23s\n", disassembly_line1);
+		log("%-23s\n", disassembly_line1);
 
 }
 
@@ -188,10 +187,10 @@ enum {
 };
 
 BasicBlock *
-create_basicblock(addr_t addr, Function *f, uint8_t bb_type) {
+create_basicblock(cpu_t *cpu, addr_t addr, Function *f, uint8_t bb_type) {
 	char label[17];
 	snprintf(label, sizeof(label), "%c%08llx", bb_type, (unsigned long long)addr);
-printf("creating basic block %s\n", label);
+log("creating basic block %s\n", label);
 	return BasicBlock::Create(_CTX(), label, f, 0);
 }
 
@@ -229,9 +228,9 @@ translate_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 
 	/* create internal basic blocks if needed */
 	if (tag & TAG_CONDITIONAL)
-		bb_cond = create_basicblock(pc, cpu->func_jitmain, BB_TYPE_COND);
+		bb_cond = create_basicblock(cpu, pc, cpu->func_jitmain, BB_TYPE_COND);
 	if ((tag & TAG_DELAY_SLOT) && (tag & TAG_CONDITIONAL))
-		bb_delay = create_basicblock(pc, cpu->func_jitmain, BB_TYPE_DELAY);
+		bb_delay = create_basicblock(cpu, pc, cpu->func_jitmain, BB_TYPE_DELAY);
 
 	/* special case: delay slot */
 	if (tag & TAG_DELAY_SLOT) {
@@ -283,7 +282,7 @@ translate_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 // buik translate
 //////////////////////////////////////////////////////////////////////
 static const BasicBlock *
-lookup_basicblock(Function* f, addr_t pc, uint8_t bb_type) {
+lookup_basicblock(cpu_t *cpu, Function* f, addr_t pc, uint8_t bb_type) {
 	Function::const_iterator it;
 	for (it = f->getBasicBlockList().begin(); it != f->getBasicBlockList().end(); it++) {
 		const char *cstr = (*it).getNameStr().c_str();
@@ -293,7 +292,7 @@ lookup_basicblock(Function* f, addr_t pc, uint8_t bb_type) {
 				return it;
 		}
 	}
-	printf("error: basic block %c%08llx not found!\n", bb_type, pc);
+	log("error: basic block %c%08llx not found!\n", bb_type, pc);
 	return NULL;
 }
 
@@ -305,14 +304,14 @@ cpu_translate(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	addr_t pc;
 	pc = cpu->code_start;
 	while (pc < cpu->code_end) {
-		//printf("%04X: %d\n", pc, get_tag(cpu, pc));
+		//log("%04X: %d\n", pc, get_tag(cpu, pc));
 		if (is_start_of_basicblock(cpu, pc)) {
-			create_basicblock(pc, cpu->func_jitmain, BB_TYPE_NORMAL);
+			create_basicblock(cpu, pc, cpu->func_jitmain, BB_TYPE_NORMAL);
 			bbs++;
 		}
 		pc++;
 	}
-	printf("bbs: %d\n", bbs);
+	log("bbs: %d\n", bbs);
 
 	// create dispatch basicblock
 	BasicBlock* bb_dispatch = BasicBlock::Create(_CTX(), "dispatch", cpu->func_jitmain, 0);
@@ -321,11 +320,11 @@ cpu_translate(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 
 	for (pc = cpu->code_start; pc<cpu->code_end; pc++) {
 		if (needs_dispatch_entry(cpu, pc)) {
-			printf("info: adding case: %llx\n", pc);
+			log("info: adding case: %llx\n", pc);
 			ConstantInt* c = ConstantInt::get(getIntegerType(cpu->pc_width), pc);
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, BB_TYPE_NORMAL);
+			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->func_jitmain, pc, BB_TYPE_NORMAL);
 			if (!target) {
-				printf("error: unknown rts target $%04llx!\n", (unsigned long long)pc);
+				log("error: unknown rts target $%04llx!\n", (unsigned long long)pc);
 				exit(1);
 			} else {
 				sw->addCase(c, target);
@@ -342,14 +341,15 @@ cpu_translate(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 		if (cstr[0] != BB_TYPE_NORMAL)
 			continue; // skip special blocks like entry, dispatch...
 		pc = strtol(cstr+1, (char **)NULL, 16);
-printf("basicblock: L%08llx\n", (unsigned long long)pc);
+log("basicblock: L%08llx\n", (unsigned long long)pc);
 		tag_t tag;
 		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_delay = NULL, *bb_cont = NULL;
 		do {
 			tag_t dummy1;
 			addr_t dummy2;
 
-			disasm_instr(cpu, pc);
+			if (LOGGING)
+				disasm_instr(cpu, pc);
 
 			tag = get_tag(cpu, pc);
 
@@ -364,16 +364,16 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 				if (new_pc == NEW_PC_NONE) { /* translate_instr() will set PC */
 					bb_target = bb_dispatch;
 				} else {
-					bb_target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, new_pc, BB_TYPE_NORMAL);
+					bb_target = (BasicBlock*)lookup_basicblock(cpu, cpu->func_jitmain, new_pc, BB_TYPE_NORMAL);
 					if (!bb_target) { /* outside of code segment */
-						bb_target = create_basicblock(new_pc, cpu->func_jitmain, BB_TYPE_EXTERNAL);
+						bb_target = create_basicblock(cpu, new_pc, cpu->func_jitmain, BB_TYPE_EXTERNAL);
 						emit_store_pc_return(cpu, bb_target, new_pc, bb_ret);
 					}
 				}
 			}
 			/* get not-taken basic block */
 			if (tag & TAG_CONDITIONAL)
- 				bb_next = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, next_pc, BB_TYPE_NORMAL);
+ 				bb_next = (BasicBlock*)lookup_basicblock(cpu, cpu->func_jitmain, next_pc, BB_TYPE_NORMAL);
 
 			bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
 
@@ -385,12 +385,12 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 
 		/* link with next basic block if there isn't a control flow instr. already */
 		if (bb_cont) {
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu->func_jitmain, pc, BB_TYPE_NORMAL);
+			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->func_jitmain, pc, BB_TYPE_NORMAL);
 			if (!target) {
 				printf("error: unknown continue $%04llx!\n", (unsigned long long)pc);
 				exit(1);
 			}
-			printf("info: linking continue $%04llx!\n", (unsigned long long)pc);
+			log("info: linking continue $%04llx!\n", (unsigned long long)pc);
 			BranchInst::Create(target, bb_cont);
 		}
     }
@@ -404,7 +404,7 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 BasicBlock *
 create_singlestep_return_basicblock(cpu_t *cpu, addr_t new_pc, BasicBlock *bb_ret)
 {
-	BasicBlock *bb_branch = create_basicblock(new_pc, cpu->func_jitmain, BB_TYPE_NORMAL);
+	BasicBlock *bb_branch = create_basicblock(cpu, new_pc, cpu->func_jitmain, BB_TYPE_NORMAL);
 	emit_store_pc_return(cpu, bb_branch, new_pc, bb_ret);
 	return bb_branch;
 }
@@ -421,7 +421,8 @@ cpu_translate_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 
 	cur_bb = BasicBlock::Create(_CTX(), "instruction", cpu->func_jitmain, 0);
 
-	disasm_instr(cpu, pc);
+	if (LOGGING)
+		disasm_instr(cpu, pc);
 
 	cpu->f.tag_instr(cpu, pc, &tag, &new_pc, &next_pc);
 
@@ -764,16 +765,16 @@ cpu_translate_function(cpu_t *cpu)
 		cpu->mod->dump();
 
 	if (cpu->flags_optimize != CPU_OPTIMIZE_NONE) {
-		if (!(cpu->flags & CPU_FLAG_QUIET)) printf("*** Optimizing...");
+		log("*** Optimizing...");
 		optimize(cpu);
-		if (!(cpu->flags & CPU_FLAG_QUIET)) printf("done.\n");
+		log("done.\n");
 		if (cpu->flags_debug & CPU_DEBUG_PRINT_IR_OPTIMIZED)
 			cpu->mod->dump();
 	}
 
-	if (!(cpu->flags & CPU_FLAG_QUIET)) printf("*** Recompiling...");
+	log("*** Recompiling...");
 	cpu->fp = cpu->exec_engine->getPointerToFunction(cpu->func_jitmain);
-	if (!(cpu->flags & CPU_FLAG_QUIET)) printf("done.\n");
+	log("done.\n");
 }
 
 void

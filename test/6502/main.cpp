@@ -87,8 +87,8 @@ main(int argc, char **argv) {
 
 	cpu = cpu_new(CPU_ARCH_6502);
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
-//	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
-	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR);
+	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
+//	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR);
 //	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP);
 //	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP | CPU_DEBUG_PRINT_IR);
 	cpu_set_flags_arch(cpu, 
@@ -136,8 +136,6 @@ main(int argc, char **argv) {
 #ifdef RET_OPTIMIZATION
 	find_rets(RAM, cpu->code_start, cpu->code_end);
 #endif
-
-	printf("*** Executing...\n");
 
 #define PC (((reg_6502_t*)cpu->reg)->pc)
 #define A (((reg_6502_t*)cpu->reg)->a)
@@ -198,8 +196,6 @@ main(int argc, char **argv) {
 				return 1;
 		}
 	}
-
-	printf("done.\n");
 
 	return 0;
 }

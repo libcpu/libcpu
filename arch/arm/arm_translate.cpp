@@ -16,7 +16,7 @@ static Value* ptr_I;
 #define ptr_CPSR cpu->ptr_r32[16]
 
 #define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0)
-#define LOG do { printf("%s:%d\n", __func__, __LINE__); } while(0)
+#define LOG do { log("%s:%d\n", __func__, __LINE__); } while(0)
 
 #define ARM_BRANCH_TARGET ((((int)BITS(0,23) << 8) >> 6) + pc + 8)
 
@@ -135,8 +135,8 @@ Value *operand(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 		if (!BIT(4)) { /* Immediate shifts */
 			int shift = BITS(5,6);
 			int shift_imm = BITS(7,11);
-			printf("shift=%x\n", shift);
-			printf("shift_imm=%x\n", shift_imm);
+			log("shift=%x\n", shift);
+			log("shift_imm=%x\n", shift_imm);
 			if (!shift && !shift_imm) { /* Register */
 				return R(RM);
 			} else {
@@ -175,17 +175,17 @@ setsub(cpu_t *cpu, Value *op1, Value *op2, BasicBlock *bb)
 #define LINK LET32(14, CONST((uint64_t)(sint64_t)(sint32_t)pc+8))
 
 int arch_arm_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
-printf("%s:%d pc=%llx\n", __func__, __LINE__, pc);
+log("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
 
 //	int cond = instr >> 28;
 //	int op1 = (instr>>20)&0xFF;
 //	int op2 = (instr>>4)&0xF;
 //	int shift_bits = (instr>>4)&0xFF;
-//	printf("cond=%x, op1=%x, op2=%x, shift_bits=%x\n", cond, op1, op2, shift_bits);
+//	log("cond=%x, op1=%x, op2=%x, shift_bits=%x\n", cond, op1, op2, shift_bits);
 
 	int opcode = ((instr >> 21) & 0x0F);
-	printf("opcode=%d\n", opcode);
+	log("opcode=%d\n", opcode);
 
 	switch ((instr >> 26) & 3) { /* bits 26 and 27 */
 		case 0:
