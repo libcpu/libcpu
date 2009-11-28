@@ -173,7 +173,7 @@ arch_get_shift8(cpu_t *cpu, Value *addr, BasicBlock *bb)
 static Value *
 arch_get_shift16(cpu_t *cpu, Value *addr, BasicBlock *bb)
 {
-	Value *shift = AND(addr,CONST(1));
+	Value *shift = AND(LSHR(addr,CONST(1)),CONST(1));
 	if (!cpu->is_little_endian)
 		shift = XOR(shift, CONST(1));
 	return SHL(shift, CONST(4));
