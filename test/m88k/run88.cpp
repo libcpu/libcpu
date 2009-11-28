@@ -327,7 +327,7 @@ main(int ac, char **av, char **ep)
 
 	/* Setup arguments */
 	g_uframe_log = xec_log_register("uframe");
-	openbsd_m88k_setup_uframe(cpu, mem_if, ac - 1, av + 1, NULL, &stack_top);
+	openbsd_m88k_setup_uframe(cpu, mem_if, ac - 1, av + 1, ep, &stack_top);
 
 	/* Setup the CPU */
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
@@ -433,7 +433,7 @@ main(int ac, char **av, char **ep)
 #else
 				dump_state(RAM, (m88k_grf_t*)cpu->rf.grf);
 
-				if (PC == -1)
+				if (PC == (uint32_t)(-1U))
 					goto double_break;
 
 				// bad :(
