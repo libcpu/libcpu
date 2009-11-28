@@ -378,8 +378,10 @@ printf("basicblock: L%08llx\n", (unsigned long long)pc);
 			bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
 
 			pc = next_pc;
-
-		} while (is_code(cpu, pc) && !(is_start_of_basicblock(cpu, pc)));
+			
+		} while (!(is_start_of_basicblock(cpu, pc)) && /* new basic block starts here */
+				is_code(cpu, pc) && /* end of code section */
+				bb_cont); /* last intruction jumped away */
 
 		/* link with next basic block if there isn't a control flow instr. already */
 		if (bb_cont) {
