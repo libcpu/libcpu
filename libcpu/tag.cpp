@@ -27,7 +27,7 @@ init_tagging(cpu_t *cpu)
 		cpu->tag[i] = TAG_UNKNOWN;
 }
 
-static bool
+bool
 is_inside_code_area(cpu_t *cpu, addr_t a)
 {
 	return a >= cpu->code_start && a < cpu->code_end;

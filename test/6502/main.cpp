@@ -74,6 +74,10 @@ kernal_dispatch(
 	unsigned char *s,
 	unsigned char *p); //XXX
 
+
+#define SINGLESTEP_NONE	0
+#define SINGLESTEP_STEP	1
+#define SINGLESTEP_BB	2
 //////////////////////////////////////////////////////////////////////
 int
 main(int argc, char **argv) {
@@ -81,16 +85,22 @@ main(int argc, char **argv) {
 	char *entries;
 	cpu_t *cpu;
 	uint8_t *RAM;
+	int singlestep = SINGLESTEP_BB;
+	int log = 0;
+	int print_ir = 0;
 
 	int ramsize = 65536;
 	RAM = (uint8_t*)malloc(ramsize);
 
 	cpu = cpu_new(CPU_ARCH_6502);
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
-	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
-//	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR);
-//	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP);
-//	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP | CPU_DEBUG_PRINT_IR);
+	cpu_set_flags_debug(cpu, 0
+		| (print_ir? CPU_DEBUG_PRINT_IR : 0)
+		| (print_ir? CPU_DEBUG_PRINT_IR_OPTIMIZED : 0)
+		| (log? CPU_DEBUG_LOG :0)
+		| (SINGLESTEP_STEP? CPU_DEBUG_SINGLESTEP    : 0)
+		| (SINGLESTEP_BB?   CPU_DEBUG_SINGLESTEP_BB : 0)
+		);
 	cpu_set_flags_arch(cpu, 
 		CPU_6502_BRK_TRAP |
 		CPU_6502_XXX_TRAP |
@@ -161,8 +171,10 @@ main(int argc, char **argv) {
 //				printf("LIB: $%04X: A=$%02X X=$%02X Y=$%02X S=$%02X P=$%02X\n", pc, a, x, y, s, p);
 
 				if (ret == JIT_RETURN_SINGLESTEP) {
-					debug_function(cpu);
-					printf("::STEP:: %d\n", step++);
+					if (log) {
+						debug_function(cpu);
+						printf("::STEP:: %d\n", step++);
+					}
 					cpu_flush(cpu);
 				}
 

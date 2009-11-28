@@ -94,7 +94,7 @@ log("basicblock: L%08llx\n", (unsigned long long)pc);
 			pc = next_pc;
 			
 		} while (!(is_start_of_basicblock(cpu, pc)) && /* new basic block starts here */
-				is_code(cpu, pc) && /* end of code section */
+				is_code(cpu, pc) && /* end of code section */ //XXX no: this is whether it's TAG_CODE
 				bb_cont); /* last intruction jumped away */
 
 		/* link with next basic block if there isn't a control flow instr. already */

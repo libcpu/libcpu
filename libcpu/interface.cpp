@@ -12,6 +12,7 @@
 #include "tag.h"
 #include "translate_all.h"
 #include "translate_singlestep.h"
+#include "translate_singlestep_bb.h"
 #include "function.h"
 #include "optimize.h"
 
@@ -133,7 +134,7 @@ void
 cpu_tag(cpu_t *cpu, addr_t pc)
 {
 	/* for singlestep, we don't need this */
-	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP)
+	if (cpu->flags_debug & (CPU_DEBUG_SINGLESTEP | CPU_DEBUG_SINGLESTEP_BB))
 		return;
 
 	tag_start(cpu, pc);
@@ -150,6 +151,8 @@ cpu_translate_function(cpu_t *cpu)
 	/* TRANSLATE! */
 	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP) {
 		bb_start = cpu_translate_singlestep(cpu, bb_ret, bb_trap);
+	} else if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP_BB) {
+		bb_start = cpu_translate_singlestep_bb(cpu, bb_ret, bb_trap);
 	} else {
 		bb_start = cpu_translate_all(cpu, bb_ret, bb_trap);
 	}

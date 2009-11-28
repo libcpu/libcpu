@@ -152,9 +152,10 @@ enum {
 //////////////////////////////////////////////////////////////////////
 #define CPU_DEBUG_NONE 0x00000000
 #define CPU_DEBUG_SINGLESTEP			(1<<0)
-#define CPU_DEBUG_PRINT_IR				(1<<1)
-#define CPU_DEBUG_PRINT_IR_OPTIMIZED	(1<<2)
-#define CPU_DEBUG_LOG					(1<<3)
+#define CPU_DEBUG_SINGLESTEP_BB			(1<<1)
+#define CPU_DEBUG_PRINT_IR				(1<<2)
+#define CPU_DEBUG_PRINT_IR_OPTIMIZED	(1<<3)
+#define CPU_DEBUG_LOG					(1<<4)
 #define CPU_DEBUG_ALL 0xFFFFFFFF
 
 //////////////////////////////////////////////////////////////////////

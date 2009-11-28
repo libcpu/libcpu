@@ -281,7 +281,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	Value *exit_code = new AllocaInst(getIntegerType(32), "exit_code", label_entry);
 	// assume JIT_RETURN_FUNCNOTFOUND or JIT_RETURN_SINGLESTEP if in in single step.
 	new StoreInst(ConstantInt::get(getType(Int32Ty),
-					(cpu->flags_debug & CPU_DEBUG_SINGLESTEP) ? JIT_RETURN_SINGLESTEP :
+					(cpu->flags_debug & (CPU_DEBUG_SINGLESTEP | CPU_DEBUG_SINGLESTEP_BB)) ? JIT_RETURN_SINGLESTEP :
 					JIT_RETURN_FUNCNOTFOUND), exit_code, false, 0, label_entry);
 
 #if 0 // bad for debugging, minimal speedup
