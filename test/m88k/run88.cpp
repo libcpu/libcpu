@@ -387,18 +387,24 @@ main(int ac, char **av, char **ep)
 				break;
 
 			case JIT_RETURN_FUNCNOTFOUND:
+#if 1
+				printf("%s: error: 0x%llX not found!\n", __func__, (unsigned long long)PC);
+				cpu_tag(cpu, PC);
+				cpu_flush(cpu);
+#else
 				dump_state(RAM, (m88k_grf_t*)cpu->rf.grf);
 
 				if (PC == -1)
 					goto double_break;
 
 				// bad :(
-				printf("%s: error: 0x%llX not found!\n", __func__, (unsigned long long)PC);
+				printf("%s: warning: 0x%llX not found!\n", __func__, (unsigned long long)PC);
 				printf("PC: ");
 				for (size_t i = 0; i < 16; i++)
 					printf("%02X ", RAM[PC+i]);
 				printf("\n");
 				exit(EXIT_FAILURE);
+#endif
 				break;
 
 			case JIT_RETURN_TRAP:
