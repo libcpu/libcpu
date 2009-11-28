@@ -63,7 +63,7 @@ arch_arm_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
 
 arch_func_t arch_func_arm = {
 	arch_arm_init,
-	NULL,
+	arch_arm_done,
 	arch_arm_get_pc,
 	arch_arm_emit_decode_reg,
 	arch_arm_spill_reg_state,
