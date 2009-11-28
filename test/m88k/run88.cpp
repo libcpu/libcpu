@@ -335,7 +335,8 @@ main(int ac, char **av, char **ep)
 
 	/* Setup the CPU */
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
-	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP_BB);
+	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
+//	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP_BB);
 	cpu_set_flags_hint(cpu, CPU_HINT_TRAP_RETURNS_TWICE);
 	cpu_set_ram(cpu, RAM);
 
@@ -363,6 +364,26 @@ main(int ac, char **av, char **ep)
 	cpu->code_entry = g_ahdr.entry;
 
 	cpu_tag(cpu, cpu->code_entry);
+
+	/* if a cache file exists, add extra tags */
+	char cache_file[256];
+	FILE *f;
+	int i;
+	snprintf(cache_file, sizeof(cache_file), "%s.cache", av[1]);
+	if ((f = fopen(cache_file, "r"))) {
+		while(!feof(f)) {
+			addr_t entry = 0;
+			for (i = 0; i < 4; i++) {
+				entry |= fgetc(f) << (i*8);
+			}
+			printf("entry: %llx\n", entry);
+			cpu_tag(cpu, entry);
+		}
+		fclose(f);
+	} else {
+		printf("info: no cache found.\n");
+	}
+
 
 	dump_state(RAM, (m88k_grf_t*)cpu->rf.grf);
 
@@ -392,6 +413,14 @@ main(int ac, char **av, char **ep)
 				printf("%s: error: 0x%llX not found!\n", __func__, (unsigned long long)PC);
 				cpu_tag(cpu, PC);
 				cpu_flush(cpu);
+				if (!(f = fopen(cache_file, "a"))) {
+					printf("error appending to cache file!\n");
+					exit(1);
+				}
+				for (i = 0; i < 4; i++) {
+					fputc((PC >> (i*8))&0xFF, f);
+				}
+				fclose(f);
 #else
 				dump_state(RAM, (m88k_grf_t*)cpu->rf.grf);
 
