@@ -76,6 +76,8 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 
 	cpu->info.type = arch;
 	cpu->info.name = "noname";
+	cpu->info.common_flags = flags;
+	cpu->info.arch_flags = arch_flags;
 
 	switch (arch) {
 		case CPU_ARCH_6502:
