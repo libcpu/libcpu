@@ -1,18 +1,11 @@
 #include "libcpu.h"
 #include "types.h"
 #include "6502_isa.h"
+#include "6502_cc.h"
 #include "cpu_generic.h"
 #include "libcpu_6502.h"
 
 using namespace llvm;
-
-//XXX put into cpu_t
-Value* ptr_C;
-Value* ptr_Z;
-Value* ptr_I;
-Value* ptr_D;
-Value* ptr_V;
-Value* ptr_N;
 
 #define A 0
 #define X 1
@@ -24,6 +17,13 @@ Value* ptr_N;
 #define ptr_Y cpu->ptr_r8[Y]
 #define ptr_S cpu->ptr_r8[S]
 #define ptr_P cpu->ptr_r8[P]
+
+#define ptr_C ((cc6502_t*)cpu->feptr)->ptr_C
+#define ptr_Z ((cc6502_t*)cpu->feptr)->ptr_Z
+#define ptr_I ((cc6502_t*)cpu->feptr)->ptr_I
+#define ptr_D ((cc6502_t*)cpu->feptr)->ptr_D
+#define ptr_V ((cc6502_t*)cpu->feptr)->ptr_V
+#define ptr_N ((cc6502_t*)cpu->feptr)->ptr_N
 
 #define OPCODE cpu->RAM[pc]
 #define OPERAND_8 cpu->RAM[(pc+1)&0xFFFF]
@@ -138,7 +138,8 @@ arch_6502_trap(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 }
 
 static Value *
-arch_6502_shiftrotate(Value *l, bool left, bool rotate, BasicBlock *bb)
+arch_6502_shiftrotate(cpu_t *cpu, Value *l, bool left, bool rotate,
+	BasicBlock *bb)
 {
 	Value *c;
 	Value *v = LOAD(l);
@@ -159,7 +160,7 @@ arch_6502_shiftrotate(Value *l, bool left, bool rotate, BasicBlock *bb)
 	return STORE(v, l);
 }
 
-#define SHIFTROTATE(l,left,rotate) arch_6502_shiftrotate(l,left,rotate,bb)
+#define SHIFTROTATE(l,left,rotate) arch_6502_shiftrotate(cpu,l,left,rotate,bb)
 
 /*
  * XXX TODO: consider changing code to avoid 16 bit arithmetic:
@@ -168,7 +169,9 @@ arch_6502_shiftrotate(Value *l, bool left, bool rotate, BasicBlock *bb)
  *     we should use llvm.uadd.with.overflow.*
  */
 static Value *
-arch_6502_adc(Value *dreg, Value *sreg, Value *v, Value *c, BasicBlock *bb) {
+arch_6502_adc(cpu_t *cpu, Value *dreg, Value *sreg, Value *v, Value *c,
+	BasicBlock *bb)
+{
 	/* calculate intermediate result */
 	Value *v1 = ADD(ADD(ZEXT16(LOAD(sreg)), ZEXT16(v)), ZEXT16(c));
 
@@ -183,7 +186,7 @@ arch_6502_adc(Value *dreg, Value *sreg, Value *v, Value *c, BasicBlock *bb) {
 
 	return v1;
 }
-#define ADC(dreg,sreg,v,c) arch_6502_adc(dreg,sreg,v,c,bb)
+#define ADC(dreg,sreg,v,c) arch_6502_adc(cpu,dreg,sreg,v,c,bb)
 
 #define N_SHIFT 7
 #define V_SHIFT 6
@@ -193,7 +196,7 @@ arch_6502_adc(Value *dreg, Value *sreg, Value *v, Value *c, BasicBlock *bb) {
 #define C_SHIFT 0
 
 static Value *
-arch_6502_flags_encode(BasicBlock *bb)
+arch_6502_flags_encode(cpu_t *cpu, BasicBlock *bb)
 {
 	Value *flags = CONST8(0);
 
@@ -208,7 +211,7 @@ arch_6502_flags_encode(BasicBlock *bb)
 }
 
 static void
-arch_6502_flags_decode(Value *flags, BasicBlock *bb)
+arch_6502_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
 {
 	arch_decode_bit(flags, ptr_N, N_SHIFT, 8, bb);
 	arch_decode_bit(flags, ptr_V, V_SHIFT, 8, bb);
@@ -273,9 +276,9 @@ arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 
 		/* stack */
 		case INSTR_PHA:	PUSH(R(A));						break;
-		case INSTR_PHP:	PUSH(arch_6502_flags_encode(bb));	break;
+		case INSTR_PHP:	PUSH(arch_6502_flags_encode(cpu, bb));	break;
 		case INSTR_PLA:	SET_NZ(LET(A,PULL));			break;
-		case INSTR_PLP:	arch_6502_flags_decode(PULL, bb);	break;
+		case INSTR_PLP:	arch_6502_flags_decode(cpu, PULL, bb);	break;
 
 		/* shift */
 		case INSTR_ASL:	SET_NZ(SHIFTROTATE(LOPERAND, true, false));			break;
@@ -365,6 +368,15 @@ arch_6502_init(cpu_t *cpu)
 	cpu->count_regs_f128 = 0;
 
 	assert(offsetof(reg_6502_t, pc) == 5);
+
+	cpu->feptr = malloc(sizeof(cc6502_t));
+	assert(cpu->feptr != NULL);
+}
+
+static void
+arch_6502_done(cpu_t *cpu)
+{
+	free(cpu->feptr);
 }
 
 static void
@@ -380,13 +392,13 @@ arch_6502_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 
 	// decode P
 	Value *flags = new LoadInst(ptr_P, "", false, bb);
-	arch_6502_flags_decode(flags, bb);
+	arch_6502_flags_decode(cpu, flags, bb);
 }
 
 static void
 arch_6502_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
-	Value *flags = arch_6502_flags_encode(bb);
+	Value *flags = arch_6502_flags_encode(cpu, bb);
 	new StoreInst(flags, ptr_P, false, bb);
 }
 
@@ -417,7 +429,7 @@ arch_6502_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
 
 arch_func_t arch_func_6502 = {
 	arch_6502_init,
-	NULL,
+	arch_6502_done,
 	arch_6502_get_pc,
 	arch_6502_emit_decode_reg,
 	arch_6502_spill_reg_state,

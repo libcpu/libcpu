@@ -4,10 +4,9 @@
 #include "cpu_generic.h"
 #include "arch_types.h"
 
-#define ptr_PSR    ptr_r32[32]
-#define ptr_TRAPNO ptr_r32[33]
-
-Value *m88k_ptr_C;
+#define ptr_PSR		ptr_r32[32]
+#define ptr_TRAPNO	ptr_r32[33]
+#define ptr_C		(cpu->feptr)
 
 static void
 arch_m88k_init(cpu_t *cpu)
@@ -57,36 +56,36 @@ arch_m88k_get_pc(cpu_t *, void *reg)
 #define C_SHIFT 28
 
 static Value *
-arch_m88k_flags_encode(BasicBlock *bb)
+arch_m88k_flags_encode(cpu_t *cpu, BasicBlock *bb)
 {
 	Value *flags = ConstantInt::get(getIntegerType(32), 0);
 
-	flags = arch_encode_bit(flags, m88k_ptr_C, C_SHIFT, 32, bb);
+	flags = arch_encode_bit(flags, (Value *)ptr_C, C_SHIFT, 32, bb);
 
 	return flags;
 }
 
 static void
-arch_m88k_flags_decode(Value *flags, BasicBlock *bb)
+arch_m88k_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
 {
-	arch_decode_bit(flags, m88k_ptr_C, C_SHIFT, 32, bb);
+	arch_decode_bit(flags, (Value *)ptr_C, C_SHIFT, 32, bb);
 }
 
 static void
 arch_m88k_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	// declare flags
-	m88k_ptr_C = new AllocaInst(getIntegerType(1), "C", bb);
+	ptr_C = new AllocaInst(getIntegerType(1), "C", bb);
 
 	// decode PSR
 	Value *flags = new LoadInst(cpu->ptr_PSR, "", false, bb);
-	arch_m88k_flags_decode(flags, bb);
+	arch_m88k_flags_decode(cpu, flags, bb);
 }
 
 static void
 arch_m88k_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
-	Value *flags = arch_m88k_flags_encode(bb);
+	Value *flags = arch_m88k_flags_encode(cpu, bb);
 	new StoreInst(flags, cpu->ptr_PSR, false, bb);
 }
 

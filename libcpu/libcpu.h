@@ -131,6 +131,7 @@ typedef struct cpu {
 	Value *in_ptr_f64[MAX_REGISTERS];
 	Value *in_ptr_f80[MAX_REGISTERS];
 	Value *in_ptr_f128[MAX_REGISTERS];
+	void *feptr; /* This pointer can be used freely by the frontend. */
 } cpu_t;
 
 enum {

@@ -28,6 +28,15 @@ arch_arm_init(cpu_t *cpu)
 	cpu->count_regs_f64 = 0;
 	cpu->count_regs_f80 = 0;
 	cpu->count_regs_f128 = 0;
+
+	cpu->feptr = malloc(sizeof(ccarm_t));
+	assert(cpu->feptr != NULL);
+}
+
+static void
+arch_arm_done(cpu_t *cpu)
+{
+	free(cpu->feptr);
 }
 
 static addr_t

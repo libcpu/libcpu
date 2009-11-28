@@ -8,10 +8,9 @@
 
 using namespace llvm;
 
-extern Value* m88k_ptr_C; // Carry
-
-#define ptr_PSR    ptr_r32[32]
-#define ptr_TRAPNO ptr_r32[33]
+#define ptr_PSR		ptr_r32[32]
+#define ptr_TRAPNO	ptr_r32[33]
+#define ptr_C		((Value *)cpu->feptr)
 
 //////////////////////////////////////////////////////////////////////
 // TAGGING
@@ -188,8 +187,8 @@ arch_m88k_get_imm(cpu_t *cpu, m88k_insn const &instr, uint32_t bits,
 
 //////////////////////////////////////////////////////////////////////
 
-#define GET_CARRY()		(SEXT32(new LoadInst(m88k_ptr_C, "", false, bb)))
-#define SET_CARRY(v)	(new StoreInst(v, m88k_ptr_C, bb))
+#define GET_CARRY()		(SEXT32(new LoadInst(ptr_C, "", false, bb)))
+#define SET_CARRY(v)	(new StoreInst(v, ptr_C, bb))
 
 //////////////////////////////////////////////////////////////////////
 // FLOATING POINT

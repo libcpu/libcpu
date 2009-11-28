@@ -5,15 +5,12 @@
 
 using namespace llvm;
 
-extern Value* ptr_PC;
-
-static Value* ptr_N;
-static Value* ptr_Z;
-static Value* ptr_C;
-static Value* ptr_V;
-static Value* ptr_I;
-
-#define ptr_CPSR cpu->ptr_r32[16]
+#define ptr_N			((ccarm_t*)cpu->feptr)->ptr_N
+#define ptr_Z			((ccarm_t*)cpu->feptr)->ptr_Z
+#define ptr_C			((ccarm_t*)cpu->feptr)->ptr_C
+#define ptr_V			((ccarm_t*)cpu->feptr)->ptr_V
+#define ptr_I			((ccarm_t*)cpu->feptr)->ptr_I
+#define ptr_CPSR	cpu->ptr_r32[16]
 
 #define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0)
 #define LOG do { log("%s:%d\n", __func__, __LINE__); } while(0)
@@ -247,7 +244,7 @@ log("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 #define I_SHIFT 27
 
 static Value *
-arch_arm_flags_encode(BasicBlock *bb)
+arch_arm_flags_encode(cpu_t *cpu, BasicBlock *bb)
 {
 	Value *flags = ConstantInt::get(getIntegerType(32), 0);
 
@@ -261,7 +258,7 @@ arch_arm_flags_encode(BasicBlock *bb)
 }
 
 static void
-arch_arm_flags_decode(Value *flags, BasicBlock *bb)
+arch_arm_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
 {
 	arch_decode_bit(flags, ptr_N, N_SHIFT, 32, bb);
 	arch_decode_bit(flags, ptr_Z, Z_SHIFT, 32, bb);
@@ -282,13 +279,13 @@ arch_arm_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 
 	// decode CPSR
 	Value *flags = new LoadInst(ptr_CPSR, "", false, bb);
-	arch_arm_flags_decode(flags, bb);
+	arch_arm_flags_decode(cpu, flags, bb);
 }
 
 void
 arch_arm_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
-	Value *flags = arch_arm_flags_encode(bb);
+	Value *flags = arch_arm_flags_encode(cpu, bb);
 	new StoreInst(flags, ptr_CPSR, false, bb);
 }
 //printf("%s:%d PC=$%04X\n", __func__, __LINE__, pc);
