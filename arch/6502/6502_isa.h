@@ -75,7 +75,6 @@ enum {
 };
 
 extern unsigned char length[13];
-extern const char *mnemo[57];
 
 typedef struct {
 	unsigned char instr;

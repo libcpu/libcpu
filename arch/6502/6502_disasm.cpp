@@ -5,7 +5,7 @@
 #include "libcpu.h"
 #include "6502_isa.h"
 
-const char *addmode_template[] = {
+static const char *addmode_template[] = {
 	/*[ADDMODE_ABS]*/	"$%04X",
 	/*[ADDMODE_ABSX]*/	"$%04X,X",
 	/*[ADDMODE_ABSY]*/	"$%04X,Y",
@@ -19,6 +19,66 @@ const char *addmode_template[] = {
 	/*[ADDMODE_ZP]*/	"$%02X",
 	/*[ADDMODE_ZPX]*/	"$%02X,X",
 	/*[ADDMODE_ZPY]*/	"$%02X,Y"
+};
+
+static const char* mnemo[] = {
+	/*[INSTR_ADC]*/ "ADC",
+	/*[INSTR_AND]*/ "AND",
+	/*[INSTR_ASL]*/ "ASL",
+	/*[INSTR_BCC]*/ "BCC",
+	/*[INSTR_BCS]*/ "BCS",
+	/*[INSTR_BEQ]*/ "BEQ",
+	/*[INSTR_BIT]*/ "BIT",
+	/*[INSTR_BMI]*/ "BMI",
+	/*[INSTR_BNE]*/ "BNE",
+	/*[INSTR_BPL]*/ "BPL",
+	/*[INSTR_BRK]*/ "BRK",
+	/*[INSTR_BVC]*/ "BVC",
+	/*[INSTR_BVS]*/ "BVS",
+	/*[INSTR_CLC]*/ "CLC",
+	/*[INSTR_CLD]*/ "CLD",
+	/*[INSTR_CLI]*/ "CLI",
+	/*[INSTR_CLV]*/ "CLV",
+	/*[INSTR_CMP]*/ "CMP",
+	/*[INSTR_CPX]*/ "CPX",
+	/*[INSTR_CPY]*/ "CPY",
+	/*[INSTR_DEC]*/ "DEC",
+	/*[INSTR_DEX]*/ "DEX",
+	/*[INSTR_DEY]*/ "DEY",
+	/*[INSTR_EOR]*/ "EOR",
+	/*[INSTR_INC]*/ "INC",
+	/*[INSTR_INX]*/ "INX",
+	/*[INSTR_INY]*/ "INY",
+	/*[INSTR_JMP]*/ "JMP",
+	/*[INSTR_JSR]*/ "JSR",
+	/*[INSTR_LDA]*/ "LDA",
+	/*[INSTR_LDX]*/ "LDX",
+	/*[INSTR_LDY]*/ "LDY",
+	/*[INSTR_LSR]*/ "LSR",
+	/*[INSTR_NOP]*/ "NOP",
+	/*[INSTR_ORA]*/ "ORA",
+	/*[INSTR_PHA]*/ "PHA",
+	/*[INSTR_PHP]*/ "PHP",
+	/*[INSTR_PLA]*/ "PLA",
+	/*[INSTR_PLP]*/ "PLP",
+	/*[INSTR_ROL]*/ "ROL",
+	/*[INSTR_ROR]*/ "ROR",
+	/*[INSTR_RTI]*/ "RTI",
+	/*[INSTR_RTS]*/ "RTS",
+	/*[INSTR_SBC]*/ "SBC",
+	/*[INSTR_SEC]*/ "SEC",
+	/*[INSTR_SED]*/ "SED",
+	/*[INSTR_SEI]*/ "SEI",
+	/*[INSTR_STA]*/ "STA",
+	/*[INSTR_STX]*/ "STX",
+	/*[INSTR_STY]*/ "STY",
+	/*[INSTR_TAX]*/ "TAX",
+	/*[INSTR_TAY]*/ "TAY",
+	/*[INSTR_TSX]*/ "TSX",
+	/*[INSTR_TXA]*/ "TXA",
+	/*[INSTR_TXS]*/ "TXS",
+	/*[INSTR_TYA]*/ "TYA",
+	/*[INSTR_XXX]*/ "???"	
 };
 
 static int
