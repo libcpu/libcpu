@@ -1,11 +1,16 @@
+/*
+ * libcpu: translate_singlestep.cpp
+ *
+ * This translates a single instruction and hooks up all
+ * basic blocks (branch target, taken, non-taken, ...)
+ * so that execution will always exit after the instruction.
+ */
 #include "libcpu.h"
 #include "disasm.h"
 #include "tag.h"
 #include "basicblock.h"
 #include "translate.h"
-//////////////////////////////////////////////////////////////////////
-// single stepping
-//////////////////////////////////////////////////////////////////////
+
 BasicBlock *
 create_singlestep_return_basicblock(cpu_t *cpu, addr_t new_pc, BasicBlock *bb_ret)
 {
@@ -40,7 +45,7 @@ cpu_translate_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	if (tag & TAG_CONDITIONAL)
 		bb_next = create_singlestep_return_basicblock(cpu, next_pc, bb_ret);
 
-	bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
+	bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_trap, bb_next, cur_bb);
 
 	/* If it's not a branch, append "store PC & return" to basic block */
 	if (bb_cont)

@@ -1,9 +1,12 @@
+/*
+ * libcpu: disasm.cpp
+ *
+ * Disassemble and print an instruction. This appends
+ * instructions in a delay slot in square brackets.
+ */
 #include "libcpu.h"
 #include "tag.h"
 
-//////////////////////////////////////////////////////////////////////
-// disassemble
-//////////////////////////////////////////////////////////////////////
 void disasm_instr(cpu_t *cpu, addr_t pc) {
 	char disassembly_line1[80];
 	char disassembly_line2[80];

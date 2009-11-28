@@ -26,8 +26,7 @@
 
 tag_t get_tag(cpu_t *cpu, addr_t a);
 bool is_code(cpu_t *cpu, addr_t a);
-void cpu_tag(cpu_t *cpu, addr_t pc);
-
+void tag_start(cpu_t *cpu, addr_t pc);
 
 /*
  * NEW_PC_NONE states that the destination of a call is unknown.

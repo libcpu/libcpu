@@ -1,3 +1,10 @@
+/*
+ * libcpu: frontend.cpp
+ *
+ * This is the interface that frontends use. But frontends
+ * don't use this directly, but go through the macros in
+ * frontend.h
+ */
 #include "frontend.h"
 
 //////////////////////////////////////////////////////////////////////

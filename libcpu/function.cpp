@@ -1,7 +1,12 @@
+/*
+ * libcpu: function.cpp
+ *
+ * Create the master function and fill it with the helper
+ * basic blocks
+ */
+//XXX this is MESSY!
 #include "libcpu.h"
-//////////////////////////////////////////////////////////////////////
-// function
-//////////////////////////////////////////////////////////////////////
+
 static StructType *
 get_struct_reg(cpu_t *cpu) {
 	std::vector<const Type*>type_struct_reg_t_fields;

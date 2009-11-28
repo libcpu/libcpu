@@ -1,3 +1,10 @@
+/*
+ * libcpu: translate.cpp
+ *
+ * This translates a single instruction by calling out into
+ * the architecture dependent functions. It will optionally
+ * create internal basic blocks if necessary.
+ */
 #include "libcpu.h"
 #include "tag.h"
 #include "basicblock.h"
@@ -8,9 +15,9 @@
  */
 BasicBlock *
 translate_instr(cpu_t *cpu, addr_t pc, tag_t tag,
-	BasicBlock *bb_target,
-	BasicBlock *bb_next,
-	BasicBlock *bb_trap,
+	BasicBlock *bb_target,	/* target for branch/call/rey */
+	BasicBlock *bb_trap,	/* target for trap */
+	BasicBlock *bb_next,	/* non-taken for conditional */
 	BasicBlock *cur_bb)
 {
 	BasicBlock *bb_cond;

@@ -1,20 +1,6 @@
-#include <stdio.h>
-#include <assert.h>
-
-#define USE_READLINE 1
-
-#ifdef USE_READLINE
-#define Function FunctionX // XXX clash in readline.
-#include <readline/readline.h>
-#include <readline/history.h>
-#undef Function
-#endif
-
-#include "libcpu.h"
-
-#define ALIGN8(x) (((x) + 7) & -8)
-
 /*
+ * libcpu: idbg.cpp
+ *
  * This is a small interactive debugger for libcpu.
  *
  * The possible commands are:
@@ -57,6 +43,22 @@
  * wd N - disable watchpoint N
  * bt - call stack trace
  */
+
+#include <stdio.h>
+#include <assert.h>
+
+#define USE_READLINE 1
+
+#ifdef USE_READLINE
+#define Function FunctionX // XXX clash in readline.
+#include <readline/readline.h>
+#include <readline/history.h>
+#undef Function
+#endif
+
+#include "libcpu.h"
+
+#define ALIGN8(x) (((x) + 7) & -8)
 
 typedef struct _idbg {
 	cpu_t *cpu;

@@ -1,9 +1,12 @@
+/*
+ * libcpu: basicblock.cpp
+ *
+ * Basic block handling (create, lookup)
+ */
 #include "libcpu.h"
 #include "basicblock.h"
 #include "tag.h"
-//////////////////////////////////////////////////////////////////////
-// generic code
-//////////////////////////////////////////////////////////////////////
+
 bool
 is_start_of_basicblock(cpu_t *cpu, addr_t a)
 {

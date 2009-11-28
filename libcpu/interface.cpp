@@ -1,14 +1,15 @@
 /*
- libcpu
- (C)2007-2009 Michael Steil et al.
+ * libcpu: interface.cpp
+ *
+ * This is the interface to the client.
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 /* project global headers */
 #include "libcpu.h"
+#include "tag.h"
 #include "translate_all.h"
 #include "translate_singlestep.h"
 #include "function.h"
@@ -126,6 +127,16 @@ void
 cpu_set_flags_arch(cpu_t *cpu, uint32_t f)
 {
 	cpu->flags_arch = f;
+}
+
+void
+cpu_tag(cpu_t *cpu, addr_t pc)
+{
+	/* for singlestep, we don't need this */
+	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP)
+		return;
+
+	tag_start(cpu, pc);
 }
 
 static void

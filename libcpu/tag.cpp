@@ -1,3 +1,12 @@
+/*
+ * libcpu: tag.cpp
+ *
+ * Do a depth search of all reachable code and associate
+ * every reachable instruction with flags that indicate
+ * instruction type (branch,call,ret, ...), flags
+ * (conditional, ...) and code flow information (branch
+ * target, ...)
+ */
 #include "libcpu.h"
 #include "tag.h"
 
@@ -123,12 +132,8 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 }
 
 void
-cpu_tag(cpu_t *cpu, addr_t pc)
+tag_start(cpu_t *cpu, addr_t pc)
 {
-	/* for singlestep, we don't need this */
-	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP)
-		return;
-
 	/* initialize data structure on demand */
 	if (!cpu->tag)
 		init_tagging(cpu);
@@ -138,4 +143,3 @@ cpu_tag(cpu_t *cpu, addr_t pc)
 	or_tag(cpu, pc, TAG_ENTRY); /* client wants to enter the guest code here */
 	tag_recursive(cpu, pc, 0);
 }
-

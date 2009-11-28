@@ -1,3 +1,8 @@
+/*
+ * libcpu: optimize.cpp
+ *
+ * Tell LLVM to run optimizers over the IR.
+ */
 #include "libcpu.h"
 //XXX how do we know this is a suitable set of optimizations?
 void

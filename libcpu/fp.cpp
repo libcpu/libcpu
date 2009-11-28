@@ -1,6 +1,8 @@
-//
-// IEEE754 Floating Point Handling
-//
+/*
+ * libcpu: fp.cpp
+ *
+ * IEEE754 Floating Point Handling
+ */
 #include "libcpu.h"
 #include "frontend.h"
 

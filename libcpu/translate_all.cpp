@@ -1,11 +1,15 @@
+/*
+ * libcpu: translate_all.cpp
+ *
+ * This translates all known code by creating basic blocks and
+ * filling them with instructions.
+ */
 #include "libcpu.h"
 #include "basicblock.h"
 #include "disasm.h"
 #include "tag.h"
 #include "translate.h"
-//////////////////////////////////////////////////////////////////////
-// buik translate
-//////////////////////////////////////////////////////////////////////
+
 BasicBlock *
 cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 {
@@ -85,7 +89,7 @@ log("basicblock: L%08llx\n", (unsigned long long)pc);
 			if (tag & TAG_CONDITIONAL)
  				bb_next = (BasicBlock*)lookup_basicblock(cpu, cpu->func_jitmain, next_pc, BB_TYPE_NORMAL);
 
-			bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_next, bb_trap, cur_bb);
+			bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_trap, bb_next, cur_bb);
 
 			pc = next_pc;
 			
