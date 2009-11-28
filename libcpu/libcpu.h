@@ -169,6 +169,7 @@ void cpu_set_flags_optimize(cpu_t *cpu, uint64_t f);
 void cpu_set_flags_debug(cpu_t *cpu, uint32_t f);
 void cpu_tag(cpu_t *cpu, addr_t pc);
 int cpu_run(cpu_t *cpu, debug_function_t debug_function);
+void cpu_translate(cpu_t *cpu);
 void cpu_set_flags_arch(cpu_t *cpu, uint32_t f);
 void cpu_set_ram(cpu_t *cpu, uint8_t *RAM);
 void cpu_flush(cpu_t *cpu);

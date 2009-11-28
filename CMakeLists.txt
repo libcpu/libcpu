@@ -13,8 +13,9 @@ SET(CMAKE_BUILD_TYPE "Debug")
 # Add here the architecture you want to support.
 # 
 SET(GUEST_ARCHITECTURES 6502 m68k m88k mips arm)
+SET(GUEST_EXTRA_TESTS multi)
 #IF(APPLE)
-#  SET(GUEST_EXTRA_TESTS next68k)
+#  SET(GUEST_EXTRA_TESTS ${GUEST_EXTRA_TESTS} next68k)
 #ENDIF(APPLE)
 
 #

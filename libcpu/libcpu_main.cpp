@@ -768,8 +768,9 @@ cpu_init(cpu_t *cpu)
 	cpu->f.init(cpu);
 }
 
-int
-cpu_run(cpu_t *cpu, debug_function_t debug_function)
+/* forces ahead of time translation (e.g. for benchmarking the run) */
+void
+cpu_translate(cpu_t *cpu)
 {
 	/* lazy init of frontend */
 	if (!cpu->reg)
@@ -778,6 +779,12 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 	/* on demand recompilation */
 	if (!cpu->fp)
 		cpu_translate_function(cpu);
+}
+
+int
+cpu_run(cpu_t *cpu, debug_function_t debug_function)
+{
+	cpu_translate(cpu);
 
 	/* run it ! */
 	typedef int (*fp_t)(uint8_t *RAM, void *reg, void *fp_reg, debug_function_t fp);
