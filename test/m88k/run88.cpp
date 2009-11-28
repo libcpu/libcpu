@@ -57,8 +57,8 @@ run88_mem_gmap(xec_mem_if_t *self, xec_haddr_t addr, size_t len, unsigned flags)
 	}
 
 	dist = addr - (xec_haddr_t)RAM;
-	fprintf(stderr, "GMAP: %llx || %p -> %llx\n",
-		(unsigned long long)addr, RAM, (unsigned long long)dist);
+	//fprintf(stderr, "GMAP: %llx || %p -> %llx\n",
+	//	(unsigned long long)addr, RAM, (unsigned long long)dist);
 
 	if (sizeof(dist) == sizeof(uint64_t)) {
 		if (dist >= RAM_SIZE && dist < (uintptr_t)(4ULL * 1024 * 1024 * 1024))
@@ -393,6 +393,16 @@ main(int ac, char **av, char **ep)
 
 	aspace_unlock();
 
+	printf("Translating..."); fflush(stdout);
+	cpu_translate(cpu);
+	printf("done.\n");
+
+#ifndef DEBUGGER
+	xec_log_disable("nix");
+	xec_log_disable("openbsd41");
+	xec_log_disable(NULL);
+#endif
+
 	for (;;) {
 		if (debugging) {
 			rc = cpu_debugger(cpu, debug_function);
@@ -409,10 +419,13 @@ main(int ac, char **av, char **ep)
 				break;
 
 			case JIT_RETURN_FUNCNOTFOUND:
-#if 1
+#ifndef DEBUGGER
 				printf("%s: error: 0x%llX not found!\n", __func__, (unsigned long long)PC);
+				printf("Translating..."); fflush(stdout);
 				cpu_tag(cpu, PC);
 				cpu_flush(cpu);
+				cpu_translate(cpu);
+				printf("done.\n");
 				if (!(f = fopen(cache_file, "a"))) {
 					printf("error appending to cache file!\n");
 					exit(1);
@@ -438,7 +451,7 @@ main(int ac, char **av, char **ep)
 				break;
 
 			case JIT_RETURN_TRAP:
-				printf("TRAP %u / %u!\n", TRAPNO, R[13]);
+				//printf("TRAP %u / %u!\n", TRAPNO, R[13]);
 				xec_us_syscall_dispatch(us_syscall, monitor);
 				break;
 
