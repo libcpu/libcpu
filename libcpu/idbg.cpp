@@ -28,6 +28,7 @@
  * > - non interactive step and display modified registers.
  * c/q - continue execution (detach)
  * i - toggle IR dumping
+ * B - toggle BB step
  *
  * --NYI--
  * I - dump LLVM IR.
@@ -1084,6 +1085,10 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 			cpu_set_flags_debug(cpu, cpu->flags_debug ^ CPU_DEBUG_PRINT_IR);
 			fprintf(stderr, "LLVM IR dumping is now %s.\n",
 				(cpu->flags_debug & CPU_DEBUG_PRINT_IR) ? "ENABLED" : "DISABLED");
+		} else if (*p == 'B') {
+			cpu_set_flags_debug(cpu, cpu->flags_debug ^ CPU_DEBUG_SINGLESTEP_BB);
+			fprintf(stderr, "BasicBlock step is now %s.\n",
+				(cpu->flags_debug & CPU_DEBUG_SINGLESTEP_BB) ? "ENABLED" : "DISABLED");
 		} else if (*p == '>') {
 			last_command = 2;
 			interactive = false;

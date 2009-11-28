@@ -12,7 +12,7 @@
 #include "nix.h"
 #include "loader.h"
 
-#define DEBUGGER
+//#define DEBUGGER
 
 #define RAM_SIZE (16 * 1024 * 1024)
 #define STACK_TOP ((long long)(RAM+RAM_SIZE-4))
@@ -335,16 +335,17 @@ main(int ac, char **av, char **ep)
 
 	/* Setup the CPU */
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
-	cpu_set_flags_debug(cpu, 0);
+	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP_BB);
 	cpu_set_flags_hint(cpu, CPU_HINT_TRAP_RETURNS_TWICE);
 	cpu_set_ram(cpu, RAM);
 
 	/* Create XEC bridge monitor */
-	guest_info.name = "m88k";
-	guest_info.endian = XEC_ENDIAN_BIG;
-	guest_info.byte_size = 8;
-	guest_info.word_size = 32;
-	guest_info.page_size = 4096;
+	guest_info.name = cpu->info.name;
+	guest_info.endian = (cpu->info.common_flags & CPU_FLAG_ENDIAN_MASK)
+		== CPU_FLAG_ENDIAN_BIG ? XEC_ENDIAN_BIG : XEC_ENDIAN_LITTLE;
+	guest_info.byte_size = cpu->info.byte_size;
+	guest_info.word_size = cpu->info.word_size;
+	guest_info.page_size = cpu->info.default_page_size;
 	monitor = xec_monitor_create(&guest_info, mem_if, cpu->rf.grf, NULL);
 	if (monitor == NULL) {
 		fprintf(stderr, "error: failed createc xec monitor.\n");
@@ -412,10 +413,16 @@ main(int ac, char **av, char **ep)
 				xec_us_syscall_dispatch(us_syscall, monitor);
 				break;
 
+			case JIT_RETURN_SINGLESTEP:
+				break;
+
 			default:
 				printf("unknown return code: %d\n", rc);
 				break;
 		}
+
+		if (cpu->flags_debug & (CPU_DEBUG_SINGLESTEP | CPU_DEBUG_SINGLESTEP_BB))
+			cpu_flush(cpu);
 	}
 
 double_break:
