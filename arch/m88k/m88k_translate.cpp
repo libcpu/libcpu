@@ -1,7 +1,7 @@
 #define OPT_LOCAL_REGISTERS //XXX
 
 #include "libcpu.h"
-#include "cpu_generic.h"
+#include "frontend.h"
 #include "arch/m88k/libcpu_m88k.h"
 #include "m88k_internal.h"
 #include "m88k_insn.h"
@@ -264,7 +264,7 @@ enum {
  *
  * LLVM mandates both operands of a binary operation
  * shall be the same size. This function overrides 
- * cpu_generic.h macros and extends the operation to
+ * frontend.h macros and extends the operation to
  * the biggest of the two operands.
  */
 static Value *

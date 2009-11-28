@@ -1,7 +1,7 @@
 #include "libcpu.h"
 #include "m88k_internal.h"
 #include "libcpu_m88k.h"
-#include "cpu_generic.h"
+#include "frontend.h"
 #include "arch_types.h"
 
 #define ptr_PSR		ptr_r32[32]

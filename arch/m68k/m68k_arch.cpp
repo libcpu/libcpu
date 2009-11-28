@@ -1,6 +1,6 @@
 #include "libcpu.h"
 #include "m68k_internal.h"
-#include "cpu_generic.h"
+#include "frontend.h"
 
 static void
 arch_m68k_init(cpu_t *cpu)

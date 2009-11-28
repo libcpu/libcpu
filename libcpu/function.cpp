@@ -1,134 +1,6 @@
-/*
- libcpu
- (C)2007-2009 Michael Steil et al.
- */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-/* project global headers */
 #include "libcpu.h"
-#include "tag.h"
-#include "disasm.h"
-#include "translate.h"
-#include "translate_all.h"
-#include "translate_singlestep.h"
-#include "basicblock.h"
-#include "arch.h"
-#include "optimize.h"
-
-using namespace llvm;
-
-#include "arch/6502/libcpu_6502.h"
-#include "arch/m68k/libcpu_m68k.h"
-#include "arch/mips/libcpu_mips.h"
-#include "arch/m88k/libcpu_m88k.h"
-#include "arch/arm/libcpu_arm.h"
-
 //////////////////////////////////////////////////////////////////////
-// cpu_t
-//////////////////////////////////////////////////////////////////////
-cpu_t *
-cpu_new(cpu_arch_t arch)
-{
-	cpu_t *cpu;
-
-	llvm::InitializeNativeTarget();
-
-	cpu = (cpu_t*)malloc(sizeof(cpu_t));
-	cpu->arch = arch;
-
-	switch (arch) {
-		case CPU_ARCH_6502:
-			cpu->f = arch_func_6502;
-			break;
-		case CPU_ARCH_M68K:
-			cpu->f = arch_func_m68k;
-			break;
-		case CPU_ARCH_MIPS:
-			cpu->f = arch_func_mips;
-			break;
-		case CPU_ARCH_M88K:
-			cpu->f = arch_func_m88k;
-			break;
-		case CPU_ARCH_ARM:
-			cpu->f = arch_func_arm;
-			break;
-		default:
-			printf("illegal arch: %d\n", arch);
-			exit(1);
-	}
-
-	cpu->name = "noname";
-	cpu->code_start = 0;
-	cpu->code_end = 0;
-	cpu->code_entry = 0;
-	cpu->tag = NULL;
-
-	cpu->flags_optimize = CPU_OPTIMIZE_NONE;
-	cpu->flags_debug = CPU_DEBUG_NONE;
-	cpu->flags_hint = CPU_HINT_NONE;
-	cpu->flags = 0;
-	cpu->flags_arch = 0;
-
-	cpu->fp = NULL;
-	cpu->reg = NULL;
-	cpu->mod = new Module(cpu->name, _CTX());
-	cpu->exec_engine = ExecutionEngine::create(cpu->mod);
-
-	assert(cpu->exec_engine != NULL);
-
-	//XXX there is a better way to do this?
-	std::string data_layout = cpu->exec_engine->getTargetData()->getStringRepresentation();
-	//printf("Target Data Layout = %s\n", data_layout.c_str());
-	if (data_layout.find("f80") != std::string::npos) {
-		log("INFO: FP80 supported.\n");
-		cpu->flags |= CPU_FLAG_FP80;
-	}
-	if (data_layout.find("f128") != std::string::npos) {
-		log("INFO: FP128 supported.\n");
-		cpu->flags |= CPU_FLAG_FP128;
-	}
-
-//	cpu->mod->setDataLayout("e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32");
-//	cpu->mod->setTargetTriple("i386-pc-linux-gnu");
-
-	return cpu;
-}
-
-void
-cpu_set_ram(cpu_t*cpu, uint8_t *r)
-{
-	cpu->RAM = r;
-}
-
-void
-cpu_set_flags_optimize(cpu_t *cpu, uint64_t f)
-{
-	cpu->flags_optimize = f;
-}
-
-void
-cpu_set_flags_debug(cpu_t *cpu, uint32_t f)
-{
-	cpu->flags_debug = f;
-}
-
-void
-cpu_set_flags_hint(cpu_t *cpu, uint32_t f)
-{
-	cpu->flags_hint = f;
-}
-
-void
-cpu_set_flags_arch(cpu_t *cpu, uint32_t f)
-{
-	cpu->flags_arch = f;
-}
-
-//////////////////////////////////////////////////////////////////////
-// 
+// function
 //////////////////////////////////////////////////////////////////////
 static StructType *
 get_struct_reg(cpu_t *cpu) {
@@ -178,70 +50,6 @@ get_struct_fp_reg(cpu_t *cpu) {
 	return getStructType(type_struct_fp_reg_t_fields, /*isPacked=*/true);
 }
 
-static Function*
-cpu_create_function(cpu_t *cpu, const char *name)
-{
-	Function *func;
-
-	// Type Definitions
-	// - struct reg
-	StructType *type_struct_reg_t = get_struct_reg(cpu);
-	cpu->mod->addTypeName("struct.reg_t", type_struct_reg_t);
-	// - struct reg *
-	PointerType *type_pstruct_reg_t = PointerType::get(type_struct_reg_t, 0);
-	// - struct fp_reg
-	StructType *type_struct_fp_reg_t = get_struct_fp_reg(cpu);
-	cpu->mod->addTypeName("struct.fp_reg_t", type_struct_fp_reg_t);
-	// - struct fp_reg *
-	PointerType *type_pstruct_fp_reg_t = PointerType::get(type_struct_fp_reg_t, 0);
-	// - uint8_t *
-	PointerType *type_pi8 = PointerType::get(getIntegerType(8), 0);
-	// - intptr *
-	PointerType *type_intptr = PointerType::get(cpu->exec_engine->getTargetData()->getIntPtrType(_CTX()), 0);
-	// - (*f)(cpu_t *) [debug_function() function pointer]
-	std::vector<const Type*>type_func_callout_args;
-	type_func_callout_args.push_back(type_intptr);	/* intptr *cpu */
-	FunctionType *type_func_callout = FunctionType::get(
-		getType(VoidTy),	/* Result */
-		type_func_callout_args,	/* Params */
-		false);		      	/* isVarArg */
-	cpu->type_pfunc_callout = PointerType::get(type_func_callout, 0);
-
-	// - (*f)(uint8_t *, reg_t *, fp_reg_t *, (*)(...)) [jitmain() function pointer)
-	std::vector<const Type*>type_func_args;
-	type_func_args.push_back(type_pi8);				/* uint8_t *RAM */
-	type_func_args.push_back(type_pstruct_reg_t);	/* reg_t *reg */
-	type_func_args.push_back(type_pstruct_fp_reg_t);	/* fp_reg_t *fp_reg */
-	type_func_args.push_back(cpu->type_pfunc_callout);	/* (*debug)(...) */
-	FunctionType* type_func = FunctionType::get(
-		getIntegerType(32),		/* Result */
-		type_func_args,		/* Params */
-		false);						/* isVarArg */
-
-	// Function Declarations
-	func = Function::Create(
-		type_func,				/* Type */
-		GlobalValue::ExternalLinkage,	/* Linkage */
-		name, cpu->mod);				/* Name */
-	func->setCallingConv(CallingConv::C);
-	AttrListPtr func_PAL;
-	{
-		SmallVector<AttributeWithIndex, 4> Attrs;
-		AttributeWithIndex PAWI;
-		PAWI.Index = 1U; PAWI.Attrs = 0  | Attribute::NoCapture;
-		Attrs.push_back(PAWI);
-		PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind;
-		Attrs.push_back(PAWI);
-		func_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-	}
-	func->setAttributes(func_PAL);
-
-	return func;
-}
-
-//////////////////////////////////////////////////////////////////////
-// 
-//////////////////////////////////////////////////////////////////////
 static Value *
 get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
 	ConstantInt* const_0 = ConstantInt::get(getType(Int32Ty), 0);
@@ -388,13 +196,69 @@ spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 	spill_fp_reg_state_helper(cpu, cpu->count_regs_f128, 128, cpu->in_ptr_f128, cpu->ptr_f128, bb);
 }
 
-static void
-cpu_translate_function(cpu_t *cpu)
+Function*
+cpu_create_function(cpu_t *cpu, const char *name,
+	BasicBlock **p_bb_ret,
+	BasicBlock **p_bb_trap,
+	BasicBlock **p_label_entry)
 {
-	cpu->func_jitmain = cpu_create_function(cpu, "jitmain");
+	Function *func;
+
+	// Type Definitions
+	// - struct reg
+	StructType *type_struct_reg_t = get_struct_reg(cpu);
+	cpu->mod->addTypeName("struct.reg_t", type_struct_reg_t);
+	// - struct reg *
+	PointerType *type_pstruct_reg_t = PointerType::get(type_struct_reg_t, 0);
+	// - struct fp_reg
+	StructType *type_struct_fp_reg_t = get_struct_fp_reg(cpu);
+	cpu->mod->addTypeName("struct.fp_reg_t", type_struct_fp_reg_t);
+	// - struct fp_reg *
+	PointerType *type_pstruct_fp_reg_t = PointerType::get(type_struct_fp_reg_t, 0);
+	// - uint8_t *
+	PointerType *type_pi8 = PointerType::get(getIntegerType(8), 0);
+	// - intptr *
+	PointerType *type_intptr = PointerType::get(cpu->exec_engine->getTargetData()->getIntPtrType(_CTX()), 0);
+	// - (*f)(cpu_t *) [debug_function() function pointer]
+	std::vector<const Type*>type_func_callout_args;
+	type_func_callout_args.push_back(type_intptr);	/* intptr *cpu */
+	FunctionType *type_func_callout = FunctionType::get(
+		getType(VoidTy),	/* Result */
+		type_func_callout_args,	/* Params */
+		false);		      	/* isVarArg */
+	cpu->type_pfunc_callout = PointerType::get(type_func_callout, 0);
+
+	// - (*f)(uint8_t *, reg_t *, fp_reg_t *, (*)(...)) [jitmain() function pointer)
+	std::vector<const Type*>type_func_args;
+	type_func_args.push_back(type_pi8);				/* uint8_t *RAM */
+	type_func_args.push_back(type_pstruct_reg_t);	/* reg_t *reg */
+	type_func_args.push_back(type_pstruct_fp_reg_t);	/* fp_reg_t *fp_reg */
+	type_func_args.push_back(cpu->type_pfunc_callout);	/* (*debug)(...) */
+	FunctionType* type_func = FunctionType::get(
+		getIntegerType(32),		/* Result */
+		type_func_args,		/* Params */
+		false);						/* isVarArg */
+
+	// Function Declarations
+	func = Function::Create(
+		type_func,				/* Type */
+		GlobalValue::ExternalLinkage,	/* Linkage */
+		name, cpu->mod);				/* Name */
+	func->setCallingConv(CallingConv::C);
+	AttrListPtr func_PAL;
+	{
+		SmallVector<AttributeWithIndex, 4> Attrs;
+		AttributeWithIndex PAWI;
+		PAWI.Index = 1U; PAWI.Attrs = 0  | Attribute::NoCapture;
+		Attrs.push_back(PAWI);
+		PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind;
+		Attrs.push_back(PAWI);
+		func_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
+	}
+	func->setAttributes(func_PAL);
 
 	// args
-	Function::arg_iterator args = cpu->func_jitmain->arg_begin();
+	Function::arg_iterator args = func->arg_begin();
 	cpu->ptr_RAM = args++;
 	cpu->ptr_RAM->setName("RAM");
 	cpu->ptr_reg = args++;
@@ -405,7 +269,7 @@ cpu_translate_function(cpu_t *cpu)
 	cpu->ptr_func_debug->setName("debug");
 
 	// entry basicblock
-	BasicBlock *label_entry = BasicBlock::Create(_CTX(), "entry", cpu->func_jitmain, 0);
+	BasicBlock *label_entry = BasicBlock::Create(_CTX(), "entry", func, 0);
 	emit_decode_reg(cpu, label_entry);
 
 	// create exit code
@@ -422,84 +286,18 @@ cpu_translate_function(cpu_t *cpu)
 #endif
 
 	// create ret basicblock
-	BasicBlock *bb_ret = BasicBlock::Create(_CTX(), "ret", cpu->func_jitmain, 0);  
+	BasicBlock *bb_ret = BasicBlock::Create(_CTX(), "ret", func, 0);  
 	spill_reg_state(cpu, bb_ret);
 	ReturnInst::Create(_CTX(), new LoadInst(exit_code, "", false, 0, bb_ret), bb_ret);
 	// create trap return basicblock
-	BasicBlock *bb_trap = BasicBlock::Create(_CTX(), "trap", cpu->func_jitmain, 0);  
+	BasicBlock *bb_trap = BasicBlock::Create(_CTX(), "trap", func, 0);  
 	new StoreInst(ConstantInt::get(getType(Int32Ty), JIT_RETURN_TRAP), exit_code, false, 0, bb_trap);
 	// return
 	BranchInst::Create(bb_ret, bb_trap);
 
-	BasicBlock *bb_start;
-	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP) {
-		bb_start = cpu_translate_singlestep(cpu, bb_ret, bb_trap);
-	} else {
-		bb_start = cpu_translate_all(cpu, bb_ret, bb_trap);
-	}
-
-	// entry basicblock
-	BranchInst::Create(bb_start, label_entry);
-
-	// make sure everything is OK
-	verifyModule(*cpu->mod, PrintMessageAction);
-
-	if (cpu->flags_debug & CPU_DEBUG_PRINT_IR)
-		cpu->mod->dump();
-
-	if (cpu->flags_optimize != CPU_OPTIMIZE_NONE) {
-		log("*** Optimizing...");
-		optimize(cpu);
-		log("done.\n");
-		if (cpu->flags_debug & CPU_DEBUG_PRINT_IR_OPTIMIZED)
-			cpu->mod->dump();
-	}
-
-	log("*** Recompiling...");
-	cpu->fp = cpu->exec_engine->getPointerToFunction(cpu->func_jitmain);
-	log("done.\n");
+	*p_bb_ret = bb_ret;
+	*p_bb_trap = bb_trap;
+	*p_label_entry = label_entry;
+	return func;
 }
 
-void
-cpu_init(cpu_t *cpu)
-{
-	cpu->f.init(cpu);
-}
-
-/* forces ahead of time translation (e.g. for benchmarking the run) */
-void
-cpu_translate(cpu_t *cpu)
-{
-	/* lazy init of frontend */
-	if (!cpu->reg)
-		cpu_init(cpu);
-
-	/* on demand recompilation */
-	if (!cpu->fp)
-		cpu_translate_function(cpu);
-}
-
-int
-cpu_run(cpu_t *cpu, debug_function_t debug_function)
-{
-	cpu_translate(cpu);
-
-	/* run it ! */
-	typedef int (*fp_t)(uint8_t *RAM, void *reg, void *fp_reg, debug_function_t fp);
-	fp_t FP = (fp_t)cpu->fp;
-
-	return FP(cpu->RAM, cpu->reg, cpu->fp_reg, debug_function);
-}
-
-void
-cpu_flush(cpu_t *cpu)
-{
-	cpu->exec_engine->freeMachineCodeForFunction(cpu->func_jitmain);
-	cpu->func_jitmain->eraseFromParent();
-
-	cpu->fp = 0;
-
-//	delete cpu->mod;
-//	cpu->mod = NULL;
-}
-//printf("%s:%d\n", __func__, __LINE__);

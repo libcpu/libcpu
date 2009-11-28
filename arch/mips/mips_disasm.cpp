@@ -1,5 +1,5 @@
 #include "libcpu.h"
-#include "cpu_generic.h"
+#include "frontend.h"
 #include "mips_internal.h"
 
 /**********************************************************************/

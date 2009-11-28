@@ -1,6 +1,6 @@
 #include "libcpu.h"
 #include "mips_internal.h"
-#include "cpu_generic.h"
+#include "frontend.h"
 
 void
 arch_mips_init(cpu_t *cpu)

@@ -2,7 +2,7 @@
 // IEEE754 Floating Point Handling
 //
 #include "libcpu.h"
-#include "cpu_generic.h"
+#include "frontend.h"
 
 #undef getType // XXX clash with llvm
 
@@ -56,7 +56,7 @@ static inline Value *fp80_sign(cpu_t *cpu, Value *hi, Value *lo, BasicBlock *bb)
 
 //////////////////////////////////////////////////////////////////////
 
-// defined in cpu_generic.cpp
+// defined in frontend.cpp
 Value *arch_get_fp_reg(cpu_t *cpu, uint32_t index, uint32_t bits,
 	BasicBlock *bb);
 void arch_put_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits,

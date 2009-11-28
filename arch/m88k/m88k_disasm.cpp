@@ -1,5 +1,5 @@
 #include "libcpu.h"
-#include "cpu_generic.h"
+#include "frontend.h"
 
 #include "m88k_internal.h"
 #include "m88k_insn.h"

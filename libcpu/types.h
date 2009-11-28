@@ -1,5 +1,5 @@
-#ifndef _RECOMPILER_TYPES_H_
-#define _RECOMPILER_TYPES_H_
+#ifndef _LIBCPU_TYPES_H_
+#define _LIBCPU_TYPES_H_
 
 #include <sys/types.h>
 #include "defines.h"

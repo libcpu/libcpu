@@ -1,7 +1,7 @@
 #define OPT_LOCAL_REGISTERS //XXX
 
 #include "libcpu.h"
-#include "cpu_generic.h"
+#include "frontend.h"
 #include "arch/mips/libcpu_mips.h"
 #include "mips_internal.h"
 

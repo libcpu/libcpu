@@ -2,10 +2,8 @@
 #include "types.h"
 #include "6502_isa.h"
 #include "6502_cc.h"
-#include "cpu_generic.h"
+#include "frontend.h"
 #include "libcpu_6502.h"
-
-using namespace llvm;
 
 #define A 0
 #define X 1

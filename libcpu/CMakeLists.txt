@@ -1,9 +1,10 @@
 PROJECT(libcpu)
 
 ADD_LIBRARY(cpu SHARED
-			cpu_generic.cpp
+			frontend.cpp
 			disasm.cpp
 			basicblock.cpp
+			function.cpp
 			translate.cpp
 			translate_all.cpp
 			translate_singlestep.cpp
@@ -11,7 +12,7 @@ ADD_LIBRARY(cpu SHARED
 			optimize.cpp
 			fp.cpp
 			idbg.cpp
-			libcpu_main.cpp)
+			interface.cpp)
 
 TARGET_LINK_LIBRARIES(cpu ${GUEST_ARCHITECTURES_ENABLED} readline)
 TARGET_LINK_LLVM(cpu)

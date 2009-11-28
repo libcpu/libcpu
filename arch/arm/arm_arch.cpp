@@ -1,6 +1,6 @@
 #include "libcpu.h"
 #include "arm_internal.h"
-#include "cpu_generic.h"
+#include "frontend.h"
 
 static void
 arch_arm_init(cpu_t *cpu)
