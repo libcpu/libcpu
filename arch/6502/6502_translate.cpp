@@ -39,7 +39,7 @@
 #define TOS GEP(OR(ZEXT32(R(S)), CONST32(0x0100)))
 #define PUSH(v) { STORE(v, TOS); LET(S,DEC(R(S))); }
 #define PULL (LET(S,INC(R(S))), LOAD(TOS))
-#define PUSH16(v) { PUSH(CONST8(v >> 8)); PUSH(CONST8(v & 0xFF)); }
+#define PUSH16(v) { PUSH(CONST8((v) >> 8)); PUSH(CONST8((v) & 0xFF)); }
 // Because of a GCC evaluation order problem, the PULL16
 // macro needs to be expanded.
 #define PULL16 arch_6502_pull16(cpu, bb)
