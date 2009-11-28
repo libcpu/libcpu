@@ -137,9 +137,7 @@ void disasm_instr(cpu_t *cpu, addr_t pc) {
 	for (i=0; i<bytes; i++) {
 		log("%02X ", cpu->RAM[pc+i]);
 	}
-	for (i=0; i<=18-3*bytes; i++) { /* TODO make this arch neutral */
-		log(" ");
-	}
+	log("%*s", (18-3*bytes)+1, ""); /* TODO make this arch neutral */
 
 	/* delay slot */
 	tag_t tag;
