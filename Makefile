@@ -1,4 +1,4 @@
-NCPU=`CMake/GetCPUCount.sh`
+NCPU=`../CMake/GetCPUCount.sh`
 
 all:
 	@cmake --version &> /dev/null || (echo Please install "cmake" before running "make". ; exit 1)
