@@ -65,7 +65,7 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 			return;
 
 		if (LOGGING) {
-			for (int i=0; i<level; i++) log(" ");
+			log("%*s", level, "");
 			disasm_instr(cpu, pc);
 		}
 
