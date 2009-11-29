@@ -299,37 +299,38 @@ typedef int (*fp_t)(uint8_t *RAM, void *grf, void *frf, debug_function_t fp);
 int
 cpu_run(cpu_t *cpu, debug_function_t debug_function)
 {
+	addr_t pc, orig_pc = 0;
+	uint32_t i;
 	int ret;
+	bool success;
+	bool do_translate = true;
 
-again:
-	cpu_translate(cpu);
+	while(true) {
+		if (do_translate) {
+			cpu_translate(cpu);
+			pc = cpu->f.get_pc(cpu, cpu->rf.grf);
+		}
 
-	/* run it ! */
-//	printf("running 0\n");
-	fp_t FP = (fp_t)cpu->fp[0];
-	ret = FP(cpu->RAM, cpu->rf.grf, cpu->rf.frf, debug_function);
-
-again2:
-	if (ret == JIT_RETURN_FUNCNOTFOUND) {
-		addr_t pc = cpu->f.get_pc(cpu, cpu->rf.grf);
-		if (is_inside_code_area(cpu, pc)) {
-			addr_t orig_pc = pc;
-			uint32_t i;
-			for (i = 0; i < cpu->functions; i++) {
-//				printf("running %d to find 0x%llx\n", i, orig_pc);
-				fp_t FP = (fp_t)cpu->fp[i];
-				ret = FP(cpu->RAM, cpu->rf.grf, cpu->rf.frf, debug_function);
-				addr_t pc = cpu->f.get_pc(cpu, cpu->rf.grf);
-//				printf("out: 0x%llx\n", pc);
-				if (pc != orig_pc)
-					goto again2;
+		orig_pc = pc;
+		success = false;
+		for (i = 0; i < cpu->functions; i++) {
+			fp_t FP = (fp_t)cpu->fp[i];
+			ret = FP(cpu->RAM, cpu->rf.grf, cpu->rf.frf, debug_function);
+			pc = cpu->f.get_pc(cpu, cpu->rf.grf);
+			if (ret != JIT_RETURN_FUNCNOTFOUND)
+				return ret;
+			if (!is_inside_code_area(cpu, pc))
+				return ret;
+			if (pc != orig_pc) {
+				success = true;
+				break;
 			}
-//			printf("info: not found: 0x%llx\n", pc);
+		}
+		if (!success) {
 			cpu_tag(cpu, pc);
-			goto again;
+			do_translate = true;
 		}
 	}
-	return ret;
 }
 //printf("%d\n", __LINE__);
 

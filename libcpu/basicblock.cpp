@@ -28,6 +28,19 @@ needs_dispatch_entry(cpu_t *cpu, addr_t a)
 		 TAG_AFTER_TRAP));		/* instruction after a call */
 }
 
+void
+emit_store_pc(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc)
+{
+	Value *v_pc = ConstantInt::get(getIntegerType(cpu->info.address_size), new_pc);
+	new StoreInst(v_pc, cpu->ptr_PC, bb_branch);
+}
+
+void
+emit_store_pc_return(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc, BasicBlock *bb_ret)
+{
+	emit_store_pc(cpu, bb_branch, new_pc);
+	BranchInst::Create(bb_ret, bb_branch);
+}
 
 BasicBlock *
 create_basicblock(cpu_t *cpu, addr_t addr, Function *f, uint8_t bb_type) {
@@ -38,7 +51,7 @@ log("creating basic block %s\n", label);
 }
 
 const BasicBlock *
-lookup_basicblock(cpu_t *cpu, Function* f, addr_t pc, uint8_t bb_type) {
+lookup_basicblock(cpu_t *cpu, Function* f, addr_t pc, BasicBlock *bb_ret, uint8_t bb_type) {
 	Function::const_iterator it;
 	for (it = f->getBasicBlockList().begin(); it != f->getBasicBlockList().end(); it++) {
 		const char *cstr = (*it).getNameStr().c_str();
@@ -48,6 +61,9 @@ lookup_basicblock(cpu_t *cpu, Function* f, addr_t pc, uint8_t bb_type) {
 				return it;
 		}
 	}
-	log("error: basic block %c%08llx not found!\n", bb_type, pc);
-	return NULL;
+
+	log("basic block %c%08llx not found - creating return basic block!\n", bb_type, pc);
+	BasicBlock *new_bb = create_basicblock(cpu, pc, cpu->cur_func, BB_TYPE_EXTERNAL);
+	emit_store_pc_return(cpu, new_bb, pc, bb_ret);
+	return new_bb;
 }

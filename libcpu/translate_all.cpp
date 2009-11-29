@@ -43,13 +43,8 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 		if (needs_dispatch_entry(cpu, pc) && !(get_tag(cpu, pc) & TAG_TRANSLATED)) {
 			log("info: adding case: %llx\n", pc);
 			ConstantInt* c = ConstantInt::get(getIntegerType(cpu->info.address_size), pc);
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, pc, BB_TYPE_NORMAL);
-			if (!target) {
-				printf("error: unknown rts target $%04llx!\n", (unsigned long long)pc);
-				exit(1);
-			} else {
-				sw->addCase(c, target);
-			}
+			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, pc, bb_ret, BB_TYPE_NORMAL);
+			sw->addCase(c, target);
 		}
 	}
 
@@ -92,24 +87,14 @@ printf("already_is_an_entry_in_some_function! %llx\n", pc);
 			if (tag & TAG_RET)
 				bb_target = bb_dispatch;
 			if (tag & (TAG_CALL|TAG_BRANCH)) {
-				if (new_pc == NEW_PC_NONE) { /* translate_instr() will set PC */
+				if (new_pc == NEW_PC_NONE) /* translate_instr() will set PC */
 					bb_target = bb_dispatch;
-				} else {
-					bb_target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, new_pc, BB_TYPE_NORMAL);
-					if (!bb_target) { /* outside of code segment */
-						bb_target = create_basicblock(cpu, new_pc, cpu->cur_func, BB_TYPE_EXTERNAL);
-						emit_store_pc_return(cpu, bb_target, new_pc, bb_ret);
-					}
-				}
+				else
+					bb_target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, new_pc, bb_ret, BB_TYPE_NORMAL);
 			}
 			/* get not-taken basic block */
-			if (tag & TAG_CONDITIONAL) {
- 				bb_next = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, next_pc, BB_TYPE_NORMAL);
-				if (!bb_next) {
-					bb_next = create_basicblock(cpu, next_pc, cpu->cur_func, BB_TYPE_EXTERNAL);
-					emit_store_pc_return(cpu, bb_next, next_pc, bb_ret);
-				}
-			}
+			if (tag & TAG_CONDITIONAL)
+ 				bb_next = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, next_pc, bb_ret, BB_TYPE_NORMAL);
 
 			bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_trap, bb_next, cur_bb);
 
@@ -126,11 +111,7 @@ printf("already_is_an_entry_in_some_function! %llx\n", pc);
 
 		/* link with next basic block if there isn't a control flow instr. already */
 		if (bb_cont) {
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, pc, BB_TYPE_NORMAL);
-			if (!target) {
-				printf("error: unknown continue $%04llx!\n", (unsigned long long)pc);
-				exit(1);
-			}
+			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, pc, bb_ret, BB_TYPE_NORMAL);
 			log("info: linking continue $%04llx!\n", (unsigned long long)pc);
 			BranchInst::Create(target, bb_cont);
 		}
