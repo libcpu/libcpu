@@ -174,7 +174,7 @@ main(int argc, char **argv) {
 					cpu_flush(cpu);
 				}
 
-				cpu_print_statistics(cpu);
+//				cpu_print_statistics(cpu);
 
 				if (kernal_dispatch(RAM, &PC, &A, &X, &Y, &S, &P)) {
 					// the runtime could handle it, so do an RTS
