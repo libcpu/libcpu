@@ -6,6 +6,9 @@ void update_timing(cpu_t *cpu, int index, bool start)
 	struct rusage r_usage;
 	uint64_t usec;
 
+	if (cpu->flags_debug & CPU_DEBUG_PROFILE)
+		return;
+
 	getrusage(RUSAGE_SELF, &r_usage);
 	usec = ((uint64_t)r_usage.ru_utime.tv_sec * 1000000) + r_usage.ru_utime.tv_usec;
 
