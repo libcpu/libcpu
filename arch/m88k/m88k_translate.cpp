@@ -1060,6 +1060,10 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 			}
 			break;
 
+		case M88K_OPC_FLDCR:
+		case M88K_OPC_FSTCR:
+			break;
+
 		default:
 			log("INVALID %s:%d\n", __func__, __LINE__); exit(1);
 			break;
