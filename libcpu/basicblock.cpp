@@ -10,22 +10,26 @@
 bool
 is_start_of_basicblock(cpu_t *cpu, addr_t a)
 {
-	return !!(get_tag(cpu, a) &
+	tag_t tag = get_tag(cpu, a);
+	return (tag &
 		(TAG_BRANCH_TARGET |	/* someone jumps/branches here */
 		 TAG_SUBROUTINE |		/* someone calls this */
 		 TAG_AFTER_CALL |		/* instruction after a call */
 		 TAG_AFTER_COND |		/* instruction after a branch */
 		 TAG_AFTER_TRAP |		/* instruction after a trap */
-		 TAG_ENTRY));			/* client wants to enter guest code here */
+		 TAG_ENTRY))			/* client wants to enter guest code here */
+		&& (tag & TAG_CODE);	/* only if we actually tagged it */
 }
 
 bool
 needs_dispatch_entry(cpu_t *cpu, addr_t a)
 {
-	return !!(get_tag(cpu, a) &
+	tag_t tag = get_tag(cpu, a);
+	return !!(tag &
 		(TAG_ENTRY |			/* client wants to enter guest code here */
 		 TAG_AFTER_CALL |		/* instruction after a call */
-		 TAG_AFTER_TRAP));		/* instruction after a call */
+		 TAG_AFTER_TRAP))		/* instruction after a call */
+		&& (tag & TAG_CODE);	/* only if we actually tagged it */
 }
 
 void

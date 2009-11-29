@@ -69,6 +69,11 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 	tag_t tag;
 	addr_t new_pc, next_pc;
 
+#ifdef LIMIT_TAGGING_DFS
+	if (level == LIMIT_TAGGING_DFS)
+		return;
+#endif
+
 	for(;;) {
 		if (!is_inside_code_area(cpu, pc))
 			return;
