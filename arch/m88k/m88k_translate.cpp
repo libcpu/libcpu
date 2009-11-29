@@ -1060,8 +1060,14 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 			}
 			break;
 
+		case M88K_OPC_DIVU_D:
+		case M88K_OPC_MULU_D:
+			// XXX TODO
+			break;
+
 		case M88K_OPC_FLDCR:
 		case M88K_OPC_FSTCR:
+			// XXX TODO
 			break;
 
 		default:

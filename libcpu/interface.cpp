@@ -179,6 +179,9 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 			^ IS_LITTLE_ENDIAN(cpu))
 		cpu->flags |= CPU_FLAG_SWAPMEM;
 
+	// initialize bb caching map
+	cpu->func_bb = funcbb_map();
+
 	return cpu;
 }
 
@@ -341,6 +344,9 @@ cpu_flush(cpu_t *cpu)
 	cpu->cur_func->eraseFromParent();
 
 	cpu->functions = 0;
+
+	// reset bb caching mapping
+	cpu->func_bb.clear();
 
 //	delete cpu->mod;
 //	cpu->mod = NULL;

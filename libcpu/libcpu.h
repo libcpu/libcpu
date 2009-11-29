@@ -127,10 +127,15 @@ typedef struct cpu_archrf {
 	void *vrf; // Vector register file
 } cpu_archrf_t;
 
+typedef std::map<addr_t, BasicBlock *> bbaddr_map;
+typedef std::map<Function *, bbaddr_map> funcbb_map;
+
 typedef struct cpu {
 	cpu_archinfo_t info;
 	cpu_archrf_t rf;
 	arch_func_t f;
+
+	funcbb_map func_bb; // faster bb lookup
 
 	uint16_t pc_offset;
 	addr_t code_start;
@@ -163,7 +168,6 @@ typedef struct cpu {
 	Value *ptr_frf; // fp register file
 	Value **ptr_fpr; // FPRs
 	Value **in_ptr_fpr;
-
 
 	void *feptr; /* This pointer can be used freely by the frontend. */
 } cpu_t;
