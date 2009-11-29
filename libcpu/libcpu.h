@@ -151,6 +151,8 @@ typedef struct cpu {
 	uint32_t flags_debug;
 	uint32_t flags_hint;
 	uint32_t flags;
+	uint8_t code_digest[20];
+	FILE *file_entries;
 	tag_t *tag;
 	bool tags_dirty;
 	Module *mod;

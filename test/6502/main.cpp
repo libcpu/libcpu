@@ -86,7 +86,7 @@ main(int argc, char **argv) {
 	cpu_t *cpu;
 	uint8_t *RAM;
 	int singlestep = SINGLESTEP_NONE;
-	int log = 1;
+	int log = 0;
 	int print_ir = 0;
 
 	int ramsize = 65536;

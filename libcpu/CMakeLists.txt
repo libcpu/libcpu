@@ -14,6 +14,7 @@ ADD_LIBRARY(cpu SHARED
 			fp.cpp
 			idbg.cpp
 			stat.cpp
+			sha1.cpp
 			interface.cpp)
 
 TARGET_LINK_LIBRARIES(cpu ${GUEST_ARCHITECTURES_ENABLED} readline)

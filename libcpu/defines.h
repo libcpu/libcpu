@@ -14,4 +14,9 @@
 // translate all reachable code at a time, but only a
 // certain amount of code in advance, and translate more
 // on demand. 6 is the optimum for OpenBSD's 'date' on M88K.
-#define LIMIT_TAGGING_DFS 6
+// If this is turned off, we do "entry caching", i.e. we
+// create a file in /tmp that holds all entries to the code
+// (i.e. all start addresses that can't be found automatically),
+// and we start tagging at these addresses on load if the
+// cache exists.
+//#define LIMIT_TAGGING_DFS 6
