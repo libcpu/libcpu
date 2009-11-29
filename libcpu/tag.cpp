@@ -44,15 +44,6 @@ or_tag(cpu_t *cpu, addr_t a, tag_t t)
 	}
 }
 
-static void
-and_tag(cpu_t *cpu, addr_t a, tag_t t)
-{
-	if (is_inside_code_area(cpu, a)) {
-		cpu->tag[a - cpu->code_start] &= t;
-		cpu->tags_dirty = true;
-	}
-}
-
 /* access functions */
 tag_t
 get_tag(cpu_t *cpu, addr_t a)
@@ -152,6 +143,5 @@ tag_start(cpu_t *cpu, addr_t pc)
 	log("starting tagging at $%02llx\n", (unsigned long long)pc);
 
 	or_tag(cpu, pc, TAG_ENTRY); /* client wants to enter the guest code here */
-	and_tag(cpu, pc, ~TAG_TRANSLATED); /* allow new functions to see this, even if we have seen it before */
 	tag_recursive(cpu, pc, 0);
 }

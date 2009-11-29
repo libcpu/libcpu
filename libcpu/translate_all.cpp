@@ -10,7 +10,7 @@
 #include "tag.h"
 #include "translate.h"
 
-bool
+static bool
 already_is_an_entry_in_some_function(cpu_t *cpu, addr_t pc)
 {
 	return get_tag(cpu, pc) & TAG_TRANSLATED
@@ -40,7 +40,7 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	SwitchInst* sw = SwitchInst::Create(v_pc, bb_ret, bbs /*XXX upper bound, not accurate count!*/, bb_dispatch);
 
 	for (pc = cpu->code_start; pc<cpu->code_end; pc++) {
-		if (needs_dispatch_entry(cpu, pc) && !already_is_an_entry_in_some_function(cpu, pc)) {
+		if (needs_dispatch_entry(cpu, pc) && !(get_tag(cpu, pc) & TAG_TRANSLATED)) {
 			log("info: adding case: %llx\n", pc);
 			ConstantInt* c = ConstantInt::get(getIntegerType(cpu->info.address_size), pc);
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, pc, BB_TYPE_NORMAL);
@@ -66,12 +66,15 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 		tag_t tag;
 		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_cont = NULL;
 
-		if (already_is_an_entry_in_some_function(cpu, pc))
+		if (already_is_an_entry_in_some_function(cpu, pc)) {
+printf("already_is_an_entry_in_some_function! %llx\n", pc);
 			continue;
+		}
+
+		if (needs_dispatch_entry(cpu, pc))
+			or_tag(cpu, pc, TAG_TRANSLATED);
 
 		log("basicblock: L%08llx\n", (unsigned long long)pc);
-
-		or_tag(cpu, pc, TAG_TRANSLATED);
 
 		do {
 			tag_t dummy1;
@@ -100,8 +103,13 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 				}
 			}
 			/* get not-taken basic block */
-			if (tag & TAG_CONDITIONAL)
+			if (tag & TAG_CONDITIONAL) {
  				bb_next = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, next_pc, BB_TYPE_NORMAL);
+				if (!bb_next) {
+					bb_next = create_basicblock(cpu, next_pc, cpu->cur_func, BB_TYPE_EXTERNAL);
+					emit_store_pc_return(cpu, bb_next, next_pc, bb_ret);
+				}
+			}
 
 			bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_trap, bb_next, cur_bb);
 
@@ -109,7 +117,7 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 			
 		} while (
 					/* new basic block starts here (and we haven't translated it yet)*/
-					!(is_start_of_basicblock(cpu, pc) && !(get_tag(cpu, pc) | TAG_TRANSLATED)) &&
+					(!is_start_of_basicblock(cpu, pc)) &&
 					/* end of code section */ //XXX no: this is whether it's TAG_CODE
 					is_code(cpu, pc) &&
 					/* last intruction jumped away */
