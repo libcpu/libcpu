@@ -105,6 +105,13 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	cpu->code_entry = 0;
 	cpu->tag = NULL;
 
+	uint32_t i;
+	for (i = 0; i < sizeof(cpu->func)/sizeof(*cpu->func); i++)
+		cpu->func[i] = NULL;
+	for (i = 0; i < sizeof(cpu->fp)/sizeof(*cpu->fp); i++)
+		cpu->fp[i] = NULL;
+	cpu->functions = 0;
+
 	cpu->flags_optimize = CPU_OPTIMIZE_NONE;
 	cpu->flags_debug = CPU_DEBUG_NONE;
 	cpu->flags_hint = CPU_HINT_NONE;
@@ -181,8 +188,8 @@ cpu_free(cpu_t *cpu)
 	if (cpu->f.done != NULL)
 		cpu->f.done(cpu);
 	if (cpu->exec_engine != NULL) {
-    if (cpu->func_jitmain != NULL)
-      cpu->exec_engine->freeMachineCodeForFunction(cpu->func_jitmain);
+    if (cpu->cur_func != NULL)
+      cpu->exec_engine->freeMachineCodeForFunction(cpu->cur_func);
 		delete cpu->exec_engine;
   }
 	if (cpu->in_ptr_fpr != NULL)
@@ -240,7 +247,8 @@ cpu_translate_function(cpu_t *cpu)
 	BasicBlock *bb_ret, *bb_trap, *label_entry, *bb_start;
 
 	/* create function and fill it with std basic blocks */
-	cpu->func_jitmain = cpu_create_function(cpu, "jitmain", &bb_ret, &bb_trap, &label_entry);
+	cpu->cur_func = cpu_create_function(cpu, "jitmain", &bb_ret, &bb_trap, &label_entry);
+	cpu->func[cpu->functions] = cpu->cur_func;
 
 	/* TRANSLATE! */
 	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP) {
@@ -269,8 +277,10 @@ cpu_translate_function(cpu_t *cpu)
 	}
 
 	log("*** Translating...");
-	cpu->fp = cpu->exec_engine->getPointerToFunction(cpu->func_jitmain);
+	cpu->fp[cpu->functions] = cpu->exec_engine->getPointerToFunction(cpu->cur_func);
 	log("done.\n");
+
+	cpu->functions++;
 }
 
 /* forces ahead of time translation (e.g. for benchmarking the run) */
@@ -278,8 +288,10 @@ void
 cpu_translate(cpu_t *cpu)
 {
 	/* on demand translation */
-	if (cpu->fp == NULL)
+	if (cpu->tags_dirty)
 		cpu_translate_function(cpu);
+
+	cpu->tags_dirty = false;
 }
 
 typedef int (*fp_t)(uint8_t *RAM, void *grf, void *frf, debug_function_t fp);
@@ -287,21 +299,47 @@ typedef int (*fp_t)(uint8_t *RAM, void *grf, void *frf, debug_function_t fp);
 int
 cpu_run(cpu_t *cpu, debug_function_t debug_function)
 {
+	int ret;
+
+again:
 	cpu_translate(cpu);
 
 	/* run it ! */
-	fp_t FP = (fp_t)cpu->fp;
+//	printf("running 0\n");
+	fp_t FP = (fp_t)cpu->fp[0];
+	ret = FP(cpu->RAM, cpu->rf.grf, cpu->rf.frf, debug_function);
 
-	return FP(cpu->RAM, cpu->rf.grf, cpu->rf.frf, debug_function);
+again2:
+	if (ret == JIT_RETURN_FUNCNOTFOUND) {
+		addr_t pc = cpu->f.get_pc(cpu, cpu->rf.grf);
+		if (is_inside_code_area(cpu, pc)) {
+			addr_t orig_pc = pc;
+			uint32_t i;
+			for (i = 0; i < cpu->functions; i++) {
+//				printf("running %d to find 0x%llx\n", i, orig_pc);
+				fp_t FP = (fp_t)cpu->fp[i];
+				ret = FP(cpu->RAM, cpu->rf.grf, cpu->rf.frf, debug_function);
+				addr_t pc = cpu->f.get_pc(cpu, cpu->rf.grf);
+//				printf("out: 0x%llx\n", pc);
+				if (pc != orig_pc)
+					goto again2;
+			}
+//			printf("info: not found: 0x%llx\n", pc);
+			cpu_tag(cpu, pc);
+			goto again;
+		}
+	}
+	return ret;
 }
+//printf("%d\n", __LINE__);
 
 void
 cpu_flush(cpu_t *cpu)
 {
-	cpu->exec_engine->freeMachineCodeForFunction(cpu->func_jitmain);
-	cpu->func_jitmain->eraseFromParent();
+	cpu->exec_engine->freeMachineCodeForFunction(cpu->cur_func);
+	cpu->cur_func->eraseFromParent();
 
-	cpu->fp = 0;
+	cpu->functions = 0;
 
 //	delete cpu->mod;
 //	cpu->mod = NULL;

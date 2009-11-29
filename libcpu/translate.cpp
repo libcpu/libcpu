@@ -25,9 +25,9 @@ translate_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 
 	/* create internal basic blocks if needed */
 	if (tag & TAG_CONDITIONAL)
-		bb_cond = create_basicblock(cpu, pc, cpu->func_jitmain, BB_TYPE_COND);
+		bb_cond = create_basicblock(cpu, pc, cpu->cur_func, BB_TYPE_COND);
 	if ((tag & TAG_DELAY_SLOT) && (tag & TAG_CONDITIONAL))
-		bb_delay = create_basicblock(cpu, pc, cpu->func_jitmain, BB_TYPE_DELAY);
+		bb_delay = create_basicblock(cpu, pc, cpu->cur_func, BB_TYPE_DELAY);
 
 	/* special case: delay slot */
 	if (tag & TAG_DELAY_SLOT) {

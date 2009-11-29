@@ -140,11 +140,14 @@ typedef struct cpu {
 	uint32_t flags_debug;
 	uint32_t flags_hint;
 	uint32_t flags;
-	tag_t *tag; /* array of flags, one per byte of code */
+	tag_t *tag;
+	bool tags_dirty;
 	Module *mod;
-	Function *func_jitmain;
+	void *fp[1024];
+	Function *func[1024];
+	Function *cur_func;
+	uint32_t functions;
 	ExecutionEngine *exec_engine;
-	void *fp;
 	uint8_t *RAM;
 	Value *ptr_PC;
 	Value *ptr_RAM;

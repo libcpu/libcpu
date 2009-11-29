@@ -25,6 +25,8 @@ init_tagging(cpu_t *cpu)
 	cpu->tag = (tag_t*)malloc(nitems * sizeof(tag_t));
 	for (i = 0; i < nitems; i++)
 		cpu->tag[i] = TAG_UNKNOWN;
+
+	cpu->tags_dirty = true;
 }
 
 bool
@@ -33,11 +35,22 @@ is_inside_code_area(cpu_t *cpu, addr_t a)
 	return a >= cpu->code_start && a < cpu->code_end;
 }
 
-static void
+void
 or_tag(cpu_t *cpu, addr_t a, tag_t t)
 {
-	if (is_inside_code_area(cpu, a))
+	if (is_inside_code_area(cpu, a)) {
 		cpu->tag[a - cpu->code_start] |= t;
+		cpu->tags_dirty = true;
+	}
+}
+
+static void
+and_tag(cpu_t *cpu, addr_t a, tag_t t)
+{
+	if (is_inside_code_area(cpu, a)) {
+		cpu->tag[a - cpu->code_start] &= t;
+		cpu->tags_dirty = true;
+	}
 }
 
 /* access functions */
@@ -139,5 +152,6 @@ tag_start(cpu_t *cpu, addr_t pc)
 	log("starting tagging at $%02llx\n", (unsigned long long)pc);
 
 	or_tag(cpu, pc, TAG_ENTRY); /* client wants to enter the guest code here */
+	and_tag(cpu, pc, ~TAG_TRANSLATED); /* allow new functions to see this, even if we have seen it before */
 	tag_recursive(cpu, pc, 0);
 }

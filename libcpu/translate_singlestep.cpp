@@ -18,7 +18,7 @@
 BasicBlock *
 create_singlestep_return_basicblock(cpu_t *cpu, addr_t new_pc, BasicBlock *bb_ret)
 {
-	BasicBlock *bb_branch = create_basicblock(cpu, new_pc, cpu->func_jitmain, BB_TYPE_NORMAL);
+	BasicBlock *bb_branch = create_basicblock(cpu, new_pc, cpu->cur_func, BB_TYPE_NORMAL);
 	emit_store_pc_return(cpu, bb_branch, new_pc, bb_ret);
 	return bb_branch;
 }
@@ -31,7 +31,7 @@ cpu_translate_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	BasicBlock *cur_bb = NULL, *bb_target = NULL, *bb_next = NULL, *bb_cont = NULL;
 	addr_t next_pc, pc = cpu->f.get_pc(cpu, cpu->rf.grf);
 
-	cur_bb = BasicBlock::Create(_CTX(), "instruction", cpu->func_jitmain, 0);
+	cur_bb = BasicBlock::Create(_CTX(), "instruction", cpu->cur_func, 0);
 
 	if (LOGGING)
 		disasm_instr(cpu, pc);

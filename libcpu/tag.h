@@ -21,10 +21,12 @@
 #define TAG_AFTER_COND	(1<<11)	/* execution continues here if a conditional instr is not taken */
 #define TAG_ENTRY		(1<<12)	/* the client wants to be able to start execution at this instruction */
 #define TAG_AFTER_TRAP	(1<<13)	/* execution continues here after a trap reenters translation unit */
+#define TAG_TRANSLATED	(1<<14)	/* this entry/target has already been translated */
 
 #define TAG_UNKNOWN      0	/* unused (or not yet discovered) code or data */
 
 tag_t get_tag(cpu_t *cpu, addr_t a);
+void or_tag(cpu_t *cpu, addr_t a, tag_t t);
 bool is_inside_code_area(cpu_t *cpu, addr_t a);
 bool is_code(cpu_t *cpu, addr_t a);
 void tag_start(cpu_t *cpu, addr_t pc);

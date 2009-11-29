@@ -85,7 +85,7 @@ main(int argc, char **argv) {
 	char *entries;
 	cpu_t *cpu;
 	uint8_t *RAM;
-	int singlestep = SINGLESTEP_BB;
+	int singlestep = SINGLESTEP_NONE;
 	int log = 0;
 	int print_ir = 0;
 
