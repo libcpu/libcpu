@@ -205,6 +205,7 @@ enum {
 #define CPU_DEBUG_PRINT_IR				(1<<2)
 #define CPU_DEBUG_PRINT_IR_OPTIMIZED	(1<<3)
 #define CPU_DEBUG_LOG					(1<<4)
+#define CPU_DEBUG_PROFILE				(1<<5)
 #define CPU_DEBUG_ALL 0xFFFFFFFF
 
 //////////////////////////////////////////////////////////////////////

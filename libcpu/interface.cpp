@@ -247,9 +247,13 @@ cpu_tag(cpu_t *cpu, addr_t pc)
 	if (cpu->flags_debug & (CPU_DEBUG_SINGLESTEP | CPU_DEBUG_SINGLESTEP_BB))
 		return;
 
-	update_timing(cpu, TIMER_TAG, true);
+	if (cpu->flags_debug & CPU_DEBUG_PROFILE)
+		update_timing(cpu, TIMER_TAG, true);
+
 	tag_start(cpu, pc);
-	update_timing(cpu, TIMER_TAG, false);
+
+	if (cpu->flags_debug & CPU_DEBUG_PROFILE)
+		update_timing(cpu, TIMER_TAG, false);
 }
 
 static void
@@ -262,7 +266,9 @@ cpu_translate_function(cpu_t *cpu)
 	cpu->func[cpu->functions] = cpu->cur_func;
 
 	/* TRANSLATE! */
-	update_timing(cpu, TIMER_FE, true);
+	if (cpu->flags_debug & CPU_DEBUG_PROFILE)
+		update_timing(cpu, TIMER_FE, true);
+
 	if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP) {
 		bb_start = cpu_translate_singlestep(cpu, bb_ret, bb_trap);
 	} else if (cpu->flags_debug & CPU_DEBUG_SINGLESTEP_BB) {
@@ -270,7 +276,9 @@ cpu_translate_function(cpu_t *cpu)
 	} else {
 		bb_start = cpu_translate_all(cpu, bb_ret, bb_trap);
 	}
-	update_timing(cpu, TIMER_FE, false);
+	
+	if (cpu->flags_debug & CPU_DEBUG_PROFILE)
+		update_timing(cpu, TIMER_FE, false);
 
 	/* finish entry basicblock */
 	BranchInst::Create(bb_start, label_entry);
@@ -290,9 +298,15 @@ cpu_translate_function(cpu_t *cpu)
 	}
 
 	log("*** Translating...");
-	update_timing(cpu, TIMER_BE, true);
+
+	if (cpu->flags_debug & CPU_DEBUG_PROFILE)
+		update_timing(cpu, TIMER_BE, true);
+
 	cpu->fp[cpu->functions] = cpu->exec_engine->getPointerToFunction(cpu->cur_func);
-	update_timing(cpu, TIMER_BE, false);
+
+	if (cpu->flags_debug & CPU_DEBUG_PROFILE)
+		update_timing(cpu, TIMER_BE, false);
+
 	log("done.\n");
 
 	cpu->functions++;
@@ -331,9 +345,15 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 		success = false;
 		for (i = 0; i < cpu->functions; i++) {
 			fp_t FP = (fp_t)cpu->fp[i];
-			update_timing(cpu, TIMER_RUN, true);
+
+			if (cpu->flags_debug & CPU_DEBUG_PROFILE)
+				update_timing(cpu, TIMER_RUN, true);
+
 			ret = FP(cpu->RAM, cpu->rf.grf, cpu->rf.frf, debug_function);
-			update_timing(cpu, TIMER_RUN, false);
+
+			if (cpu->flags_debug & CPU_DEBUG_PROFILE)
+				update_timing(cpu, TIMER_RUN, false);
+
 			pc = cpu->f.get_pc(cpu, cpu->rf.grf);
 			if (ret != JIT_RETURN_FUNCNOTFOUND)
 				return ret;
