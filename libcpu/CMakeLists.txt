@@ -13,6 +13,7 @@ ADD_LIBRARY(cpu SHARED
 			optimize.cpp
 			fp.cpp
 			idbg.cpp
+			stat.cpp
 			interface.cpp)
 
 TARGET_LINK_LIBRARIES(cpu ${GUEST_ARCHITECTURES_ENABLED} readline)

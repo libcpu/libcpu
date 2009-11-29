@@ -86,7 +86,7 @@ main(int argc, char **argv) {
 	cpu_t *cpu;
 	uint8_t *RAM;
 	int singlestep = SINGLESTEP_NONE;
-	int log = 0;
+	int log = 1;
 	int print_ir = 0;
 
 	int ramsize = 65536;
@@ -173,6 +173,8 @@ main(int argc, char **argv) {
 					}
 					cpu_flush(cpu);
 				}
+
+				cpu_print_statistics(cpu);
 
 				if (kernal_dispatch(RAM, &PC, &A, &X, &Y, &S, &P)) {
 					// the runtime could handle it, so do an RTS

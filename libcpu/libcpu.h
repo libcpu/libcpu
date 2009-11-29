@@ -95,6 +95,12 @@ enum {
 				 // registers available.
 };
 
+#define TIMER_COUNT	4
+#define TIMER_TAG	0
+#define TIMER_FE	1
+#define TIMER_BE	2
+#define TIMER_RUN	3
+
 typedef struct cpu_archinfo {
 	cpu_arch_t type;
 	
@@ -169,6 +175,9 @@ typedef struct cpu {
 	Value **ptr_fpr; // FPRs
 	Value **in_ptr_fpr;
 
+	uint64_t timer_total[TIMER_COUNT];
+	uint64_t timer_start[TIMER_COUNT];
+
 	void *feptr; /* This pointer can be used freely by the frontend. */
 } cpu_t;
 
@@ -230,6 +239,7 @@ int cpu_run(cpu_t *cpu, debug_function_t debug_function);
 void cpu_translate(cpu_t *cpu);
 void cpu_set_ram(cpu_t *cpu, uint8_t *RAM);
 void cpu_flush(cpu_t *cpu);
+void cpu_print_statistics(cpu_t *cpu);
 
 /* runs the interactive debugger */
 int cpu_debugger(cpu_t *cpu, debug_function_t debug_function);
