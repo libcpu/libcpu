@@ -6,7 +6,7 @@ void update_timing(cpu_t *cpu, int index, bool start)
 	struct rusage r_usage;
 	uint64_t usec;
 
-	if (cpu->flags_debug & CPU_DEBUG_PROFILE)
+	if ((cpu->flags_debug & CPU_DEBUG_PROFILE) == 0)
 		return;
 
 	getrusage(RUSAGE_SELF, &r_usage);

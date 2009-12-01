@@ -345,6 +345,7 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 			}
 		}
 		if (!success) {
+			fprintf(stderr, "{%llx}", pc);
 			cpu_tag(cpu, pc);
 			do_translate = true;
 		}

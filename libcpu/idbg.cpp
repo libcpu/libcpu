@@ -1074,6 +1074,7 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 		if (*p == '?') {
 			idbg_help(p + 1);
 		} else if (last_command == 1 || *p == 's') {
+			idbg_examine_instruction(&ctx, cpu->f.get_pc(cpu, cpu->rf.grf));
 			rc = idbg_step(&ctx);
 			if (rc != JIT_RETURN_SINGLESTEP)
 				return rc;

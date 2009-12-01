@@ -54,7 +54,7 @@ log("creating basic block %s\n", label);
 	BasicBlock *bb = BasicBlock::Create(_CTX(), label, f, 0);
 
 	// if it's a label, cache the new basic block.
-	if (bb_type == 'L')
+	if (bb_type == BB_TYPE_NORMAL)
 		cpu->func_bb[f][addr] = bb;
 
 	return bb;

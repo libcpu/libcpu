@@ -39,7 +39,7 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	Value *v_pc = new LoadInst(cpu->ptr_PC, "", false, bb_dispatch);
 	SwitchInst* sw = SwitchInst::Create(v_pc, bb_ret, bbs /*XXX upper bound, not accurate count!*/, bb_dispatch);
 
-	for (pc = cpu->code_start; pc<cpu->code_end; pc++) {
+	for (pc = cpu->code_start; pc < cpu->code_end; pc++) {
 		if (needs_dispatch_entry(cpu, pc) && !(get_tag(cpu, pc) & TAG_TRANSLATED)) {
 			log("info: adding case: %llx\n", pc);
 			ConstantInt* c = ConstantInt::get(getIntegerType(cpu->info.address_size), pc);
@@ -49,14 +49,11 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	}
 
 // translate basic blocks
-    Function::const_iterator it;
-    for (it = cpu->cur_func->getBasicBlockList().begin(); it != cpu->cur_func->getBasicBlockList().end(); it++) {
-		const BasicBlock *hack = it;
-		BasicBlock *cur_bb = (BasicBlock*)hack;	/* cast away const */
-		const char *cstr = (*it).getNameStr().c_str();
-		if (cstr[0] != BB_TYPE_NORMAL)
-			continue; // skip special blocks like entry, dispatch...
-		pc = strtol(cstr+1, (char **)NULL, 16);
+	bbaddr_map &bb_addr = cpu->func_bb[cpu->cur_func];
+	bbaddr_map::const_iterator it;
+	for (it = bb_addr.begin(); it != bb_addr.end(); it++) {
+		pc = it->first;
+		BasicBlock *cur_bb = it->second;
 
 		tag_t tag;
 		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_cont = NULL;
