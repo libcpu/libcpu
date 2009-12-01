@@ -1,4 +1,3 @@
-#include "types.h"
 #include "libcpu.h"
 
 #define RAM16(a) (int16_t)(cpu->RAM[a] << 8 | cpu->RAM[a+1])

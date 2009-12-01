@@ -1,9 +1,8 @@
 //#include <stdlib.h>
 //#include <stdio.h>
 //#include <string.h>
-#include "types.h"
-#include "m68k_isa.h"
 #include "libcpu.h"
+#include "m68k_isa.h"
 
 enum {
 	TASK_DIS,

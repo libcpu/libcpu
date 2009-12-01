@@ -1,4 +1,4 @@
-#include "types.h"
+#include "libcpu.h"
 #include "tag.h"
 #include "m68k_isa.h"
 
