@@ -35,6 +35,11 @@ ENDIF()
 SET(LLVM_FIND_REQUIRED TRUE)
 INCLUDE(CMake/FindLLVM.cmake)
 
+INCLUDE(CMake/BuildConfigH.cmake)
+IF(MSVC)
+	add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
+ENDIF()
+
 #
 #
 #
