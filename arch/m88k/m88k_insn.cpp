@@ -88,9 +88,9 @@ m88k_insn::insn_desc const m88k_insn::desc_cfmt[64] =
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0e [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 0f [illegal]
     { M88K_CFMT_REG,   M88K_OPC_LDCR    }, // 10 ldcr
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 11 [illegal]
+    { M88K_CFMT_REG,   M88K_OPC_LDCR    }, // 11 ldcr
     { M88K_CFMT_REG,   M88K_OPC_FLDCR   }, // 12 fldcr
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 13 [illegal]
+    { M88K_CFMT_REG,   M88K_OPC_FLDCR   }, // 13 fldcr
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 14 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 15 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 16 [illegal]
@@ -104,9 +104,9 @@ m88k_insn::insn_desc const m88k_insn::desc_cfmt[64] =
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1e [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 1f [illegal]
     { M88K_CFMT_GER,   M88K_OPC_STCR    }, // 20 stcr
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 21 [illegal]
+    { M88K_CFMT_GER,   M88K_OPC_STCR    }, // 21 stcr
     { M88K_CFMT_GER,   M88K_OPC_FSTCR   }, // 22 fstcr
-    { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 23 [illegal]
+    { M88K_CFMT_GER,   M88K_OPC_FSTCR   }, // 23 fstcr
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 24 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 25 [illegal]
     { M88K_FMT_NONE,   M88K_OPC_ILLEGAL }, // 26 [illegal]
