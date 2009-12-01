@@ -50,10 +50,14 @@ void tag_extra_filename(cpu_t *cpu, char *filename) {
 	free(buf);
 }
 
+#ifdef __GNUC__
 void __attribute__((noinline))
 breakpoint() {
 asm("nop");
 }
+#else
+void breakpoint() {}
+#endif
 
 static void
 debug_function(cpu_t *cpu) {
