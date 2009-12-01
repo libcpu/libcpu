@@ -13,7 +13,6 @@ typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
-typedef int64_t __int64;
 
 /**************************************************************************
 * DSemu: ARM Generic register structure and constants (arm.h)             *
@@ -34,7 +33,7 @@ typedef struct {
   u32 flags[8];
   u32 cpsr, spsr[7];
   u32 curop; u32 curmode;
-  __int64 clock;
+  s64 clock;
 
   u32 tmp1, tmp2, tmp3, tmp4, tmpc;
 
