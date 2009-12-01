@@ -48,8 +48,6 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define USE_READLINE 1
-
 #ifdef USE_READLINE
 #define Function FunctionX // XXX clash in readline.
 #include <readline/readline.h>
