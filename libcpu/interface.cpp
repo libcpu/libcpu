@@ -181,7 +181,8 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		cpu->flags |= CPU_FLAG_SWAPMEM;
 
 	// initialize bb caching map
-	cpu->func_bb = funcbb_map();
+    // XXX: allocate cpu with new() to avoid need for this hack
+    new (&cpu->func_bb) funcbb_map();
 
 	cpu->timer_total[TIMER_TAG] = 0;
 	cpu->timer_total[TIMER_FE] = 0;
