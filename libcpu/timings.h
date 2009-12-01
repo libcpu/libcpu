@@ -20,4 +20,11 @@
 #define abs_time() 0
 #endif
 
+#ifdef _WIN32
+typedef unsigned long       DWORD;
+#define WINAPI      __stdcall
+extern "C" DWORD WINAPI GetTickCount(void);
+#define abs_time() GetTickCount()
+#endif
+
 #endif  /* !__libcpu_timings_h */
