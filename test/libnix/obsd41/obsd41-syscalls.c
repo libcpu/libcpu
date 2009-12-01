@@ -1,5 +1,5 @@
 /* 
- * OpenBSD 4.1 System Calls Implementation (Reflector)
+ * OpenBSD 4.1 System Calls Implementation
  * Copyright (C) 2007 Orlando Bassotto. All rights reserved.
  */
 #include <errno.h>
@@ -30,6 +30,9 @@
 #define GE32(gi, x) \
 (((gi)->endian != XEC_ENDIAN_NATIVE) ? xec_byte_swap_int32(x) : (x))
 
+#define GE64(gi, x) \
+(((gi)->endian != XEC_ENDIAN_NATIVE) ? xec_byte_swap_int64(x) : (x))
+
 void *g_bsd_log = NULL;
 
 static __inline struct nix_iovec *
@@ -53,7 +56,7 @@ __obsd41_iovec32_copy_from(nix_env_t				*env,
 				uintptr_t	  pa;
 				xec_mem_flg_t mf = 0;
 
-				pa = xec_mem_gtoh(mem, GE32 (gi, iov[n].iov_base), &mf);
+				pa = xec_mem_gtoh(mem, GE32(gi, iov[n].iov_base), &mf);
 				if (mf != 0) {
 					nix_env_set_errno(env, EFAULT);
 					xec_mem_free(xiov);
@@ -3162,16 +3165,20 @@ int obsd41_ftruncate(
 	return (nix_env_get_errno(env));
 }
 
-static void __str_copy (char *out, uint32_t *len, char const *in)
+/// XXX move away
+static __inline void
+__str_copy(xec_guest_info_t const *gi, char *out,
+	uint32_t *len, char const *in)
 {
-	size_t inlen = strlen (in);
+	size_t inlen = strlen(in);
 
-	*len = XEC_MIN (inlen, *len);
+	*len = XEC_MIN(inlen, GE32(gi, *len));
 	if (*len == 0)
 		return;
 
-	memcpy (out, in, *len);
+	memcpy(out, in, *len);
 	out[*len] = 0;
+	*len = GE32(gi, *len);
 }
 
 int obsd41___sysctl(
@@ -3210,7 +3217,7 @@ int obsd41___sysctl(
 					XEC_ASSERT (g_bsd_log, miblen == 2);
 					__nix_try
 					{
-						__str_copy((char *)oldp, oldlenp, "OpenBSD");
+						__str_copy(&gi, (char *)oldp, oldlenp, "OpenBSD");
 					}
 					__nix_catch_any
 					{
@@ -3224,7 +3231,7 @@ int obsd41___sysctl(
 					XEC_ASSERT (g_bsd_log, miblen == 2);
 					__nix_try
 					{
-						__str_copy((char *)oldp, oldlenp, "4.1");
+						__str_copy(&gi, (char *)oldp, oldlenp, "4.1");
 					}
 					__nix_catch_any
 					{
@@ -3238,10 +3245,10 @@ int obsd41___sysctl(
 					XEC_ASSERT (g_bsd_log, miblen == 2);
 					__nix_try
 					{
-						if (*oldlenp != GE32 (&gi, 4))
+						if (*oldlenp != GE32(&gi, 4))
 							*result = -1;
 									
-						*(uint32_t *)oldp = GE32 (&gi, 256 * 1024);
+						*(uint32_t *)oldp = GE32(&gi, 256 * 1024);
 					}
 					__nix_catch_any
 					{
@@ -3255,7 +3262,7 @@ int obsd41___sysctl(
 					XEC_ASSERT (g_bsd_log, miblen == 2);
 					__nix_try
 					{
-						__str_copy((char *)oldp, oldlenp, "GENERIC");
+						__str_copy(&gi, (char *)oldp, oldlenp, "GENERIC");
 					}
 					__nix_catch_any
 					{
@@ -3277,7 +3284,7 @@ int obsd41___sysctl(
 
 					__nix_try
 					{
-						__str_copy((char *)oldp, oldlenp, hostname);
+						__str_copy(&gi, (char *)oldp, oldlenp, hostname);
 					}
 					__nix_catch_any
 					{
@@ -3301,7 +3308,7 @@ int obsd41___sysctl(
 
 					__nix_try
 					{
-						__str_copy ( (char *)oldp, oldlenp, domainname);
+						__str_copy(&gi, (char *)oldp, oldlenp, domainname);
 					}
 					__nix_catch_any
 					{
@@ -3321,20 +3328,20 @@ int obsd41___sysctl(
 					{
 						uint8_t buf[256];
 
-						if (GE32 (&gi, *oldlenp) > sizeof (buf))
-							*oldlenp = GE32 (&gi, sizeof (buf));
+						if (GE32(&gi, *oldlenp) > sizeof (buf))
+							*oldlenp = GE32(&gi, sizeof (buf));
 
 						if (oldp != NULL) {
 							char pbuf[1024], *p = pbuf;
 							size_t x;
 
-							bsd_arc4random_bytes (buf, GE32 (&gi, *oldlenp));
+							bsd_arc4random_bytes(buf, GE32(&gi, *oldlenp));
 
-							for (x = 0; x < GE32 (&gi, *oldlenp); x++)
+							for (x = 0; x < GE32(&gi, *oldlenp); x++)
 								p += sprintf (p, "%02x ", (uint8_t)buf[x]);
 
 							XEC_LOG(g_bsd_log, XEC_LOG_INFO, 0, "Generated RND sequence = %s", pbuf);
-							memcpy (oldp, buf, GE32 (&gi, *oldlenp));
+							memcpy(oldp, buf, GE32(&gi, *oldlenp));
 						}
 					}
 					__nix_catch_any
@@ -3360,7 +3367,7 @@ int obsd41___sysctl(
 					XEC_ASSERT(g_bsd_log, miblen == 2);
 					__nix_try
 					{
-						__str_copy((char *)oldp, oldlenp, OBSD41_MACHINE_NAME);
+						__str_copy(&gi, (char *)oldp, oldlenp, OBSD41_MACHINE_NAME);
 					}
 					__nix_catch_any
 					{
@@ -3374,7 +3381,7 @@ int obsd41___sysctl(
 					XEC_ASSERT (g_bsd_log, miblen == 2);
 					__nix_try
 					{
-						XEC_ASSERT(NULL, *oldlenp == GE32 (&gi, sizeof(uint32_t)));
+						XEC_ASSERT(NULL, GE32(&gi, *oldlenp) >= sizeof(uint32_t));
 						*oldp = GE32(&gi, 1);
 					}
 					__nix_catch_any
@@ -3389,7 +3396,7 @@ int obsd41___sysctl(
 					XEC_ASSERT (NULL, miblen == 2);
 					__nix_try
 					{
-						XEC_ASSERT(NULL, *oldlenp == GE32 (&gi, sizeof(uint32_t)));
+						XEC_ASSERT(NULL, GE32(&gi, *oldlenp) >= sizeof(uint32_t));
 						*oldp = GE32(&gi, gi.page_size);
 					}
 					__nix_catch_any
@@ -4448,6 +4455,7 @@ int obsd41_lstat(
 	__nix_try
 	{
 		nix_stat_to_obsd41_stat(gi.endian, &st, args->arg1);
+		printf("result=%07o\n", st.st_mode);
 	}
 	__nix_catch_any
 	{

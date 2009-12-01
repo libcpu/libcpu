@@ -174,7 +174,7 @@ obsd41_guest_set_result(void              *self,
 		}
 
 		ctx->gpr[2] = lo;
-		ctx->gpr[3] = hi;
+    ctx->gpr[3] = hi;
 		ctx->sxip += 4;
 	}
 }

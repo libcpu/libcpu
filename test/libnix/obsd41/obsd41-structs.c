@@ -2,6 +2,8 @@
 #include "xec-debug.h"
 #include "xec-byte-order.h"
 
+#include "obsd41-stat.h"
+
 #include <string.h>
 
 extern void *g_bsd_log;
@@ -111,6 +113,31 @@ obsd41_timeval_to_nix_timeval(xec_endian_t                 endian,
 		XEC_ASSERT(g_bsd_log, 0);
 }
 
+static __inline obsd41_mode_t
+nix_mode_to_obsd41_mode(nix_mode_t mode)
+{
+	obsd41_mode_t result = 0;
+
+	if (mode == 0)
+		return (0);
+
+	switch(mode & NIX_S_IFMT) {
+		case NIX_S_IFIFO:  result |= OBSD41_S_IFIFO;  break;
+		case NIX_S_IFCHR:  result |= OBSD41_S_IFCHR;  break;
+		case NIX_S_IFDIR:  result |= OBSD41_S_IFDIR;  break;
+		case NIX_S_IFBLK:  result |= OBSD41_S_IFBLK;  break;
+		case NIX_S_IFREG:  result |= OBSD41_S_IFREG;  break;
+		case NIX_S_IFLNK:  result |= OBSD41_S_IFLNK;  break;
+		case NIX_S_IFSOCK: result |= OBSD41_S_IFSOCK; break;
+	}
+
+	if (mode & NIX_S_ISUID) result |= OBSD41_S_ISUID;
+	if (mode & NIX_S_ISGID) result |= OBSD41_S_ISGID;
+	if (mode & NIX_S_ISVTX) result |= OBSD41_S_ISVTX;
+
+	return (result | (mode & 0777));
+}
+
 void
 nix_stat_to_obsd41_stat(xec_endian_t           endian,
 						struct nix_stat const *in,
@@ -118,7 +145,7 @@ nix_stat_to_obsd41_stat(xec_endian_t           endian,
 {
 	out->st_dev     = GE32(in->st_dev);
 	out->st_ino     = GE32(in->st_ino);
-	out->st_mode    = GE32(in->st_mode);
+	out->st_mode    = GE32(nix_mode_to_obsd41_mode(in->st_mode));
 	out->st_nlink   = GE32(in->st_nlink);
 	out->st_uid     = GE32(in->st_uid);
 	out->st_gid     = GE32(in->st_gid);
