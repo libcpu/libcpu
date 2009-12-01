@@ -1,8 +1,7 @@
-#include <sys/types.h>
-#include <netinet/in.h>
-#include "types.h"
 #include <stdio.h>
 #include <string.h>
+#include "libcpu.h"
+#include "netlong.h"
 
 #define ExecBase -1 /* let's put Exec at -1, so the jump table is at a negative address; ("0" would be bad, as this is the error case of OpenLibrary) */
 #define DOSBase -4096
