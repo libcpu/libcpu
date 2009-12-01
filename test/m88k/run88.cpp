@@ -218,17 +218,17 @@ debug_function(cpu_t *cpu)
 static void
 dump_state(uint8_t *RAM, m88k_grf_t *reg)
 {
-	printf("%08llx:", (unsigned long long)reg->sxip);
+	fprintf(stderr, "%08llx:", (unsigned long long)reg->sxip);
 	for (int i=0; i<32; i++) {
 		if (!(i%4))
-			printf("\n");
-		printf("R%02d=%08x ", i, (unsigned int)reg->r[i]);
+			fprintf(stderr, "\n");
+		fprintf(stderr, "R%02d=%08x ", i, (unsigned int)reg->r[i]);
 	}
 	int base = reg->r[31];
 	for (int i=0; i<256 && i+base<65536; i+=4) {
 		if (!(i%16))
-			printf("\nSTACK: ");
-		printf("%08x ", *(unsigned int*)&RAM[(base+i)]);
+			fprintf(stderr, "\nSTACK: ");
+		fprintf(stderr, "%08x ", *(unsigned int*)&RAM[(base+i)]);
 	}
 	printf("\n");
 }
@@ -327,6 +327,14 @@ main(int ac, char **av, char **ep)
 
 	/* Setup arguments */
 	g_uframe_log = xec_log_register("uframe");
+
+#ifndef DEBUGGER
+	xec_log_disable("nix");
+	xec_log_disable("openbsd41");
+	xec_log_disable("uframe");
+	xec_log_disable(NULL);
+#endif
+
 	openbsd_m88k_setup_uframe(cpu, mem_if, ac - 1, av + 1, ep, &stack_top);
 
 	/* Setup the CPU */
@@ -367,17 +375,11 @@ main(int ac, char **av, char **ep)
 	debugging = true;
 #endif
 
-	aspace_unlock();
-
-	printf("Translating..."); fflush(stdout);
+	fprintf(stderr, "Translating..."); fflush(stderr);
 	cpu_translate(cpu);
-	printf("done.\n");
+	fprintf(stderr, "done.\n");
 
-#ifndef DEBUGGER
-	xec_log_disable("nix");
-	xec_log_disable("openbsd41");
-	xec_log_disable(NULL);
-#endif
+	aspace_unlock();
 
 	for (;;) {
 		if (debugging) {
@@ -396,38 +398,45 @@ main(int ac, char **av, char **ep)
 
 			case JIT_RETURN_FUNCNOTFOUND:
 #ifndef DEBUGGER
-				printf("%s: error: 0x%llX not found!\n", __func__, (unsigned long long)PC);
-				printf("Translating..."); fflush(stdout);
+				fprintf(stderr, "%s: error: 0x%llX not found!\n", __func__, (unsigned long long)PC);
+				fprintf(stderr, "Translating..."); fflush(stderr);
 				cpu_tag(cpu, PC);
 				cpu_flush(cpu);
 				cpu_translate(cpu);
-				printf("done.\n");
+				fprintf(stderr, "done.\n");
 #else
 				dump_state(RAM, (m88k_grf_t*)cpu->rf.grf);
 
 				if (PC == (uint32_t)(-1U))
-					goto double_break;
+					goto exit_loop;
 
 				// bad :(
-				printf("%s: warning: 0x%llX not found!\n", __func__, (unsigned long long)PC);
-				printf("PC: ");
+				fprintf(stderr, "%s: warning: 0x%llX not found!\n", __func__, (unsigned long long)PC);
+				fprintf(stderr, "PC: ");
 				for (size_t i = 0; i < 16; i++)
-					printf("%02X ", RAM[PC+i]);
-				printf("\n");
+					fprintf(stderr, "%02X ", RAM[PC+i]);
+				fprintf(stderr, "\n");
 				exit(EXIT_FAILURE);
 #endif
 				break;
 
 			case JIT_RETURN_TRAP:
-				//printf("TRAP %u / %u!\n", TRAPNO, R[13]);
+//				printf("TRAP %u / %u!\n", TRAPNO, R[13]);
+				if (TRAPNO == 0x80 && R[13] == 1) // exit
+					goto exit_loop;
+
+//				printf("BEFORE:\n");
+//				dump_state(RAM, (m88k_grf_t*)cpu->rf.grf);
 				xec_us_syscall_dispatch(us_syscall, monitor);
+//				printf("AFTER:\n");
+//				dump_state(RAM, (m88k_grf_t*)cpu->rf.grf);
 				break;
 
 			case JIT_RETURN_SINGLESTEP:
 				break;
 
 			default:
-				printf("unknown return code: %d\n", rc);
+				fprintf(stderr, "unknown return code: %d\n", rc);
 				goto exit_loop;
 		}
 
@@ -438,5 +447,6 @@ main(int ac, char **av, char **ep)
 exit_loop:
 	cpu_free(cpu);
 
-	exit(EXIT_FAILURE);
+	fprintf(stderr, ">> run88 success\n");
+	exit(EXIT_SUCCESS);
 }
