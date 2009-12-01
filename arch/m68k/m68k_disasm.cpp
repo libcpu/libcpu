@@ -492,7 +492,7 @@ arch_m68k_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 	return disreclen(TASK_DIS, cpu, pc, line, max_line, 0, 0);
 }
 
-int
+Value *
 arch_m68k_translate_cond(cpu_t *, addr_t, BasicBlock*)
 {
 	printf("unimplemented!\n");
