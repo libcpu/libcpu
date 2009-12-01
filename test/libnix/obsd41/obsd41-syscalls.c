@@ -4455,7 +4455,6 @@ int obsd41_lstat(
 	__nix_try
 	{
 		nix_stat_to_obsd41_stat(gi.endian, &st, args->arg1);
-		printf("result=%07o\n", st.st_mode);
 	}
 	__nix_catch_any
 	{
