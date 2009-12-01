@@ -18,8 +18,12 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ModuleProvider.h"
 #include "llvm/Target/TargetData.h"
+#ifdef LIBCPU_BUILD_CORE
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/LinkAllPasses.h"
+#else
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#endif
 #include "llvm/Config/config.h"
 #include "llvm/Target/TargetSelect.h"
 
