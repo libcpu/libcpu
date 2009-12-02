@@ -2,7 +2,6 @@
 #define __m88k_insn_h
 
 #include <stddef.h>
-#include <stdint.h>
 
 #include "m88k_isa.h"
 

@@ -1,6 +1,8 @@
 #ifndef _LIBCPU_H_
 #define _LIBCPU_H_
 
+#include "config.h"
+#include "platform.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,8 +18,12 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ModuleProvider.h"
 #include "llvm/Target/TargetData.h"
+#ifdef LIBCPU_BUILD_CORE
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/LinkAllPasses.h"
+#else
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#endif
 #include "llvm/Config/config.h"
 #include "llvm/Target/TargetSelect.h"
 
@@ -232,20 +238,20 @@ typedef void (*debug_function_t)(cpu_t*);
 
 //////////////////////////////////////////////////////////////////////
 
-cpu_t *cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags);
-void cpu_free(cpu_t *cpu);
-void cpu_set_flags_optimize(cpu_t *cpu, uint64_t f);
-void cpu_set_flags_hint(cpu_t *cpu, uint32_t f);
-void cpu_set_flags_debug(cpu_t *cpu, uint32_t f);
-void cpu_tag(cpu_t *cpu, addr_t pc);
-int cpu_run(cpu_t *cpu, debug_function_t debug_function);
-void cpu_translate(cpu_t *cpu);
-void cpu_set_ram(cpu_t *cpu, uint8_t *RAM);
-void cpu_flush(cpu_t *cpu);
-void cpu_print_statistics(cpu_t *cpu);
+API_FUNC cpu_t *cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags);
+API_FUNC void cpu_free(cpu_t *cpu);
+API_FUNC void cpu_set_flags_optimize(cpu_t *cpu, uint64_t f);
+API_FUNC void cpu_set_flags_hint(cpu_t *cpu, uint32_t f);
+API_FUNC void cpu_set_flags_debug(cpu_t *cpu, uint32_t f);
+API_FUNC void cpu_tag(cpu_t *cpu, addr_t pc);
+API_FUNC int cpu_run(cpu_t *cpu, debug_function_t debug_function);
+API_FUNC void cpu_translate(cpu_t *cpu);
+API_FUNC void cpu_set_ram(cpu_t *cpu, uint8_t *RAM);
+API_FUNC void cpu_flush(cpu_t *cpu);
+API_FUNC void cpu_print_statistics(cpu_t *cpu);
 
 /* runs the interactive debugger */
-int cpu_debugger(cpu_t *cpu, debug_function_t debug_function);
+API_FUNC int cpu_debugger(cpu_t *cpu, debug_function_t debug_function);
 
 //////////////////////////////////////////////////////////////////////
 // LLVM Helpers

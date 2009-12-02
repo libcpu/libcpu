@@ -9,7 +9,7 @@
 #ifndef _SHA1_H
 # define _SHA1_H
 
-#include "types.h"
+#include "libcpu.h"
 
 typedef struct {
   uint32_t state[5];

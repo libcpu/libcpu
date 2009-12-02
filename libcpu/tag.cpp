@@ -17,6 +17,22 @@
  * code memory, but have one tag per instruction location.
  */
 
+#ifdef _WIN32
+#define MAX_PATH 260
+extern "C" __declspec(dllimport) uint32_t __stdcall GetTempPathA(uint32_t nBufferLength, char *lpBuffer);
+#endif
+
+static const char *
+get_temp_dir()
+{
+#ifdef _WIN32
+	static char pathname[MAX_PATH];
+	if (GetTempPathA(sizeof(pathname), pathname))
+		return pathname;
+#endif
+	return "/tmp/";
+}
+
 static void
 init_tagging(cpu_t *cpu)
 {
@@ -42,7 +58,7 @@ init_tagging(cpu_t *cpu)
 	for (j=0; j<20; j++)
 		sprintf(ascii_digest+strlen(ascii_digest), "%02x", cpu->code_digest[j]);
 	log("Code Digest: %s\n", ascii_digest);
-	sprintf(cache_fn, "/tmp/libcpu-%s.entries", ascii_digest);
+	sprintf(cache_fn, "%slibcpu-%s.entries", get_temp_dir(), ascii_digest);
 
 	cpu->file_entries = NULL;
 

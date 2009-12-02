@@ -1,5 +1,4 @@
 #include "libcpu.h"
-#include "types.h"
 #include "6502_isa.h"
 #include "6502_cc.h"
 #include "frontend.h"

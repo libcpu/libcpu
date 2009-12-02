@@ -1,6 +1,5 @@
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <libcpu.h>
+#include "libcpu.h"
+#include "netlong.h"
 
 #include "arch/m68k/libcpu_m68k.h"
 
@@ -165,10 +164,14 @@ void tag_extra_filename(cpu_t *cpu, char *filename) {
 	free(buf);
 }
 
+#ifdef __GNUC__
 void __attribute__((noinline))
 breakpoint() {
 asm("nop");
 }
+#else
+void breakpoint() {}
+#endif
 
 static void
 debug_function(cpu_t *cpu) {

@@ -63,10 +63,14 @@ void tag_extra_filename(cpu_t *cpu, char *filename) {
 	free(buf);
 }
 
+#ifdef __GNUC__
 void __attribute__((noinline))
 breakpoint() {
 asm("nop");
 }
+#else
+void breakpoint() {}
+#endif
 
 static void
 dump_state(uint8_t *RAM, reg_mips32_t *reg)

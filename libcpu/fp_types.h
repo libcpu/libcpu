@@ -32,7 +32,7 @@ typedef union _fp80_reg {
 		uint64_t lo;
 #endif
 	} i;
-} __attribute__((aligned(16))) fp80_reg_t;
+} ALIGNED(16) fp80_reg_t;
 
 typedef struct _fp128_reg {
 #ifdef __LITTLE_ENDIAN__

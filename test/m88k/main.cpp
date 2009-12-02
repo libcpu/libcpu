@@ -69,13 +69,17 @@ void tag_extra_filename(cpu_t *cpu, char *filename)
 	free(buf);
 }
 
+#ifdef __GNUC__
 void __attribute__((noinline))
 breakpoint() {
 asm("nop");
 }
+#else
+void breakpoint() {}
+#endif
 
 static double
-ieee754_fp80_to_double(fp80_reg_t reg)
+ieee754_fp80_to_double(const fp80_reg_t &reg)
 {
 #if defined(__i386__) || defined(__x86_64__)
 #if 0

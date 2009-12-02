@@ -13,6 +13,24 @@
 # LLVM_LIBS_JIT : ldflags needed to link against a LLVM JIT
 # LLVM_LIBS_JIT_OBJECTS : objects you need to add to your source when using LLVM JIT
 
+if (MSVC)
+  set(LLVM_ROOT "C:/Program Files/LLVM")
+  if (NOT IS_DIRECTORY ${LLVM_ROOT})
+      message(FATAL_ERROR "Could NOT find LLVM")
+  endif ()
+
+  message(STATUS "Found LLVM: ${LLVM_ROOT}")
+  set(LLVM_BIN_DIR ${LLVM_ROOT}/bin)
+  set(LLVM_LIB_DIR ${LLVM_ROOT}/lib)
+  set(LLVM_INCLUDE_DIR ${LLVM_ROOT}/include)
+
+  set(LLVM_COMPILE_FLAGS "")
+  set(LLVM_LDFLAGS "")
+  set(LLVM_LIBS_CORE LLVMLinker LLVMArchive LLVMBitWriter LLVMBitReader LLVMInstrumentation LLVMScalarOpts LLVMipo LLVMTransformUtils LLVMipa LLVMAnalysis LLVMTarget LLVMMC LLVMCore LLVMSupport LLVMSystem)
+  set(LLVM_LIBS_JIT LLVMX86AsmParser LLVMX86AsmPrinter LLVMX86CodeGen LLVMSelectionDAG LLVMAsmPrinter LLVMX86Info LLVMJIT LLVMExecutionEngine LLVMCodeGen LLVMScalarOpts LLVMTransformUtils LLVMipa LLVMAnalysis LLVMTarget LLVMMC LLVMCore LLVMSupport LLVMSystem)
+  set(LLVM_LIBS_JIT_OBJECTS "")
+endif (MSVC)
+
 if (LLVM_INCLUDE_DIR)
   set(LLVM_FOUND TRUE)
 else (LLVM_INCLUDE_DIR)
