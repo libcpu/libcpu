@@ -4,6 +4,36 @@
 #include <termios.h>
 #include <string.h>
 
+static __inline nix_mode_t
+mode_to_nix_mode(mode_t mode)
+{
+	nix_mode_t result = 0;
+
+	if (mode == 0)
+		return (0);
+
+	switch(mode & S_IFMT) {
+		case S_IFIFO:  result |= NIX_S_IFIFO;  break;
+		case S_IFCHR:  result |= NIX_S_IFCHR;  break;
+		case S_IFDIR:  result |= NIX_S_IFDIR;  break;
+		case S_IFBLK:  result |= NIX_S_IFBLK;  break;
+		case S_IFREG:  result |= NIX_S_IFREG;  break;
+		case S_IFLNK:  result |= NIX_S_IFLNK;  break;
+		case S_IFSOCK: result |= NIX_S_IFSOCK; break;
+#ifdef S_IFWHT
+		case S_IFWHT:  result |= NIX_S_IFWHT;  break;
+#endif
+	}
+
+	if (mode & S_ISUID) result |= NIX_S_ISUID;
+	if (mode & S_ISGID) result |= NIX_S_ISGID;
+#ifdef S_ISVTX
+	if (mode & S_ISVTX) result |= NIX_S_ISVTX;
+#endif
+
+	return (result | (mode & 0777));
+}
+
 void
 timeval_to_nix_timeval(struct timeval const *in,
 					   struct nix_timeval   *out)
@@ -67,7 +97,7 @@ stat_to_nix_stat(struct stat const *in,
 {
 	out->st_dev     = in->st_dev;
 	out->st_ino     = in->st_ino;
-	out->st_mode    = in->st_mode;
+	out->st_mode    = mode_to_nix_mode(in->st_mode);
 	out->st_nlink   = in->st_nlink;
 	out->st_uid     = in->st_uid;
 	out->st_gid     = in->st_gid;

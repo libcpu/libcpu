@@ -251,8 +251,13 @@ enum {
 	FP_OP_MUL,
 	FP_OP_DIV,
 	FP_OP_REM,
+	FP_OP_CMP_ORD,
 	FP_OP_CMP_OEQ,
-	FP_OP_CMP_OGE
+	FP_OP_CMP_OGE,
+	FP_OP_CMP_OGT,
+	FP_OP_CMP_UEQ,
+	FP_OP_CMP_UGE,
+	FP_OP_CMP_UGT
 };
 
 #undef getType // XXX clash!
@@ -295,8 +300,13 @@ arch_m88k_fp_op(cpu_t *cpu, unsigned op, Value *a, Value *b,
 		case FP_OP_MUL:		return FPMUL(a, b);
 		case FP_OP_DIV:		return FPDIV(a, b);
 		case FP_OP_REM:		return FPREM(a, b);
+		case FP_OP_CMP_ORD:	return FPCMP_ORD(a, b);
 		case FP_OP_CMP_OEQ:	return FPCMP_OEQ(a, b);
 		case FP_OP_CMP_OGE:	return FPCMP_OGE(a, b);
+		case FP_OP_CMP_OGT:	return FPCMP_OGT(a, b);
+		case FP_OP_CMP_UEQ:	return FPCMP_UEQ(a, b);
+		case FP_OP_CMP_UGE:	return FPCMP_UGE(a, b);
+		case FP_OP_CMP_UGT:	return FPCMP_UGT(a, b);
 		default:			assert(0 && "Invalid FP operation");
 							return NULL;
 	}
@@ -307,15 +317,27 @@ arch_m88k_fp_op(cpu_t *cpu, unsigned op, Value *a, Value *b,
 #undef FPMUL
 #undef FPDIV
 #undef FPREM
+#undef FPCMP_ORD
 #undef FPCMP_OEQ
 #undef FPCMP_OGE
+#undef FPCMP_OGT
+#undef FPCMP_OLT
+#undef FPCMP_UEQ
+#undef FPCMP_UGE
+#undef FPCMP_UGT
 #define FPADD(a, b) arch_m88k_fp_op(cpu, FP_OP_ADD, a, b, bb)
 #define FPSUB(a, b) arch_m88k_fp_op(cpu, FP_OP_SUB, a, b, bb)
 #define FPMUL(a, b) arch_m88k_fp_op(cpu, FP_OP_MUL, a, b, bb)
 #define FPDIV(a, b) arch_m88k_fp_op(cpu, FP_OP_DIV, a, b, bb)
 #define FPREM(a, b) arch_m88k_fp_op(cpu, FP_OP_REM, a, b, bb)
-#define FPCMP_OGE(a, b) arch_m88k_fp_op(cpu, FP_OP_CMP_OGE, a, b, bb)
+#define FPCMP_ORD(a, b) arch_m88k_fp_op(cpu, FP_OP_CMP_ORD, a, b, bb)
 #define FPCMP_OEQ(a, b) arch_m88k_fp_op(cpu, FP_OP_CMP_OEQ, a, b, bb)
+#define FPCMP_OGE(a, b) arch_m88k_fp_op(cpu, FP_OP_CMP_OGE, a, b, bb)
+#define FPCMP_OGT(a, b) arch_m88k_fp_op(cpu, FP_OP_CMP_OGT, a, b, bb)
+#define FPCMP_OLT(a, b) NOT(FPCMP_OGE(a, b))
+#define FPCMP_UEQ(a, b) arch_m88k_fp_op(cpu, FP_OP_CMP_UEQ, a, b, bb)
+#define FPCMP_UGE(a, b) arch_m88k_fp_op(cpu, FP_OP_CMP_UGE, a, b, bb)
+#define FPCMP_UGT(a, b) arch_m88k_fp_op(cpu, FP_OP_CMP_UGT, a, b, bb)
 
 //////////////////////////////////////////////////////////////////////
 // CONDITIONAL EXECUTION
@@ -553,13 +575,6 @@ arch_m88k_cmp_reg(cpu_t *cpu, m88k_reg_t dst, m88k_reg_t src1, m88k_reg_t src2, 
 /*
  * Motorola 88000 fcmp(u):
  *
- * Broken optimization: (this works as long as we don't encounter NaNs,
- * it's fine for testing purpose but needs to be reimplemented).
- *
- *    s1 == s2  => 0x6a6
- *    s1 < s2   => 0x66a --+-> 0x666 ^ ( (s1 < s2) ^ 0x66)
- *    s1 >= s2  => 0x69a --+
- *
  * bit name meaning/pseudo-code
  *   0 un   is_unordered(s1) || is_unordered(s2)
  *   1 leg  !(is_unordered(s1) || is_unordered(s2))
@@ -571,7 +586,7 @@ arch_m88k_cmp_reg(cpu_t *cpu, m88k_reg_t dst, m88k_reg_t src1, m88k_reg_t src2, 
  *   7 ge   s1 >= s2
  *   8 ou   (s2 >= 0.0) && (is_unordered(s1 - s2) || (s1 < 0 || s1 > s2))
  *   9 ib   (s2 >= 0.0) && is_ordered(s1 - s2) && (s1 >= 0 && s1 <= s2)
- *  11 in   (s2 >= 0.0) && is_ordered(s1 - s1) && (s1 >= 0 && s1 <= s2)
+ *  11 in   (s2 >= 0.0) && is_ordered(s1 - s2) && (s1 >= 0 && s1 <= s2)
  *  12 ob   (s2 >= 0.0) && (is_unordered(s1 - s2) || (s1 < 0 || s1 > s2))
  *  13 ue   is_unordered(s1 - s2) || (s1 == s2)
  *  14 lg   is_ordered(s1 - s2) && (s1 < s2 || s1 > s2)
@@ -580,23 +595,70 @@ arch_m88k_cmp_reg(cpu_t *cpu, m88k_reg_t dst, m88k_reg_t src1, m88k_reg_t src2, 
  *  17 ul   is_unordered(s1 - s2) || (s1 < s2)
  *  18 uge  is_unordered(s1 - s2) || (s1 >= s2)
  *
- * TBD Unordered!!
- *     Negative values in 's2' sets OU/IB/IN/OB to zero.
- *     If an operand is either signalling or quiet NaN,
+ * TBD If an operand is either signalling or quiet NaN,
  *     set the FINV bit in the FPSR; if using fcmp,
  *     raise also FPE.
  */
+enum {
+	F_UN  = (1 << 0),
+	F_LEG = (1 << 1),
+	F_EQ  = (1 << 2),
+	F_NE  = (1 << 3),
+	F_GT  = (1 << 4),
+	F_LE  = (1 << 5),
+	F_LT  = (1 << 6),
+	F_GE  = (1 << 7),
+	F_OU  = (1 << 8),
+	F_IB  = (1 << 9),
+	F_IN  = (1 << 11),
+	F_OB  = (1 << 12),
+	F_UE  = (1 << 13),
+	F_LG  = (1 << 14),
+	F_UG  = (1 << 15),
+	F_ULE = (1 << 16),
+	F_UL  = (1 << 17),
+	F_UGE = (1 << 18)
+};
+
 static void
-arch_m88k_fcmp(cpu_t *cpu, m88k_reg_t dst, Value *src1, Value *src2, BasicBlock *bb)
+arch_m88k_fcmp(cpu_t *cpu, m88k_reg_t rdst, Value *src1, Value *src2, BasicBlock *bb)
 {
-	LET32(dst,
+	Value *zero = FPCONST80(0);
+	Value *ord  = FPCMP_ORD(src1, src2);
+	Value *uno  = NOT(ord);
+	Value *d    = FPSUB(src1, src2);
+	Value *dord = FPCMP_ORD(d, d);
+	Value *duno = NOT(dord);
+	Value *neg2 = AND(FPCMP_ORD(src2, src2), FPCMP_OLT(src2, zero));
+	Value *dst  = R32(rdst);
+
+	// UN | LEG
+	LET32(rdst, ZEXT32(uno));
+	LET32(rdst, OR(dst, SHL(ZEXT32(ord), CONST32(1))));
+
+	// EQ | NE | GT | LE | LT | GE
+	LET32(rdst, OR(dst,
 		SELECT(FPCMP_OEQ(src1, src2),
-			CONST32(0x6a6), // LEG | EQ | LE | GE | IB | IN 
-			XOR(CONST(0x6a6), //
-				// 0x6a6 ^ ((((-(s1 > s2)) << 4) & 0xff) ^ 0xcc) is another trick to
-				// satisfy GT/LE/LT/LE correct flags.
-	 			XOR(AND(SHL(NEG(SEXT32(FPCMP_OGE(src1, src2))), CONST32(4)),
-							CONST32(0xff)), CONST32(0xcc)))));
+			// EQ | LE | GE 
+			CONST32(F_EQ | F_LE | F_GE),
+			// NE | LT | GT
+			OR(CONST(F_NE), SELECT(FPCMP_OGT(src1, src2),
+				CONST32(F_GT), CONST32(F_LT))))));
+
+	// OU | IB | IN | OB
+	LET32(rdst, OR(dst, SELECT(neg2, CONST32(0), SELECT(OR(duno,
+		OR(FPCMP_OLT(src1, zero), FPCMP_OGT(src1, src2))),
+		CONST32(F_OU | F_OB), CONST32(F_IN | F_IB)))));
+
+	// LG
+	LET32(rdst, OR(dst, SELECT(OR(dord, OR(FPCMP_OLT(src1, src2),
+		FPCMP_OGT(src1, src2))), CONST32(F_LG), CONST32(0))));
+
+	// UE | UG | ULE | UL | UGE
+	LET32(rdst, OR(dst, SELECT(dord, CONST32(0),
+		// UE | ULE | UGE
+		SELECT(FPCMP_UEQ(src1, src2), CONST32(F_UE | F_ULE | F_UGE),
+			SELECT(FPCMP_UGT(src1, src2), CONST32(F_GT), CONST32(F_LT))))));
 }
 
 /*
@@ -687,12 +749,19 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 				LET32(instr.rd(), SDIV(R32(instr.rs1()), R32(instr.rs2())));
 			break;
 
+			// DIVU doesn't fault on div by zero.
 		case M88K_OPC_DIVU:
-			if (fmt == M88K_IFMT_REG)
-				LET32(instr.rd(), UDIV(R32(instr.rs1()), UIMM));
-			else
-				LET32(instr.rd(), UDIV(R32(instr.rs1()), R32(instr.rs2())));
-			break;
+			{
+				Value *divisor;
+				if (fmt == M88K_IFMT_REG)
+					divisor = UIMM;
+				else
+					divisor = R32(instr.rs2());
+
+				LET32(instr.rd(), SELECT(ICMP_EQ(divisor, CONST32(0)),
+					CONST32(0), UDIV(R32(instr.rs1()), divisor)));
+				break;
+			}
 
 		case M88K_OPC_MASK:
 			LET32(instr.rd(), AND(R32(instr.rs1()), UIMM));
@@ -769,7 +838,7 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 
 		case M88K_OPC_CMP:
 			if (fmt == M88K_IFMT_REG)
-				arch_m88k_cmp(cpu, instr.rd(), R32(instr.rs1()), IMM,
+				arch_m88k_cmp(cpu, instr.rd(), R32(instr.rs1()), UIMM,
 					bb);
 			else
 				arch_m88k_cmp_reg(cpu, instr.rd(), instr.rs1(), instr.rs2(),
@@ -858,7 +927,9 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 				LOAD32(instr.rd() | 1, ADD(ADD(R32(instr.rs1()), UIMM),
 					CONST32(4)));
 			} else if (fmt == M88K_IFMT_XMEM) {
-				//arch_m88k_load_xfr(cpu, 64, instr.rd(), ADD(R32(intr.rs1()), UIMM));
+				if (instr.rd() == 0)
+					break;
+				BAD;
 			} else if (fmt == M88K_TFMT_REG) {
 				LOAD32(instr.rd() & ~1, ADD(R32(instr.rs1()), R32(instr.rs2())));
 				LOAD32(instr.rd() | 1, ADD(R32(instr.rs1()),
@@ -874,6 +945,9 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 			break;
 
 		case M88K_OPC_LD_X:
+			if (instr.rd() == 0)
+				break;
+			DEBUG_ME();
 			//BAD;
 			break;
 
@@ -881,7 +955,7 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 			if (fmt == M88K_IFMT_MEM)
 				STORE32(R(instr.rd()), ADD(R32(instr.rs1()), UIMM));
 			else if (fmt == M88K_IFMT_XMEM) {
-				//BAD;
+				DEBUG_ME();//BAD;
 			} else if (fmt == M88K_TFMT_REG) {
 				STORE32(R(instr.rd()), ADD(R32(instr.rs1()), R32(instr.rs2())));
 			} else if (fmt == M88K_TFMT_REGS) {
@@ -918,7 +992,10 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 				STORE32(R(instr.rd() | 1), ADD(ADD(R32(instr.rs1()), UIMM),
 					CONST32(4)));
 			} else if (fmt == M88K_IFMT_XMEM) {
-				// BAD;
+				if (instr.rd() == 0)
+					break;
+				DEBUG_ME();
+				//BAD;
 			} else if (fmt == M88K_TFMT_REG) {
 				STORE32(R(instr.rd() & ~1), ADD(R32(instr.rs1()), R32(instr.rs2())));
 				STORE32(R(instr.rd() | 1), ADD(R32(instr.rs1()),
@@ -932,6 +1009,7 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 			break;
 
 		case M88K_OPC_ST_X:
+			DEBUG_ME();
 			//BAD;
 			break;
 
@@ -1066,6 +1144,8 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 			break;
 
 		case M88K_OPC_FLDCR:
+			// XXX TODO
+			LET32(instr.rd(), CONST32(0));
 		case M88K_OPC_FSTCR:
 			// XXX TODO
 			break;

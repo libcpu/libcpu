@@ -103,11 +103,11 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define DEC(a) SUB(a,CONST(1))
 
 /* floating point */
-#define FPCONSTs(s,v) ConstantFP::get(getFloatType(bits), v)
-#define FPCONST32(v) CONSTs(32,v)
-#define FPCONST64(v) CONSTs(64,v)
-#define FPCONST80(v) CONSTs(80,v)
-#define FPCONST128(v) CONSTs(128,v)
+#define FPCONSTs(s,v) ConstantFP::get(getFloatType(s), v)
+#define FPCONST32(v) FPCONSTs(32,v)
+#define FPCONST64(v) FPCONSTs(64,v)
+#define FPCONST80(v) FPCONSTs(80,v)
+#define FPCONST128(v) FPCONSTs(128,v)
 
 #define FPCONST(v) FPCONSTs(cpu->info.float_size,v)
 

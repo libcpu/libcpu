@@ -7,7 +7,7 @@ void update_timing(cpu_t *cpu, int index, bool start)
 {
 	uint64_t usec;
 
-	if (cpu->flags_debug & CPU_DEBUG_PROFILE)
+	if ((cpu->flags_debug & CPU_DEBUG_PROFILE) == 0)
 		return;
 
 #if HAVE_GETRUSAGE

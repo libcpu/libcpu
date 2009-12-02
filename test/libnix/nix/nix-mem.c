@@ -69,8 +69,8 @@ nix_mmap(xec_gaddr_t gaddr, size_t len, int prot, int flags, int fd,
 	XEC_LOG(g_nix_log, XEC_LOG_DEBUG, 0, "mmap()'ed %d bytes at 0x%x w/ flags 0x%x\n", len, ga, flags);
 
 	if (ga == (xec_gaddr_t)(-1)) {
-    nix_env_set_errno (env, ENOMEM);
-  }
+		nix_env_set_errno (env, ENOMEM);
+	}
 
 	return (ga);
 }
@@ -80,7 +80,7 @@ nix_munmap (uintmax_t addr, size_t len, nix_env_t *env)
 {
     XEC_LOG(g_nix_log, XEC_LOG_DEBUG, 0, "addr=%llx, len=%08x", addr, len);
 
-    return 0;//(nix_nosys(env));
+	return 0;//(nix_nosys(env));
 }
 
 int
@@ -112,7 +112,7 @@ nix_mlockall (int flags, nix_env_t *env)
 {
 	XEC_LOG(g_nix_log, XEC_LOG_DEBUG, 0, "flags=%x", flags);
 
-  	return (nix_nosys(env));
+	return (nix_nosys(env));
 }
 
 int
@@ -120,7 +120,7 @@ nix_munlockall (nix_env_t *env)
 {
 	XEC_LOG(g_nix_log, XEC_LOG_DEBUG, 0, "invoked", 0);
 
-  	return (nix_nosys(env));
+	return (nix_nosys(env));
 }
 
 int

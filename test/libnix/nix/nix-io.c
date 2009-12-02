@@ -505,7 +505,7 @@ nix_select(int                       highestfd,
 			FD_ZERO(&fds[2]);
 			pfds[2] = &fds[2];
 			for (n = 0; n < highestfd; n++) {
-				if (FD_ISSET(n, (fd_set *)wfds)) {
+				if (FD_ISSET(n, (fd_set *)xfds)) {
 					int hfd = nix_fd_get(n);
 					if (!(hfd < 0) && hfd < 256) {
 						FD_SET(hfd, pfds[2]);
@@ -526,6 +526,8 @@ nix_select(int                       highestfd,
 		nix_env_set_errno(env, errno);
 		goto done;
 	}
+
+	nix_env_set_errno(env, 0);
 
 	__nix_try
 	{
@@ -557,9 +559,9 @@ nix_select(int                       highestfd,
 				if (pfds[2] != NULL) {
 					XEC_LOG(g_nix_log, XEC_LOG_DEBUG, 0, "selecting except hfd %d gfd %d", n, gfd);
 					if (FD_ISSET(n, pfds[2]))
-					  FD_SET(gfd, (fd_set *)wfds);
+					  FD_SET(gfd, (fd_set *)xfds);
 					else
-					  FD_CLR(gfd, (fd_set *)wfds);
+					  FD_CLR(gfd, (fd_set *)xfds);
 				}
 			}
 		  }
