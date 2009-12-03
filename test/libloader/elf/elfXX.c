@@ -399,6 +399,7 @@ elfXX_image_get_string_table(elfXX_image_t const    *image,
 	return LOADER_SUCCESS;
 }
 
+#if 0
 /*
  * Find a symbol by name using slow lookup.
  */
@@ -550,6 +551,7 @@ elfXX_image_find_symbol_fast(elfXX_image_t const  *image,
 
 	return LOADER_ERROR_NOT_FOUND;
 }
+#endif
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Image Loader Interface                                                    */
@@ -1041,7 +1043,6 @@ elfXX_section_iterator_next(void *value, void *opaque)
 	loader_status_t           status;
 	elf_word_t                name_offset;
 	elfXX_shdr_t const       *elf_section;
-	char const               *sect_name;
 	loader_section_t         *section = (loader_section_t *)value;
 	elfXX_section_iterator_t *i       = (elfXX_section_iterator_t *)opaque;
 
@@ -1126,6 +1127,7 @@ elfXX_image_get_section_iterator(loader_image_t const  *image,
 
 /* * * * RELOCATION ITERATOR * * * */
 
+#if 0
 static void
 process_rel(elfXX_image_t const *image,
             elfXX_offset_t       file_offset,
@@ -1243,6 +1245,7 @@ elfXX_iter_reloc(elfXX_image_t const *image)
 	}
 
 }
+#endif
 
 static loader_status_t
 LOADERCALL
