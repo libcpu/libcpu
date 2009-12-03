@@ -1,1 +1,1 @@
-./build/test/multi/test_fib arm test/bin/arm/fibit_arm.bin 1000000000
+./build/libcpu/test_fib arm test/bin/arm/fibit_arm.bin 1000000000
