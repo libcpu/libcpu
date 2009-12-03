@@ -85,6 +85,7 @@ ENDFOREACH()
 
 ADD_SUBDIRECTORY(libcpu)
 IF(NOT MSVC)
+  ADD_SUBDIRECTORY(test/libloader)
   ADD_SUBDIRECTORY(test/libnix)
 ENDIF()
 
