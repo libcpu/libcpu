@@ -93,9 +93,9 @@ LdrResult_t *LdrLoadMachO (char *filename, char *strentrypoint, char *RAM) {
 	   1. Load all data according to LC_SEGMENT and LC_LOAD_DYLIB commands
 	   2. Patch calls to libraries in a second pass */
 	unsigned int i;
-	struct nlist *symtab;
-	char *strtab;
-	uint32_t *idrsymtab;
+	struct nlist *symtab = NULL;
+	char *strtab = NULL;
+	uint32_t *idrsymtab= NULL;
 	for(i=0;i<mach_header.ncmds;i++) {
 		switch(BE32_toHost(current_cmd->cmd)) {
 			case LC_SEGMENT:
