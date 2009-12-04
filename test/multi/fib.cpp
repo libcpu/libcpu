@@ -36,6 +36,10 @@ int fib(int n)
 }
 
 //////////////////////////////////////////////////////////////////////
+#define SINGLESTEP_NONE	0
+#define SINGLESTEP_STEP	1
+#define SINGLESTEP_BB	2
+//////////////////////////////////////////////////////////////////////
 
 int
 main(int argc, char **argv)
@@ -50,6 +54,10 @@ main(int argc, char **argv)
 	int r1, r2;
 	uint64_t t1, t2, t3, t4;
 	unsigned start_no = START_NO;
+
+	int singlestep = SINGLESTEP_NONE;
+	int log = 1;
+	int print_ir = 1;
 
 	/* parameter parsing */
 	if (argc < 3) {
@@ -77,8 +85,13 @@ main(int argc, char **argv)
 	cpu = cpu_new(arch, 0, 0);
 
 	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
-	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
-//	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED);
+	cpu_set_flags_debug(cpu, 0
+		| (print_ir? CPU_DEBUG_PRINT_IR : 0)
+		| (print_ir? CPU_DEBUG_PRINT_IR_OPTIMIZED : 0)
+		| (log? CPU_DEBUG_LOG :0)
+		| (singlestep == SINGLESTEP_STEP? CPU_DEBUG_SINGLESTEP    : 0)
+		| (singlestep == SINGLESTEP_BB?   CPU_DEBUG_SINGLESTEP_BB : 0)
+		);
 
 	cpu_set_ram(cpu, RAM);
 	

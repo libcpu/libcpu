@@ -43,8 +43,6 @@ init_tagging(cpu_t *cpu)
 	for (i = 0; i < nitems; i++)
 		cpu->tag[i] = TAG_UNKNOWN;
 
-	cpu->tags_dirty = true;
-
 #ifndef LIMIT_TAGGING_DFS
 	/* calculate hash of code */
 	SHA1_CTX ctx;
@@ -93,10 +91,8 @@ is_inside_code_area(cpu_t *cpu, addr_t a)
 void
 or_tag(cpu_t *cpu, addr_t a, tag_t t)
 {
-	if (is_inside_code_area(cpu, a)) {
+	if (is_inside_code_area(cpu, a))
 		cpu->tag[a - cpu->code_start] |= t;
-		cpu->tags_dirty = true;
-	}
 }
 
 /* access functions */
@@ -196,6 +192,12 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 void
 tag_start(cpu_t *cpu, addr_t pc)
 {
+	cpu->tags_dirty = true;
+
+	/* for singlestep, we don't need this */
+	if (cpu->flags_debug & (CPU_DEBUG_SINGLESTEP | CPU_DEBUG_SINGLESTEP_BB))
+		return;
+
 	/* initialize data structure on demand */
 	if (!cpu->tag)
 		init_tagging(cpu);

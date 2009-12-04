@@ -244,10 +244,6 @@ cpu_set_flags_hint(cpu_t *cpu, uint32_t f)
 void
 cpu_tag(cpu_t *cpu, addr_t pc)
 {
-	/* for singlestep, we don't need this */
-	if (cpu->flags_debug & (CPU_DEBUG_SINGLESTEP | CPU_DEBUG_SINGLESTEP_BB))
-		return;
-
 	update_timing(cpu, TIMER_TAG, true);
 	tag_start(cpu, pc);
 	update_timing(cpu, TIMER_TAG, false);
@@ -312,6 +308,15 @@ cpu_translate(cpu_t *cpu)
 
 typedef int (*fp_t)(uint8_t *RAM, void *grf, void *frf, debug_function_t fp);
 
+#ifdef __GNUC__
+void __attribute__((noinline))
+breakpoint() {
+asm("nop");
+}
+#else
+void breakpoint() {}
+#endif
+
 int
 cpu_run(cpu_t *cpu, debug_function_t debug_function)
 {
@@ -333,6 +338,7 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 		for (i = 0; i < cpu->functions; i++) {
 			fp_t FP = (fp_t)cpu->fp[i];
 			update_timing(cpu, TIMER_RUN, true);
+			breakpoint();
 			ret = FP(cpu->RAM, cpu->rf.grf, cpu->rf.frf, debug_function);
 			update_timing(cpu, TIMER_RUN, false);
 			pc = cpu->f.get_pc(cpu, cpu->rf.grf);
