@@ -229,8 +229,38 @@ log("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 				if (BIT(24))
 					LINK;
 				break;
-			} else
-				BAD;
+			} else { /* LDM/STM */
+				if (BIT(20))
+					BAD;		/* LDM */
+				if (BIT(22))	/* S bit */
+					BAD;		/* trying to CPSR form SPSR */
+				if (!BITS(0,15))
+					BAD;		/* unpredictable */
+
+				if (BIT(20))
+					BAD;		/* LDM */
+
+				int i;
+				Value *addr = R(RN);
+				for (i = 0; i <= 15; i++) {
+					if (BIT(i)) {
+						if (BIT(24)) /* before */
+							if (BIT(23)) /* increment */
+								addr = ADD(addr,CONST(4));
+							else
+								addr = SUB(addr,CONST(4));
+						STORE32(R(i),addr);
+						if (!BIT(24)) /* after */
+							if (BIT(23)) /* increment */
+								addr = ADD(addr,CONST(4));
+							else
+								addr = SUB(addr,CONST(4));
+					}
+				}
+				if (BIT(21))	/* W (1 = write back register) */
+					LET(RN, addr);
+				break;
+			}
 		case 3:
 			BAD;
 		
