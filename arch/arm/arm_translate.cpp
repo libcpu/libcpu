@@ -190,6 +190,17 @@ log("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 	switch ((instr >> 26) & 3) { /* bits 26 and 27 */
 		case 0:
 			switch(opcode) {
+				case 2:
+					{
+						Value *op1 = R(RN);
+						Value *op2 = OPERAND;
+						Value *res = SUB(op1,op2);
+						LET(RD, res);
+						if (S) {
+							BAD;
+							//XXX TODO overflow!
+						}
+					}
 				case 4: /* ADD */
 					{
 						Value *op1 = R(RN);
