@@ -1,0 +1,35 @@
+arch "6502" {
+
+	name "MOS 6502";
+
+	endian little;
+
+	byte_size 8;
+	word_size 8;
+	psr_size 8;
+	address_size 16;
+
+	register_file {
+
+		group R {
+
+			[ #i8 A ],
+			[ #i8 X ],
+			[ #i8 Y ],
+			[ #i8 S ]
+
+		}
+
+		group S {
+
+			[ #i16 pc -> %PC ],
+			[ #i8 P -> %PSR #i1 explicit ( N->%N:V->%V:0:B:D:I:Z->%Z:C->%C ) ]
+
+		}
+
+	}
+
+}
+
+insn a : ;
+

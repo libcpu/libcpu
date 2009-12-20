@@ -1,0 +1,53 @@
+arch "sparc32" {
+
+	name "SPARC v7";
+
+	register_file {
+
+		group R {
+
+			// 8 globals
+			[ #i32 g0 <- 0 ],
+			 
+			[ 7 ** #i32 g?:1 ],
+			// 8 inputs
+			[ 8 ** #i32 i? -> w?:( [ #i9 ( cwp * 16 ) - 8 ] ) ],
+			// 8 locals
+			[ 8 ** #i32 l? -> w?:( [ #i9 ( cwp * 16 ) ] ) ],
+			// 8 outputs
+			[ 8 ** #i32 o? -> w?:( [ #i9 ( cwp * 16 ) + 8 ] ) ]
+
+		}
+
+		group W {
+
+			// 32 sets * 16 registers
+			[ ( 32 * 16 ) ** #i32 w? ],
+
+			// current window
+			[ #i32 cwp -> [ #i27 0, #i5 _ ] ],
+
+			// pseudo registers
+			[ 8 ** #i32 r?:0 -> g? ],
+			[ 8 ** #i32 r?:8 -> l? ],
+			[ 8 ** #i32 r?:16 -> i? ],
+			[ 8 ** #i32 r?:24 -> o? ]
+		}
+
+		group F {
+			[ 32 ** #i32 int_f? -> r? ],
+			 // XXX check if f[0:1] pair is assumed to be zero.
+			 [ 16 ** #i64 int_d? -> #i32 ( _ <-> int_f?:( _ * 2 + 0 ) : _ <-> int_f?:( _ * 2 + 1 ) ) ],
+			 // XXX check if d[0:1] pair is assumed to be zero.
+			 [ 8 ** #i128 int_x? -> #i64 ( _ <-> int_d?:( _ * 2 + 0 ) : _ <-> int_d?:( _ * 2 + 1 ) ) ],
+
+			 [ 32 ** #f32 f? -> int_f? ],
+			 [ 16 ** #f64 d? -> int_d? ],
+			 [ 8 ** #f128 x? -> int_x? ]
+		}
+
+	}
+
+}
+insn a : ;
+

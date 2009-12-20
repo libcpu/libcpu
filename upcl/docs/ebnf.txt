@@ -1,0 +1,118 @@
+
+string ::= '"' *(utf8 char) '"' .
+
+number ::= ( 1*( [0-9] ) | "0x" 1*( [0-9A-Fa-f] ) | "0" 1*( [0-7] ) | "0b" 1*( [0-1] ) ) .
+
+identifier ::= 1*( [A-Za-z_] )*( [0-9A-Za-z] ) .
+
+meta_identifier ::= '%' identifier .
+
+
+arch_decl ::= "arch" string '{' *( arch_stmts ) '}' .
+
+arch_decls ::= ( arch_name_decl
+                 | arch_endian_decl
+                 | arch_default_endian_decl
+                 | arch_byte_size_decl
+                 | arch_word_size_decl
+                 | arch_float_size_decl
+                 | arch_address_size_decl
+                 | arch_psr_size_decl
+                 | arch_min_page_size_decl
+                 | arch_max_page_size_decl
+                 | arch_default_page_size_decl
+                 | arch_page_size_decl
+                 | arch_register_file_decl ) ';' .
+
+arch_name_decl ::= "name" string .
+
+arch_endian_decl ::= "endian" ( "little" | "big" | "both" ) .
+
+arch_default_endian_decl ::= "default_endian" ( "little" | "big" ) .
+
+arch_byte_size_decl ::= "byte_size" number .
+
+arch_word_size_decl ::= "word_size" number .
+
+arch_psr_size_decl ::= "psr_size" number .
+
+arch_address_size_decl ::= "address_size" number .
+
+arch_float_size_decl ::= "float_size" number .
+
+arch_register_file_decl ::= "register_file" '{' *( register_file_stmts ) '}' .
+
+register_file_stmts ::= ( rf_group_decl ) ';' .
+
+rf_group_decl ::= "group" identifier ( rf_group_simple | rf_group_complex ) .
+
+rf_group_simple ::= ':' reg_full_decl .
+
+rf_group_complex ::= '{' 1*( reg_full_decl ',' ) '}' .
+
+reg_full_decl ::= '[' ( repetition ) reg_decl [ ( "->" ( binding_expression | [ binding_register ] reg_format ) ) | ( "<-" alias_binding ) ] ']' .
+
+repetition ::= expression "**" .
+
+alias_binding ::= [ identifier "." ] repeatible_identifier .
+
+reg_decl ::= type repeatible_identifier .
+
+type ::= '#' ( 'i' | 'f' | 'v' [ number ':' ] ) number .
+
+repeatible_identifier ::= identifier [ '?' [ ':' ( number | sub_expression ) ] ] .
+
+binding_expression ::= '{' expression '}' .
+
+binding_register ::= meta_identifier .
+
+reg_format ::= reg_bit_format | reg_union_format .
+
+reg_bit_format ::= type [ "explicit" ] '(' value_bind *( ':' value_bind ) ')' .
+
+value_bind ::= number | identifier [ ( value_bind_meta | value_bind_bit | value_hardwired ) ] .
+
+value_bind_meta ::= "->" meta_identifier .
+
+value_bind_bit ::= "<-" identifier .
+
+value_hardwired ::= "<-" '(' expression ')' .
+
+reg_union_format ::= [ type ] [ "explicit" ] '[' ( typed_value_bind | typed_value_bind_group ) ']' .
+
+typed_value_bind ::= type value_bind '.'
+
+typed_value_bind_group ::= type '[' value_bind *( ',' value_bind ) ']' .
+
+expression ::= binary_expression
+               | unary_expression
+               | CC_expression
+               | S_expression
+               | U_expression
+               | qualified_identifier
+               | cast_expression
+               | sub_expression 
+               | memory_expression .
+
+binary_expression ::= expression binary_operator expression .
+
+unary_expression ::= unary_operator expression .
+
+CC_expression ::= "%CC" '(' expression [ ',' CC_bits ] ')' .
+
+S_expression ::= "%S" '(' expression ')' .
+
+U_expression ::= "%U" '(' expression ')' .
+
+CC_bit ::= 'C' | 'V' | 'N' | 'Z' | 'P' .
+
+CC_bits ::= [ '!' CC_bit ] *( ',' [ '!' CC_bit ] ) .
+
+qualified_identifier ::= identifier [ "." identifier ] .
+
+cast_expression ::= '[' type expression ']' .
+
+sub_expression ::= '(' expression ')' .
+
+memory_expression ::= [ type ] ( "M" | "MEM" ) '[' expression ']' .
+

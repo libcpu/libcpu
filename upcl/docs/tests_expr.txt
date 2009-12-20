@@ -1,0 +1,194 @@
+
+#if 0
+	// X + -(Y)
+	test_expr(CADD(CREG(X), CNEG(CREG(Y))));
+	// -(X) + Y
+	test_expr(CADD(CNEG(CREG(X)), CREG(Y)));
+	// -10 + Y
+	test_expr(CADD(CCONST(-10), CREG(Y)));
+	// -(10) + Y
+	test_expr(CADD(CNEG(CCONST(10)), CREG(Y)));
+
+	// -(X) + -(Y)
+	test_expr(CADD(CNEG(CREG(X)), CNEG(CREG(Y))));
+
+	// -10 + -Y
+	test_expr(CADD(CCONST(-10), CNEG(CREG(Y))));
+	// -(10) + -Y
+	test_expr(CADD(CNEG(CCONST(10)), CNEG(CREG(Y))));
+
+	// X + ~10
+	test_expr(CADD(CREG(X), CCOM(CCONST(10))));
+
+	// X & X & X
+	test_expr(CAND(CAND(CREG(X), CREG(X)), CREG(X)));
+
+	// X & Y & ~Y
+	test_expr(CAND(CAND(CREG(X), CREG(Y)), CCOM(CREG(Y))));
+
+	// X & Y & -Y
+	test_expr(CAND(CAND(CREG(X), CREG(Y)), CNEG(CREG(Y))));
+
+	// X & -Y & -Y
+	test_expr(CAND(CAND(CREG(X), CNEG(CREG(Y))), CNEG(CREG(Y))));
+
+	// X & ~Y & ~Y
+	test_expr(CAND(CAND(CREG(X), CCOM(CREG(Y))), CCOM(CREG(Y))));
+
+	// ~X & ~Y & ~Y
+	test_expr(CAND(CAND(CCOM(CREG(X)), CCOM(CREG(Y))), CCOM(CREG(Y))));
+
+	// ~X & ~Y & ~Y & ~X
+	test_expr(CAND(CAND(CAND(CCOM(CREG(X)), CCOM(CREG(Y))), CCOM(CREG(Y))), CCOM(CREG(X))));
+
+	// ~X | ~Y | ~Y | ~X
+	test_expr(COR(COR(COR(CCOM(CREG(X)), CCOM(CREG(Y))), CCOM(CREG(Y))), CCOM(CREG(X))));
+
+	// X ^ Y ^ Y
+	test_expr(CXOR(CXOR(CREG(X), CREG(Y)), CREG(Y)));
+
+	// X ^ Y ^ X
+	test_expr(CXOR(CXOR(CREG(X), CREG(Y)), CREG(X)));
+
+	// X | X | X
+	test_expr(COR(COR(CREG(X), CREG(X)), CREG(X)));
+
+	// X ^ X ^ X
+	test_expr(CXOR(CXOR(CREG(X), CREG(X)), CREG(X)));
+
+	// (X+Y) - (Y+X)
+	test_expr(CSUB(CADD(CREG(X), CREG(Y)), CADD(CREG(Y), CREG(X))));
+
+	// (X+Y) - (Y+X)
+	test_expr(
+
+			CBITCOMBINE(
+			CBITSLICE(
+				CCAST(c::type::get_integer_type(32),
+				CSIGN(CCAST(c::type::get_integer_type(32),
+				 CROR(CADD(CCAST(c::type::get_integer_type(18),
+							 CEQ(CADD(CREG(X), CREG(Y)),
+								 CADD(CREG(Y), CREG(X)))),
+						 CCONST(16)), CCONST(1))
+				))
+				),
+
+				CCONST(16),
+				CCONST(1)
+				),
+			CCONST(13U),
+			(CXOR(CXOR(CREG(X), CREG(X)), CREG(X))),
+			0
+
+			)
+			);
+	test_expr(CBITCOMBINE(CCONST(0x12345678U), CCONST(0xabcdU), 0));
+	test_expr(CBITCOMBINE(CCONST(0x12345678U), CCONSTn(0xabcdU, 16),
+				CCONSTn(0x0123U, 16), 0));
+	test_expr(CBITCOMBINE(CCONSTn(0x1U, 4), CCONSTn(0x1234U, 16), CCONSTn(0x5678U, 16),
+				CCONSTn(0xabcdU, 16), CCONSTn(0x0123U, 16), 0));
+	test_expr(CSIGN(CCOM(CBITCOMBINE(CCONSTn(0x12U, 8), CCONSTn(0x34U, 8), CCONSTn(0x5678U, 16),
+				CCONSTn(0xabcdU, 16), CCONSTn(0xe0123U, 20), 0))));
+#endif
+
+#if 1
+	test_expr(CNEG(CROL(CBITCOMBINE(CCONSTn(0x12U, 8), CCONSTn(0x34U, 8),
+					CCONSTn(0x5678U, 16), CCONSTn(0xabcdU, 16),
+					CCONSTn(0xe0123U, 20), CREG(X), NULL), CCONST(90U))));
+
+#endif
+
+#if 0
+	test_expr(COR(CBITCOMBINE(CREG(X), CREG(Y), NULL), CCONST(0x12345678ABCDEF01ULL)));
+	
+	test_expr(COR(CBITCOMBINE(CREG(X), CREG(Y), NULL), CREG(d0)));
+#endif
+
+#if 0
+	test_expr(CCAST(c::type::get_integer_type(32),
+				CBITCOMBINE(CCONSTn(0x12U, 8), CCONSTn(0x34U, 8), CCONSTn(0x5678U, 16),
+				CCONSTn(0xabcdU, 16), CCONSTn(0xe0123U, 20), 0)));
+#endif
+#if 0
+	test_expr(
+
+			CADD(
+				CCONST(0),
+
+				CBITSLICE(
+
+					CADD(
+
+						CSIGN(
+							//CCAST(type::get_integer_type(32),
+					CCAST(type::get_integer_type(8), CCONST(-1)) 
+					//)
+							),
+
+						CBITSLICE(CSUB(CREG(rax), CCONST(1U)),
+							CCONST(10U), CCONST(15U))
+
+						),
+
+					CCONST(0U),
+					CCONST(9U)
+
+					)
+
+				 )
+				 );
+#endif
+
+#if 0
+	// THIS: ( ( 0#i36 : 0x8#i64 )[ 0x4a#i64 : 0x1a#i64 ]
+	// 	     : ( 0#i36 : 0x8#i64 )[ 0x2a#i64 : 0x20#i64 ]
+	// 	     : ( 0#i36 : 0x8#i64 )[ 0xa#i64 : 0x20#i64 ]
+	// 	     : ( 0#i36 : 0x8#i64 )[ 0#i64 : 0xa#i64 ] )
+	{
+		expression *bc_expr = CCONSTn(8U, 100);
+		print_expr(bc_expr);
+
+		expression *bc_expr_1 = CBITSLICE(bc_expr, CCONST(0x4AU), CCONST(0x1AU));
+		print_expr(bc_expr_1);
+		print_expr(bc_expr_1->simplify());
+
+		expression *bc_expr_2 = CBITSLICE(bc_expr, CCONST(0x2AU), CCONST(0x20U));
+		print_expr(bc_expr_2);
+		print_expr(bc_expr_2->simplify());
+
+		expression *bc_expr_3 = CBITSLICE(bc_expr, CCONST(0xAU), CCONST(0x20U));
+		print_expr(bc_expr_3);
+		print_expr(bc_expr_3->simplify());
+
+		expression *bc_expr_4 = CBITSLICE(bc_expr, CCONST(0x0U), CCONST(0xAU));
+		print_expr(bc_expr_4);
+		print_expr(bc_expr_4->simplify());
+	}
+
+	// THAT: ( ( 0x345678abcde0123#i58 : X#i32 : 0#i10 )[ 0x4a#i64 : 0x1a#i64 ]
+	//       : ( 0x345678abcde0123#i58 : X#i32 : 0#i10 )[ 0x2a#i64 : 0x20#i64 ]
+	//       : ( 0x345678abcde0123#i58 : X#i32 : 0#i10 )[ 0xa#i64 : 0x20#i64 ]
+	//       : ( 0x345678abcde0123#i58 : X#i32 : 0#i10 )[ 0#i64 : 0xa#i64 ] )
+	{
+		expression *bc_expr =
+		 	CBITCOMBINE(CCONSTn(0U, 58), CREG(X), CCONSTn(0U, 10), NULL);
+		print_expr(bc_expr);
+
+		expression *bc_expr_1 = CBITSLICE(bc_expr, CCONST(0x4AU), CCONST(0x1AU));
+		print_expr(bc_expr_1);
+		print_expr(bc_expr_1->simplify());
+
+		expression *bc_expr_2 = CBITSLICE(bc_expr, CCONST(0x2AU), CCONST(0x20U));
+		print_expr(bc_expr_2);
+		print_expr(bc_expr_2->simplify());
+
+		expression *bc_expr_3 = CBITSLICE(bc_expr, CCONST(0xAU), CCONST(0x20U));
+		print_expr(bc_expr_3);
+		print_expr(bc_expr_3->simplify());
+
+		expression *bc_expr_4 = CBITSLICE(bc_expr, CCONST(0x0U), CCONST(0xAU));
+		print_expr(bc_expr_4);
+		print_expr(bc_expr_4->simplify());
+	}	
+#endif
+

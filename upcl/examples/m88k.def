@@ -1,0 +1,52 @@
+arch "m88k" {
+
+	name "Motorola 88100";
+
+	endian both;
+	default_endian big;
+
+	byte_size 8;
+	word_size 32;
+	address_size 32;
+	psr_size 32;
+	float_size 80;
+
+	register_file {
+
+		// General Purpose Register Group
+		group R {
+			// r0 is hardwired to zero.
+			[ #i32 r0 <- 0 ],
+			// define r1..r31 as 32bit registers.
+			[ 31 ** #i32 r?:1 ],
+			 
+			// XXX check if r[0:1] pair is assumed to be zero.
+			[ 16 ** #i64 d? -> #i32 ( _ <-> r?:( _ * 2 + 0 ) : _ <-> r?:( _ * 2 + 1 ) ) ]
+		}
+
+		// Extended Floating Register Group
+		group F {
+
+			[ #f80 x0 <- 0 ],
+			[ 31 ** #f80 x?:1 ]
+
+		}
+
+		// Special Register Group
+		group S {
+
+			[ #i32 sxip -> %PC ],
+			[ #i32 snip <- ( sxip + 4 ) ],
+			[ #i32 sfip <- ( sxip + 8 ) ],
+			[ #i32 psr -> %PSR #i32 explicit [ #i3 0, #i1 C->%C, #i27 0 ] ]
+
+		}
+
+		// Trap
+		group T : [ #i5 trapno ];
+
+	}
+
+}
+
+insn a : ;

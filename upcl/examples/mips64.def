@@ -1,0 +1,38 @@
+arch "mips64" {
+
+	name "MIPS R4000 (64bit)";
+
+	endian both;
+  default_endian big;
+
+  sizes {
+    byte 8;
+    word 64;
+    address 64;
+    float 64 ieee;
+  };
+
+	register_file {
+
+    // General Purpose Register Group
+		group "R" {
+      // r0 is hardwired to zero.
+      [ #i64 r0 <- 0 ],
+      // define r1..r31 as 32bit registers.
+      [ 31 x #i64 r?:1 ]
+    };
+
+    // Special Register Group
+		group "S" {
+
+			[ #i64 pc -> PC ],
+			[ #i64 npc -> { PC + 4 } ]
+
+		};
+
+	};
+
+};
+
+include "mips.def";
+

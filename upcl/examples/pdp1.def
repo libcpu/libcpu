@@ -1,0 +1,85 @@
+arch "pdp1" {
+
+	name "DEC PDP-1";
+
+//	endian strange;
+
+	byte_size 18;
+	word_size 18;
+	psr_size 18;
+	address_size 12;
+
+	register_file {
+
+		group R {
+
+			[ #i18 ac ],
+			[ #i18 io ]
+
+		}
+
+		group S {
+
+			[ #i12 pc -> %PC ]
+
+		}
+
+		group USER {
+
+			[ #i18 twr ]
+		
+		}
+
+	}
+
+}
+
+insn add : ac += Y;
+insn and : ac += Y;
+jump insn cal : type branch
+                action pc = 0100;
+insn dac : Y = ac;
+insn dio : Y = io;
+insn dip : Y = io;
+
+insn dzm : Y = 0;
+insn idx : Y += 1;
+insn ior : ac |= Y;
+insn jda {
+	t = Y;
+	Y = AC;
+	@pdp1_jsp( t );
+}
+jump insn isp : type branch {
+	Y += 1;
+	if ( %S ( Y ) > 0 )
+		pc += Y;
+}
+insn lac : ac = %M[ ac + Y ];
+insn law : ac = N;
+insn lio : io = Y;
+insn mus {
+	flags.X = 1;
+}
+
+jump insn sad : type branch
+				condition Y != ac
+				action pc += 1;
+
+jump insn sas : type branch
+				condition Y == ac
+				action pc += 1;
+
+insn sub : ac -= Y;
+insn xct : @execute_one ( Y );
+insn xor : ac ^= Y;
+
+insn cla : ac = 0;
+insn clf : flags[N:1] = 0;
+insn cli : io = 0;
+insn cma : ac = ~ac;
+insn hlt : ;
+insn lat : ac = twr;
+insn nop : ;
+insn stf : flags[N:1] = 1;
+
