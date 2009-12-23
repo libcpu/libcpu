@@ -9,13 +9,14 @@ class dumper {
 
 public:
     void dump(token_list const *root);
+	bool dump_expression(expression const *e);
+	bool dump_literal_qualified_identifier(qualified_identifier const *literal);
 
 private:
     bool dump_architecture(architecture const *arch);
     bool dump_arch_tagged_value(tagged_value const *tv);
 
 private:
-	bool dump_expression(expression const *e);
 	bool dump_unary_expression(unary_expression const *e);
 	bool dump_binary_expression(binary_expression const *e);
 	bool dump_literal_expression(literal_expression const *e);
@@ -30,7 +31,6 @@ private:
 	bool dump_literal_number(number const *literal);
 	bool dump_literal_type(type const *literal);
 	bool dump_literal_identifier(identifier const *literal);
-	bool dump_literal_qualified_identifier(qualified_identifier const *literal);
 	bool dump_range(range const *range);
 
 private:

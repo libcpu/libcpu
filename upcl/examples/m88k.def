@@ -21,7 +21,7 @@ arch "m88k" {
 			[ 31 ** #i32 r?:1 ],
 			 
 			// XXX check if r[0:1] pair is assumed to be zero.
-			[ 16 ** #i64 d? -> #i32 ( _ <-> r?:( _ * 2 + 0 ) : _ <-> r?:( _ * 2 + 1 ) ) ]
+			[ 16 ** #i64 d? -> #i32 ( _ <-> r?:( ( _ * 2 ) + 1 ) : _ <-> r?:( ( _ * 2 ) + 0 ) ) ]
 		}
 
 		// Extended Floating Register Group
@@ -36,8 +36,8 @@ arch "m88k" {
 		group S {
 
 			[ #i32 sxip -> %PC ],
-			[ #i32 snip <- ( sxip + 4 ) ],
-			[ #i32 sfip <- ( sxip + 8 ) ],
+			[ #i32 snip -> %NPC ],
+			[ #i32 sfip <- ( snip + 8 ) ],
 			[ #i32 psr -> %PSR #i32 explicit [ #i3 0, #i1 C->%C, #i27 0 ] ]
 
 		}

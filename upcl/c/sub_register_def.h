@@ -3,6 +3,8 @@
 
 #include "c/register_def.h"
 
+namespace upcl { namespace sema { class register_file_builder; } }
+
 namespace upcl { namespace c {
 
 class sub_register_def : public register_def {
@@ -18,7 +20,8 @@ public:
 		: register_def(name, ty), m_master(master), m_bidi(bidi),
 		m_first_bit(0), m_bit_count(0)
  	{
- 		m_master->add_sub(this);
+		if (!m_master->add_sub(this))
+			abort();
  	}
  
 	sub_register_def(register_def *master, std::string const &name,
@@ -27,7 +30,8 @@ public:
 		: register_def(name, ty), m_master(master), m_bidi(bidi),
 		m_first_bit(first_bit), m_bit_count(bit_count)
 	{
-		m_master->add_sub(this);
+		if (!m_master->add_sub(this))
+			abort();
 	}
 
 	sub_register_def(register_def *master, std::string const &name,
@@ -37,7 +41,8 @@ public:
 		m_first_bit(expression::fromInteger(first_bit, sizeof(first_bit)*8)),
 		m_bit_count(expression::fromInteger(bit_count, sizeof(bit_count)*8))
 	{
-		m_master->add_sub(this);
+		if (!m_master->add_sub(this))
+			abort();
 	}
 
 	virtual bool is_virtual() const;
@@ -49,6 +54,7 @@ public:
 	virtual bool is_sub_register() const;
 
 protected:
+	friend class sema::register_file_builder;
 	virtual void set_aliasing_range(size_t first_bit, size_t bit_count);
 	virtual void set_aliasing_range(expression *first_bit,
 			expression *bit_count);

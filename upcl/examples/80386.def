@@ -20,7 +20,16 @@ arch "8086" {
 			[ #i16 sp ],
 			[ #i16 bp ],
 			[ #i16 si ],
-			[ #i16 di ]
+			[ #i16 di ],
+
+			[ #i32 ebx -> #i16 ( _ : _ <-> bx ) ],
+			[ #i32 eax -> #i16 ( _ : _ <-> ax ) ],
+			[ #i32 ecx -> #i16 ( _ : _ <-> cx ) ],
+			[ #i32 edx -> #i16 ( _ : _ <-> dx ) ],
+			[ #i32 esp -> #i16 ( _ : _ <-> sp ) ],
+			[ #i32 ebp -> #i16 ( _ : _ <-> bp ) ],
+			[ #i32 esi -> #i16 ( _ : _ <-> si ) ],
+			[ #i32 edi -> #i16 ( _ : _ <-> di ) ]
 		}
 
 		group SEG {
@@ -35,8 +44,10 @@ arch "8086" {
 		group S {
 
 			[ #i16 ip ],
-			[ #i24 pc -> %PC #i16 explicit evaluate ( @ea ( seg, off ) ) ( seg <- cs : off <-> ip ) ],
-			[ #i16 flags -> %PSR #i1 explicit ( 0:0:0:0:O->%V:D:I:T:S->%N:Z->%Z:0:A<-C:0:P->%P:0:C->%C ) ]
+			[ #i32 eip -> #i16 ( _ : _ <-> ip ) ],
+			[ #i48 pc -> %PC explicit evaluate ( @ea ( seg, off ) ) [ #i16 seg <- cs, #i32 off <-> eip ] ],
+			[ #i16 flags -> #i1 explicit ( 0:0:0:0:O->%V:D:I:T:S->%N:Z->%Z:0:A<-C:0:P->%P:0:C->%C ) ],
+			[ #i32 eflags -> %PSR #i16 explicit ( _ : _ <-> flags ) ]
 
 		}
 

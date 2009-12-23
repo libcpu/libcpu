@@ -69,10 +69,17 @@ register_def::set_binding(special_register const &special)
 	m_bind = 0;
 }
 
-void
+bool
 register_def::add_sub(sub_register_def *alias)
 {
+	if (alias == this || alias == 0)
+		return false;
+
+	if (m_named_subs.find(alias->get_name()) != m_named_subs.end())
+		return false;
+
 	m_subs.push_back(alias);
+	m_named_subs[alias->get_name()] = alias;
 }
 
 type *
@@ -204,101 +211,27 @@ assign:
 #endif
 }
 
+sub_register_def *
+register_def::get_sub_register(std::string const &name)
+{
+	named_sub_register_map::iterator i = m_named_subs.find(name);
+	if (i != m_named_subs.end())
+		return i->second;
+	else
+		return 0;
+}
+
+bool
+register_def::add_uow(register_def *rdef)
+{
+	if (rdef == this || rdef == 0)
+		return false;
+
+	m_uow.insert(rdef);
+	return true;
+}
+
 void
 test_reg_def()
 {
-	// 
-	// try simulate m88k, where d0 alias r0:r1
-	//
-	register_def *r0 = new hardwired_register_def("r0", CCONST(0ULL),
-			type::get_integer_type(32));
-	register_def *r1 = new register_def("r1", type::get_integer_type(32));
-	register_def *r2 = new register_def("r2", type::get_integer_type(32));
-
-	register_def *d0 = new register_def("d0", type::get_integer_type(64));
-
-	printf("PRE-BINDING\n");
-	printf("r0 virtual: %u\n", r0->is_virtual());
-	printf("r1 virtual: %u\n", r1->is_virtual());
-	printf("d0 virtual: %u\n", d0->is_virtual());
-
-	register_def *d0_0 = new bound_sub_register_def(d0, "d0_0", type::get_integer_type(32),
-			32, 32, r0, true);
-	register_def *d0_1 = new bound_sub_register_def(d0, "d0_1", type::get_integer_type(32),
-			0, 32, r1, true);
-	
-	printf("POST-BINDING\n");
-	printf("d0 virtual: %u\n", d0->is_virtual());
-	printf("d0_0 virtual: %u\n", d0_0->is_virtual());
-	printf("d0_1 virtual: %u\n", d0_1->is_virtual());
-
-	//assign(d0, expression::fromInteger(0x1234567890abcdefull, 64));
-
-
-	//
-	// try simulate x64
-	//
-	register_def *rax = new register_def("rax", type::get_integer_type(64));
-
-	register_def *rax_0 = new sub_register_def(rax, "rax_0", type::get_integer_type(16),
-			32, 32, true);
-	register_def *eax = new sub_register_def(rax, "eax", type::get_integer_type(32),
-			0, 32, true);
-
-	register_def *eax_0 = new sub_register_def(eax, "eax_0", type::get_integer_type(16),
-			16, 16, true);
-	register_def *ax = new sub_register_def(eax, "ax", type::get_integer_type(16),
-			0, 16, true);
-
-	register_def *ah = new sub_register_def(ax, "ah",
-			type::get_integer_type(8), 8, 8);
-	register_def *al = new sub_register_def(ax, "al",
-			type::get_integer_type(8), 0, 8);
-
-	printf("rax virtual: %u\n", rax->is_virtual());
-	printf("eax virtual: %u\n", eax->is_virtual());
-	printf("ax virtual: %u\n", ax->is_virtual());
-	printf("ah virtual: %u\n", ah->is_virtual());
-	printf("al virtual: %u\n", al->is_virtual());
-#if 0
-	assign(ax, CCONST(1));
-	assign(ah, CCONST(0xaa));
-	assign(al, CCONST(0x55));
-	assign(rax_0, CCONST(0x55));
-#endif
-	// rflags/eflags/flags
-
-	register_def *rflags = new bound_register_def("rflags", type::get_integer_type(64),
-			SPECIAL_REGISTER_PSR);
-	register_def *rflags_0 = new sub_register_def(rflags, "rflags_0", type::get_integer_type(32),
-			32, 32, true);
-	register_def *eflags = new sub_register_def(rflags, "eflags", type::get_integer_type(32),
-			0, 32, true);
-
-	register_def *eflags_0 = new sub_register_def(eflags, "eflags_0", type::get_integer_type(16),
-			16, 16, true);
-	register_def *flags = new sub_register_def(eflags, "flags", type::get_integer_type(16),
-			0, 16, true);
-
-	register_def *flags_O = new bound_sub_register_def(flags, "flags_O", type::get_integer_type(1),
-			11, 1, SPECIAL_REGISTER_V, true);
-	register_def *flags_D = new sub_register_def(flags, "flags_D", type::get_integer_type(1),
-			10, 1, true);
-	register_def *flags_I = new sub_register_def(flags, "flags_I", type::get_integer_type(1),
-			9, 1, true);
-	register_def *flags_T = new sub_register_def(flags, "flags_T", type::get_integer_type(1),
-			8, 1, true);
-	register_def *flags_S = new bound_sub_register_def(flags, "flags_S", type::get_integer_type(1),
-			7, 1, SPECIAL_REGISTER_N, true);
-	register_def *flags_Z = new bound_sub_register_def(flags, "flags_Z", type::get_integer_type(1),
-			6, 1, SPECIAL_REGISTER_Z, true);
-	register_def *flags_P = new bound_sub_register_def(flags, "flags_P", type::get_integer_type(1),
-			2, 1, SPECIAL_REGISTER_P, true);
-	register_def *flags_C = new bound_sub_register_def(flags, "flags_C", type::get_integer_type(1),
-			0, 1, SPECIAL_REGISTER_C, true);
-	register_def *flags_A = new bound_sub_register_def(flags, "flags_A", type::get_integer_type(1),
-			4, 1, flags_C, false);
-
-	register_def *X = new register_def("X", type::get_integer_type(32));
-	register_def *Y = new register_def("Y", type::get_integer_type(32));
 }

@@ -1,8 +1,7 @@
-#ifndef __upcl_ast_h
-#define __upcl_ast_h
+#ifndef __upcl_ast_ast_h
+#define __upcl_ast_ast_h
 
-#include <string>
-#include <vector>
+#include "types.h"
 
 namespace upcl { namespace ast {
 
@@ -649,4 +648,4 @@ public:
 
 } }
 
-#endif  // !__upcl_ast_h
+#endif  // !__upcl_ast_ast_h

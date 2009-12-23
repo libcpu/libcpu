@@ -1,16 +1,18 @@
 #ifndef __upcl_c_register_def_h
 #define __upcl_c_register_def_h
 
-#include <string>
-#include <vector>
+#include "types.h"
 
 #include "c/type.h"
 #include "c/expression.h"
 
 namespace upcl { namespace c {
 
+class register_def;
 class sub_register_def;
 typedef std::vector <sub_register_def *> sub_register_vector;
+typedef std::set <register_def *> register_def_set;
+typedef std::map <std::string, sub_register_def *> named_sub_register_map;
 
 enum special_register {
   NO_SPECIAL_REGISTER = 0,
@@ -38,6 +40,8 @@ class register_def {
 	register_def *m_bind;
 	expression *m_expr;
 	sub_register_vector m_subs;
+	named_sub_register_map m_named_subs;
+	register_def_set m_uow;
 
 protected:
 	register_def(unsigned flags, std::string const &name, c::type *type)
@@ -53,7 +57,7 @@ public:
 
 protected:
 	friend class sub_register_def;
-	virtual void add_sub(sub_register_def *alias);
+	virtual bool add_sub(sub_register_def *alias);
 
 	virtual bool is_bound() const;
 
@@ -77,6 +81,11 @@ public:
 
 	inline sub_register_vector const &get_sub_register_vector() const
 	{ return m_subs; }
+
+	virtual sub_register_def *get_sub_register(std::string const &name);
+
+public:
+	virtual bool add_uow(register_def *rdef);
 };
 
 } }

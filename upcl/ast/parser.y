@@ -1,5 +1,5 @@
 %{
-#include "ast.h"
+#include "ast/ast.h"
 
 using namespace upcl;
 
@@ -110,6 +110,9 @@ extern ast::token *g_root;
 %type <expression> base_operand operand bit_combine expression arg
 %type <expression> cast_expr macro_expr mem_expr SU_expr CC_expr is_expr
 %type <expression> CC_flag unary_expr binary_expr
+
+%left '/' '%' '*'
+%left '-' '+'
 
 %%
 
@@ -504,19 +507,6 @@ binary_expr: unary_expr
 		   { $$ = new ast::binary_expression(ast::binary_expression::GE, $1, $3); }
 		   | binary_expr '>' expression
 		   { $$ = new ast::binary_expression(ast::binary_expression::GT, $1, $3); }
-		   /* Additive */
-		   | binary_expr '+' expression
-		   { $$ = new ast::binary_expression(ast::binary_expression::ADD, $1, $3); }
-		   | binary_expr '-' expression
-		   { $$ = new ast::binary_expression(ast::binary_expression::SUB, $1, $3); }
-		   | binary_expr '|' expression
-		   { $$ = new ast::binary_expression(ast::binary_expression::OR, $1, $3); }
-		   | binary_expr T_ORCOM expression
-		   { $$ = new ast::binary_expression(ast::binary_expression::ORCOM, $1, $3); }
-		   | binary_expr '^' expression
-		   { $$ = new ast::binary_expression(ast::binary_expression::XOR, $1, $3); }
-		   | binary_expr T_XORCOM expression
-		   { $$ = new ast::binary_expression(ast::binary_expression::XORCOM, $1, $3); }
 		   /* Multiplicative */
 		   | binary_expr '*' expression
 		   { $$ = new ast::binary_expression(ast::binary_expression::MUL, $1, $3); }
@@ -544,6 +534,19 @@ binary_expr: unary_expr
 		   { $$ = new ast::binary_expression(ast::binary_expression::AND, $1, $3); }
 		   | binary_expr T_ANDCOM expression
 		   { $$ = new ast::binary_expression(ast::binary_expression::ANDCOM, $1, $3); }
+		   /* Additive */
+		   | binary_expr '+' expression
+		   { $$ = new ast::binary_expression(ast::binary_expression::ADD, $1, $3); }
+		   | binary_expr '-' expression
+		   { $$ = new ast::binary_expression(ast::binary_expression::SUB, $1, $3); }
+		   | binary_expr '|' expression
+		   { $$ = new ast::binary_expression(ast::binary_expression::OR, $1, $3); }
+		   | binary_expr T_ORCOM expression
+		   { $$ = new ast::binary_expression(ast::binary_expression::ORCOM, $1, $3); }
+		   | binary_expr '^' expression
+		   { $$ = new ast::binary_expression(ast::binary_expression::XOR, $1, $3); }
+		   | binary_expr T_XORCOM expression
+		   { $$ = new ast::binary_expression(ast::binary_expression::XORCOM, $1, $3); }
 		   ;
 
 insn_decl: K_INSN identifier ':' ';'

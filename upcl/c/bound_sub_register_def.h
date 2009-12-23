@@ -2,6 +2,7 @@
 #define __upcl_c_bound_sub_register_def_h
 
 #include "c/sub_register_def.h"
+#include <cassert>
 
 namespace upcl { namespace c {
 

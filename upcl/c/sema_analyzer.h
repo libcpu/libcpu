@@ -1,13 +1,10 @@
 #ifndef __upcl_c_sema_analyzer_h
 #define __upcl_c_sema_analyzer_h
 
-#include <string>
-
-#include "ast.h"
+#include "ast/ast.h"
 #include "c/type.h"
 #include "c/expression.h"
-
-struct register_info;
+#include "sema/register_info.h"
 
 namespace upcl { namespace c {
 
@@ -38,10 +35,10 @@ private:
 
 private:
 
-	bool process_register_splitter_dep(register_info *ri);
-	bool process_bound_value_dep(register_info *ri, size_t &offset,
+	bool process_register_splitter_dep(sema::register_info *ri);
+	bool process_bound_value_dep(sema::register_info *ri, size_t &offset,
 			ast::type const *type, ast::bound_value const *bv, bool explic);
-	bool process_typed_bound_value_dep(register_info *ri, size_t &offset,
+	bool process_typed_bound_value_dep(sema::register_info *ri, size_t &offset,
 			size_t max_size, ast::type const *type,
 			ast::typed_bound_value const *bv, bool explic);
 

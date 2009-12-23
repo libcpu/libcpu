@@ -1,23 +1,87 @@
-#include "c/simple_const_expr.h"
+#include "sema/simple_expr_evaluator.h"
 
 using namespace upcl;
-using namespace upcl::c;
+using namespace upcl::sema;
+
+simple_expr_evaluator::simple_expr_evaluator()
+{
+	reset();
+}
+
+void
+simple_expr_evaluator::reset()
+{
+	m_usage.clear();
+	m_collect = false;
+	m_failed = false;
+}
+
+void
+simple_expr_evaluator::clear()
+{
+	reset();
+	m_vars.clear();
+}
+
+void
+simple_expr_evaluator::collect_literals()
+{
+	m_collect = true;
+}
+
+void
+simple_expr_evaluator::set_var(std::string const &varname, uint64_t v)
+{
+	m_vars[varname] = v;
+}
 
 bool
-simple_const_expr::eval(ast::expression const *expr, uint64_t &value)
+simple_expr_evaluator::is_used(std::string const &varname) const
+{
+	string_count_map::const_iterator i = m_usage.find(varname);
+
+	if (i != m_usage.end())
+		return (i->second != 0);
+	else
+		return false;
+}
+
+void
+simple_expr_evaluator::get_used_literals(string_vector &literals) const
+{
+	literals.clear();
+
+	for (string_count_map::const_iterator i = m_usage.begin();
+			i != m_usage.end(); i++) {
+		if (m_vars.find(i->first) == m_vars.end())
+			literals.push_back(i->first);
+	}
+}
+
+bool
+simple_expr_evaluator::evaluate(ast::expression const *expr, uint64_t &value)
+{
+	m_failed = false;
+	return eval(expr, value);
+}
+
+bool
+simple_expr_evaluator::eval(ast::expression const *expr, uint64_t &value)
 {
 	return eval(expr, value, false);
 }
 
 bool
-simple_const_expr::eval(ast::expression const *expr, uint64_t &value,
+simple_expr_evaluator::eval(ast::expression const *expr, uint64_t &value,
 		bool sign)
 {
 	switch (expr->get_expression_type()) {
 		case ast::expression::LITERAL:
 			return eval_literal((ast::literal_expression const *)expr, value);
+		case ast::expression::CAST:
+			return eval_cast((ast::cast_expression const *)expr, value, sign);
 		case ast::expression::UNARY:
-			return eval_unary((ast::unary_expression const *)expr, value);
+			return eval_unary((ast::unary_expression const *)expr, value, sign);
 		case ast::expression::BINARY:
 			return eval_binary((ast::binary_expression const *)expr, value,
 					sign);
@@ -27,7 +91,7 @@ simple_const_expr::eval(ast::expression const *expr, uint64_t &value,
 }
 
 bool
-simple_const_expr::eval_literal(ast::literal_expression const *expr,
+simple_expr_evaluator::eval_literal(ast::literal_expression const *expr,
 		uint64_t &value)
 {
 	ast::token const *literal = expr->get_literal();
@@ -35,17 +99,55 @@ simple_const_expr::eval_literal(ast::literal_expression const *expr,
 	switch (literal->get_token_type()) {
 		case ast::token::IDENTIFIER:
 			return eval_identifier((ast::identifier const *)literal, value);
+
+
+		case ast::token::QUALIFIED_IDENTIFIER:
+		{
+			ast::qualified_identifier const *qi =
+			 	(ast::qualified_identifier const *)literal;
+			if (qi->get_identifier_list() != 0 &&
+					qi->get_identifier_list()->size() != 0)
+				return false;
+			else
+				literal = qi->get_base_identifier();
+
+			return eval_identifier((ast::identifier const *)literal, value);
+		}
+
 		case ast::token::NUMBER:
 			return eval_number((ast::number const *)literal, value);
+
 		default:
-			fprintf(stderr, "error: only numbers are valid in constant expression.\n");
+			//fprintf(stderr, "error: only numbers are valid in constant expression.\n");
 			return false;
 	}
 }
 
 bool
-simple_const_expr::eval_unary(ast::unary_expression const *expr,
-		uint64_t &value)
+simple_expr_evaluator::eval_cast(ast::cast_expression const *expr,
+		uint64_t &value, bool sign)
+{
+	ast::type const *t = expr->get_type();
+
+	// only casts to integer are valid.
+	if (t->get_value()[1] != 'i')
+		return false;
+
+	size_t bits = atoi(t->get_value().c_str()+2);
+
+	if (!eval(expr->get_expression(), value, false))
+		return false;
+
+	value &= (1 << bits) - 1;
+	if (sign && (1 << (bits - 1)))
+		value |= -1ULL << bits;
+
+	return true;
+}
+
+bool
+simple_expr_evaluator::eval_unary(ast::unary_expression const *expr,
+		uint64_t &value, bool)
 {
 	switch (expr->get_expression_operator()) {
 		case ast::unary_expression::SUB:
@@ -90,7 +192,7 @@ simple_const_expr::eval_unary(ast::unary_expression const *expr,
 }
 
 bool
-simple_const_expr::eval_binary(ast::binary_expression const *expr,
+simple_expr_evaluator::eval_binary(ast::binary_expression const *expr,
 		uint64_t &value, bool sign)
 {
 	uint64_t a, b;
@@ -172,15 +274,19 @@ simple_const_expr::eval_binary(ast::binary_expression const *expr,
 }
 
 bool
-simple_const_expr::eval_identifier(ast::identifier const *ident,
+simple_expr_evaluator::eval_identifier(ast::identifier const *ident,
 		uint64_t &value)
 {
-	std::map<std::string, uint64_t>::const_iterator i =
-	 	m_local_vars.find(ident->get_value());
+	string_uint_map::const_iterator i = m_vars.find(ident->get_value());
 
-	if (i != m_local_vars.end()) {
-		m_local_usage[ident->get_value()]++;
+	if (i != m_vars.end()) {
+		m_usage[ident->get_value()]++;
 		value = i->second;
+		return true;
+	} else if (m_collect) {
+		m_usage[ident->get_value()]++;
+		value = 0;
+		m_failed = true;
 		return true;
 	}
 
@@ -188,7 +294,7 @@ simple_const_expr::eval_identifier(ast::identifier const *ident,
 }
 
 bool
-simple_const_expr::eval_number(ast::number const *number, uint64_t &value)
+simple_expr_evaluator::eval_number(ast::number const *number, uint64_t &value)
 {
 	std::string const &v = number->get_value();
 

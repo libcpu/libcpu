@@ -1,9 +1,9 @@
 %{
-#include "ast.h"
+#include "ast/ast.h"
 
 using namespace upcl;
 
-#include "parser.hpp"
+#include "ast/parser.hpp"
 
 %}
 

@@ -24,7 +24,7 @@ arch "mips32" {
 		group S {
 
 			[ #i32 pc -> %PC ],
-			[ #i32 npc <- ( pc + 4 ) ]
+			[ #i32 npc -> %NPC ]
 
 		};
 

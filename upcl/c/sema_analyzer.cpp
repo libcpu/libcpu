@@ -1,10 +1,18 @@
-#include <cassert>
-
 #include "c/sema_analyzer.h"
-#include "c/simple_const_expr.h"
+#include "sema/simple_expr_evaluator.h"
+#include "sema/register_dep_tracker.h"
+#include "sema/register_file_builder.h"
+#include "ast/dumper.h"
+
+#include <cassert>
+#include <sstream>
 
 using namespace upcl;
 using upcl::c::sema_analyzer;
+using upcl::sema::register_dep_tracker;
+using upcl::sema::register_file_builder;
+using upcl::sema::register_info;
+using upcl::sema::register_info_vector;
 
 sema_analyzer::sema_analyzer()
 	: m_arch_tags()
@@ -61,7 +69,7 @@ sema_analyzer::process_architecture(ast::architecture const *arch)
 
 					uint64_t v = tv->get_value();
 					if (tv->is_token()) {
-						if (!c::simple_const_expr().eval(
+						if (!sema::simple_expr_evaluator().evaluate(
 									(ast::expression const *)tv->get_token(), v)) {
 							fprintf(stderr, "error: expression is too complex.\n");
 							return false;
@@ -99,235 +107,6 @@ sema_analyzer::process_architecture(ast::architecture const *arch)
 	return true;
 }
 
-#include <map>
-
-struct register_info;
-
-typedef std::vector <register_info *> register_info_vector;
-
-struct register_info {
-	enum {
-		UNRESOLVED_FLAG = 1,
-		HARDWIRED_FLAG = 2,
-		EXPLICIT_FLAG = 4,
-		RESERVED_FLAG = 8
-	};
-
-	uint32_t               flags;
-	std::string            name;
-	ast::type const       *type;
-	register_info         *super;
-	ast::register_splitter const *splitter; // bitfields
-	ast::expression const *hwexpr;          // hardwired expression
-	ast::expression const *special_eval;    // special evaluation function on assignment.
-	uint64_t               repeat_index;    // index to be used to compute aliasing
-	                                        // register index value.
-	ast::expression const *complex_index;   // index to be used to compute aliasing,
-	                                        // but it's too complex to be evaluated
-										    // during the pass, it can still evaluate
-										    // to a constant value if the only variable
-										    // referenced is the special variable '_'
-	register_info         *binding;
-	register_info_vector   subs;
-	register_info_vector   deps;
-};
-
-class register_dep_tracker {
-	typedef std::map <std::string, register_info *> name_info_map;
-
-	name_info_map m_regs;
-
-public:
-	register_info *ref(std::string const &name);
-	register_info *add(std::string const &name, ast::type const *type,
-			unsigned flags = 0);
-	register_info *add(std::string const &name, ast::type const *type,
-			ast::expression const *expr, unsigned flags = 0);
-	register_info *add(std::string const &name, ast::type const *type,
-			ast::register_splitter const *splitter, unsigned flags = 0);
-	register_info *add(register_info *super, std::string const &name,
-			ast::type const *type, unsigned flags = 0);
-	register_info *add(register_info *super, std::string const &name,
-			ast::type const *type, ast::register_splitter const *splitter,
-			unsigned flags = 0);
-
-	register_info *get(std::string const &name) const;
-
-	void dump()
-	{
-		for(name_info_map::const_iterator i = m_regs.begin();
-				i != m_regs.end(); i++) {
-			printf("reg '%s'\n", i->first.c_str());
-			for(register_info_vector::const_iterator j = i->second->deps.begin();
-					j != i->second->deps.end(); j++) {
-				printf("\tdep '%s'\n", (*j)->name.c_str());
-			}
-		}
-	}
-};
-
-register_info *
-register_dep_tracker::ref(std::string const &name)
-{
-	register_info *info;
-
-	info = get(name);
-	if (info == 0) {
-		info = new register_info;
-		info->name = name;
-		info->type = 0;
-		info->flags = register_info::UNRESOLVED_FLAG;
-		info->super = 0;
-		info->hwexpr = 0;
-		info->splitter = 0;
-		info->repeat_index = 0;
-		m_regs[name] = info;
-	}
-	return info;
-}
-
-register_info *
-register_dep_tracker::add(std::string const &name, ast::type const *type,
-		unsigned flags)
-{
-	register_info *info;
-
-	info = get(name);
-	if (info != 0)
-		return 0;
-
-	info = new register_info;
-	info->name = name;
-	info->type = type;
-	info->flags = flags & ~register_info::UNRESOLVED_FLAG;
-	info->super = 0;
-	info->hwexpr = 0;
-	info->splitter = 0;
-	info->repeat_index = 0;
-	m_regs[name] = info;
-
-	return info;
-}
-
-register_info *
-register_dep_tracker::add(std::string const &name, ast::type const *type,
-		ast::expression const *expr, unsigned flags)
-{
-	register_info *info;
-
-	info = get(name);
-	if (info != 0)
-		return 0;
-
-	info = new register_info;
-	info->name = name;
-	info->type = type;
-	info->flags = flags & ~register_info::UNRESOLVED_FLAG;
-	info->super = 0;
-	info->hwexpr = expr;
-	info->splitter = 0;
-	info->repeat_index = 0;
-	m_regs[name] = info;
-
-	return info;
-}
-
-register_info *
-register_dep_tracker::add(std::string const &name, ast::type const *type,
-		ast::register_splitter const *splitter, unsigned flags)
-{
-	register_info *info;
-
-	info = get(name);
-	if (info != 0)
-		return 0;
-
-	info = new register_info;
-	info->name = name;
-	info->type = type;
-	info->flags = flags & ~register_info::UNRESOLVED_FLAG;
-	info->super = 0;
-	info->hwexpr = 0;
-	info->splitter = splitter;
-	info->repeat_index = 0;
-	m_regs[name] = info;
-
-	return info;
-}
-
-register_info *
-register_dep_tracker::add(register_info *super, std::string const &name,
-		ast::type const *type, unsigned flags)
-{
-	register_info *info;
-
-	info = get(name);
-	if (info != 0)
-		return 0;
-
-	info = new register_info;
-	info->name = name;
-	info->type = type;
-	info->flags = flags & ~register_info::UNRESOLVED_FLAG;
-	info->super = super;
-	info->hwexpr = 0;
-	info->splitter = 0;
-	info->repeat_index = 0;
-
-	if ((info->flags & (register_info::EXPLICIT_FLAG | register_info::RESERVED_FLAG)) == 0)
-		m_regs[name] = info;
-
-	if (super != 0) {
-		super->deps.push_back(info);
-		super->subs.push_back(info);
-	}
-	info->deps.push_back(super);
-
-	return info;
-}
-
-register_info *
-register_dep_tracker::add(register_info *super, std::string const &name,
-		ast::type const *type, ast::register_splitter const *splitter,
-		unsigned flags)
-{
-	register_info *info;
-
-	info = get(name);
-	if (info != 0)
-		return 0;
-
-	info = new register_info;
-	info->name = name;
-	info->type = type;
-	info->flags = flags & ~register_info::UNRESOLVED_FLAG;
-	info->super = super;
-	info->hwexpr = 0;
-	info->splitter = splitter;
-	info->repeat_index = 0;
-	
-	if ((info->flags & (register_info::EXPLICIT_FLAG | register_info::RESERVED_FLAG)) == 0)
-		m_regs[name] = info;
-
-	if (super != 0) {
-		super->deps.push_back(info);
-		super->subs.push_back(info);
-	}
-	info->deps.push_back(super);
-
-	return info;
-}
-
-register_info *
-register_dep_tracker::get(std::string const &name) const
-{
-	name_info_map::const_iterator i = m_regs.find(name);
-	if (i != m_regs.end())
-		return i->second;
-	else
-		return 0;
-}
-
 register_dep_tracker g_dpt;
 
 bool
@@ -353,6 +132,8 @@ sema_analyzer::process_register_file(ast::register_file const *reg_file)
 	// the aliasing, and lastly the register definitions are created.
 	// 
 
+	printf("%s: analyzing register dependencies...\n", __func__);
+
 	size_t count = groups->size();
 	for (size_t n = 0; n < count; n++) {
 		ast::register_group const *group = (ast::register_group const *)(*groups)[n];
@@ -360,7 +141,17 @@ sema_analyzer::process_register_file(ast::register_file const *reg_file)
 			return false;
 	}
 
-	g_dpt.dump();
+	printf("%s: register dependencies analysis: %zu total registers, "
+			"%zu top registers, %zu independent registers, "
+			"%zu pseudo registers, %zu stub registers, %zu dependencies.\n",
+			__func__, g_dpt.get_all_regs_count(), g_dpt.get_top_regs_count(),
+			g_dpt.get_indep_regs_count(), g_dpt.get_pseudo_regs_count(),
+			g_dpt.get_stub_count(), g_dpt.get_deps_count());
+
+	//g_dpt.dump_top();
+
+	register_file_builder builder;
+	builder.analyze(&g_dpt);
 
 	return true;
 }
@@ -381,6 +172,31 @@ sema_analyzer::process_register_group_dep(ast::register_group const *group)
 	}
 
 	return true;
+}
+
+static std::string
+make_repeat_register_name(ast::identifier const *identifier,
+		uint64_t index)
+{
+	std::string name(identifier->get_value());
+
+	if (identifier->is_repeat()) {
+		std::stringstream ss;
+		ss << name.substr(0, name.length() - 1) << index;
+		return ss.str();
+	}
+
+	return name;
+}
+
+static upcl::ast::expression *
+make_index_expr_relative(upcl::ast::expression *index_expr, uint64_t index)
+{
+	std::stringstream ss;
+	ss << index;
+	return new ast::binary_expression(ast::binary_expression::ADD,
+			new ast::literal_expression(new ast::number(ss.str())),
+			(upcl::ast::expression *)index_expr);
 }
 
 // 
@@ -504,7 +320,8 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 	fprintf(stderr, "%s: register '%s'\n", __func__, name->get_value().c_str());
 
 	// repeat expression shall be constant.
-	if (repeat_expr != 0 && !c::simple_const_expr().eval(repeat_expr, repeat)) {
+	if (repeat_expr != 0 &&
+			!sema::simple_expr_evaluator().evaluate(repeat_expr, repeat)) {
 		fprintf(stderr, "error: repeat expression shall be constant.\n");
 		return false;
 	}
@@ -567,57 +384,124 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 
 	uint64_t start_index = 0;
 	uint64_t alias_start_index = 0;
+	bool relative_aliasing_index = false;
+	string_vector alias_deps;
 	ast::expression const *complex_alias_index_expr = 0;
+
+	//
+	// analyze repeatable identifiers.
+	//
 	if (repeat != 1) {
 		ast::repeat_identifier const *repname = (ast::repeat_identifier const *)name;
 		ast::expression const *startexpr = repname->get_expression();
 
 		if (startexpr != 0 &&
-				!c::simple_const_expr().eval(startexpr, start_index)) {
+				!sema::simple_expr_evaluator().evaluate(startexpr, start_index)) {
 			fprintf(stderr, "error: register start index must evaluate to a constant value.\n");
 			return false;
 		}
 
+		// handle the special case where we are aliasing another 
+		// repeatable register set.
 		if (alias_reg != 0 && alias_reg->is_repeat()) {
-			ast::repeat_identifier const *aliasrepname = (ast::repeat_identifier const *)alias_reg;
-			ast::expression const *aliasexpr = aliasrepname->get_expression();
+			ast::repeat_identifier const *alias_repname = 
+				(ast::repeat_identifier const *)alias_reg;
+			ast::expression const *alias_expr =
+			 	alias_repname->get_expression();
 
-			if (aliasexpr != 0 &&
-					!c::simple_const_expr().eval(aliasexpr, alias_start_index)) {
-				fprintf(stderr, "info: complex expression to compute aliased register index.\n");
-				// if it's complex compute it later.
-				complex_alias_index_expr = aliasexpr;
+			// if the aliasing index is a complex expression, collect
+			// the literals in order to add them as dependencies of
+			// the register.
+			if (alias_expr != 0) {
+				sema::simple_expr_evaluator x;
+
+				// evaluator can fail and has to collect literals.
+				x.collect_literals();
+
+				if (!x.evaluate(alias_expr, alias_start_index)) {
+					fprintf(stderr, "error: register alias indexing expression is too complex.\n");
+					return false;
+				} else if (x.has_failed()) {
+					// if the expression contains the special symbol _
+					// it is assumed to be absolute.
+					relative_aliasing_index = !x.is_used("_");
+
+					fprintf(stderr, "info: complex expression to compute aliased register index.\n");
+					complex_alias_index_expr = alias_expr;
+
+					// get all seen literals, they are dependencies.
+					x.get_used_literals(alias_deps);
+				}
 			}
 		}
 	}
 
+	// create the register information
 	for (uint64_t n = 0; n < repeat; n++) {
-		char buf[64];
-		std::string rname(name->get_value());
-		if (name->is_repeat()) {
-			snprintf(buf, sizeof(buf), "%llu", n + start_index);
-			rname.replace(rname.find('?'), 1, buf);
-		}
+		std::string rname = make_repeat_register_name(name, n + start_index);
 
-		// create dependency.
+		// create dependencies.
 		register_info *ri;
-		if (hw_value != 0)
+
+		if (hw_value != 0) {
+
+			// read-only hardwiring
+
+			// evaluate any register used.
+			sema::simple_expr_evaluator e;
+			uint64_t v;
+
+			// evaluator can fail and has to collect literals.
+			e.collect_literals();
+
+			// evalute, ignore if failed.
+			e.evaluate(hw_value, v);
+			
 			ri = g_dpt.add(rname, type, hw_value);
-		else if (alias_reg != 0) {
-			std::string aname(alias_reg->get_value());
-			if (alias_reg->is_repeat() && complex_alias_index_expr == 0) {
-				// if it's not complex, use the alias_start_index.
-				snprintf(buf, sizeof(buf), "%llu", n + alias_start_index);
-				aname.replace(aname.find('?'), 1, buf);
+
+			string_vector expr_deps;
+			e.get_used_literals(expr_deps);
+
+			// cross deps
+			g_dpt.make_deps_by(expr_deps, ri);
+		} else if (alias_reg != 0) {
+
+			// aliasing definition
+			std::string aname;
+			// if the indexing expression is complex, it is possible that
+			// this expression must be evaluated at translation time, so
+			// we make a reference to the repeatable identifier instead
+			// of the target register.
+			if (complex_alias_index_expr != 0) {
+				aname = alias_reg->get_value();
+			} else {
+				aname = make_repeat_register_name(alias_reg,
+						n + alias_start_index);
 			}
 
 			ri = g_dpt.add(g_dpt.ref(aname), rname, type, reg_def);
 
-			if (ri != 0)
-				ri->complex_index = complex_alias_index_expr;
-		}
-		else
+			// bind complex indexing expression
+			if (ri != 0 && complex_alias_index_expr != 0) {
+
+				ast::expression *index_expr =
+					(ast::expression *)complex_alias_index_expr;
+
+				if (relative_aliasing_index) {
+					// make the expression relative
+					index_expr = make_index_expr_relative(index_expr,
+							n + start_index);
+				}
+
+				ri->complex_index = index_expr;
+			}
+
+		} else {
+
+			// simple definition
 			ri = g_dpt.add(rname, type, reg_def);
+
+		}
 
 		if (ri == 0) {
 			fprintf(stderr, "error: register '%s' is already defined.\n",
@@ -627,8 +511,11 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 
 		ri->repeat_index = n + start_index;
 
-		// At this point, evaluate the bitfields if this register has a 
-		// definition attached.
+		// cross deps
+		g_dpt.make_deps_by(alias_deps, ri);
+
+		// At this point, evaluate the bitfields if this register
+		// has a definition attached.
 		if (ri->splitter != 0 && !process_register_splitter_dep(ri))
 			return false;
 	}
@@ -654,7 +541,8 @@ sema_analyzer::process_register_splitter_dep(register_info *ri)
 		size_t offset = 0;
 		size_t count = values->size();
 
-		// process in reverse order!
+		// process bitfields in reverse order, since they
+		// are written "big endian".
 		for (size_t n = 0; n < count; n++) {
 			ast::token *t = (*values)[count - n - 1];
 
@@ -683,9 +571,12 @@ sema_analyzer::process_register_splitter_dep(register_info *ri)
 	return true;
 }
 
-namespace {
-
-// fails only if identifier is qualified!
+// extract the base identifier name from an expression.
+// the expression shall be a literal_expression and
+// shall be bound to an identifier or a qualified identifier
+// token. in the latter case, the qualified identifier
+// shall be non-qualified (only the base identifier is
+// present).
 static bool
 bound_value_name_from_expression(ast::token const *binding,
 		ast::identifier const *&name)
@@ -714,91 +605,197 @@ bound_value_name_from_expression(ast::token const *binding,
 	return true;
 }
 
+// returns the register name.
+// if name is the special identifier (_), this field
+// is unnamed.
+static std::string
+make_register_name(std::string const &base_name,
+		std::string const &name, ssize_t offset)
+{
+	if (name == "_") {
+		std::stringstream ss;
+		ss << '$' << base_name << '$' << offset;
+		return ss.str();
+	} else {
+		return name;
+	}
 }
 
 bool
-sema_analyzer::process_bound_value_dep(register_info *ri, size_t &offset,
+sema_analyzer::process_bound_value_dep(register_info *bri, size_t &offset,
 		ast::type const *type, ast::bound_value const *bv, bool expl)
 {
+	register_info *ri;
 	ast::identifier const *name = bv->get_name();
 	ast::token const *binding = bv->get_binding();
 	size_t max_size = atoi(type->get_value().c_str() + 2);
 
-	// if there's no name check this expression refers to an identifier,
-	// if so use it.
+	// if there's no name check if this expression refers to 
+	// an identifier and if so use it.
 	if (name == 0) {
 		if (!bound_value_name_from_expression(binding, name)) {
 			fprintf(stderr, "error: bitfield cannot be qualified in register '%s'.\n",
-					ri->name.c_str());
+					bri->name.c_str());
 			return false;
+		} else if (name != 0) {
+			// no binding if name was extracted.
+			binding = 0;
 		}
 
 		// if name is still null, it's a complex expression or a constant
-		// expression, in the both cases this expression is computed at
-		// the second pass.
+		// expression.
 	}
 
-	char const *bitfield_name = (name != 0 ? name->get_value().c_str() :
-			"<expr>");
-
-	printf("\tBitfield '%s.%s' [%zu:%zu]\n", ri->name.c_str(), bitfield_name,
-			offset, max_size);
+	std::string bfname;
 
 	if (name != 0) {
-		std::string bfname(name->get_value());
-		if (bfname == "_") {
-			char buf[64];
-			snprintf(buf, sizeof(buf), "$%s$%u", ri->name.c_str(), offset);
-			bfname = buf;
-		}
+		bfname = make_register_name(bri->name, name->get_value(), offset);
 
-		ri = g_dpt.add(ri, bfname, type,
-				expl ? register_info::EXPLICIT_FLAG : 0);
-		
-		if (ri == 0) {
-			fprintf(stderr, "error: register '%s' is already defined.\n",
-					bfname.c_str());
-			return false;
-		}
+		ri = g_dpt.add(bri, bfname, type,
+				register_info::SUBREGISTER_FLAG |
+				(expl ? register_info::EXPLICIT_FLAG : 0));
 	} else {
-		char buf[64];
-		snprintf(buf, sizeof(buf), "$%s$%u", ri->name.c_str(), offset);
+		bfname = make_register_name(bri->name, "_", offset);
 
-		ri = g_dpt.add(ri, buf, type, register_info::RESERVED_FLAG);
-		if (ri == 0) {
-			fprintf(stderr, "error: register '%s' is already defined.\n", buf);
-			return false;
-		}
+		ri = g_dpt.add(bri, bfname, type, register_info::SUBREGISTER_FLAG |
+				register_info::RESERVED_FLAG);
+	}
+
+	printf("\tBitfield '%s.%s' [%zu:%zu]\n", bri->name.c_str(), bfname.c_str(),
+			offset, max_size);
+
+	if (ri == 0) {
+		fprintf(stderr, "error: register '%s' is already defined.\n",
+				bfname.c_str());
+		return false;
 	}
 
 	if (binding != 0) {
+		if (binding->get_token_type() == ast::token::QUALIFIED_IDENTIFIER) {
+			// if a qualified identifier, check it's only base identifier.
+			ast::qualified_identifier const *qi =
+			 (ast::qualified_identifier const *)binding;
+			if (qi->get_identifier_list() == 0 ||
+					qi->get_identifier_list()->size() == 0)
+				binding = qi->get_base_identifier();
+		}
+
 		if (binding->get_token_type() == ast::token::IDENTIFIER) {
 			//
-			// The subfield is bound to a register, if it's a repeatable,
-			// evaluate the expression if possible, if "_" is present
+			// The subfield is bound to a register, if it's repeatable,
+			// evaluate the expression if possible: if "_" is present
 			// in the expression, the expression is assumed to be "absolute",
 			// otherwise the result from the expression is added to the
 			// repeat index, hence "relative" index.
 			//
+			// If the expression cannot be resolved, it will be analyzed
+			// on the second pass.
+			//
 			ast::identifier const *bid = (ast::identifier const *)binding;
 
-			c::simple_const_expr x;
-			x.set_var("_", ri->repeat_index);
+			sema::simple_expr_evaluator e;
+
+			// evaluator can fail and has to collect literals.
+			e.collect_literals();
+
+			// _ is the base register repeat index.
+			e.set_var("_", bri->repeat_index);
 
 			fprintf(stderr, "INFO: %s has bound an identifier '%s'.\n",
 					ri->name.c_str(),
 					bid->get_value().c_str());
 
+			std::string rname(bid->get_value());
+
 			if (bid->is_repeat()) {
 				ast::expression const *index_expr =
 					((ast::repeat_identifier const *)bid)->get_expression();
 
+				char buf[64];
+				// 
+				// No index expression, use referenced register.
+				//
 				if (index_expr == 0) {
+					snprintf(buf, sizeof(buf), "%llu", bri->repeat_index);
+					rname.replace(rname.find('?'), 1, buf);
+				} else {
+					uint64_t index;
+					if (!e.evaluate(index_expr, index)) {
+						fprintf(stderr, "error: bitfield aliasing indexing expression is too complex.\n");
+						return false;
+					}
+					if (e.has_failed()) {
+						fprintf(stderr, "info: bitfield aliasing indexing expression depends on other registers.\n");
+						if (!e.is_used("_")) {
+							// make the expression relative
+							index_expr = make_index_expr_relative((upcl::ast::expression*)index_expr,
+									bri->repeat_index);
+						}
+						ri->complex_index = index_expr;
+						// add all variables found in the expression as deps.
+						string_vector alias_deps;
+						e.get_used_literals(alias_deps);
+						
+						// cross deps
+						g_dpt.make_deps_by(alias_deps, ri);
+					} else {
+						// if the indexing identifier (_) hasn't been used,
+						// then it's relative indexing.
+						if (!e.is_used("_"))
+							index += bri->repeat_index;
 
+						snprintf(buf, sizeof(buf), "%llu", index);
+						rname.replace(rname.find('?'), 1, buf);
+					}
 				}
 			}
+
+			if (bv->is_bidi())
+				ri->flags |= register_info::BIDIBIND_FLAG;
+
+			ri->binding = g_dpt.ref(rname);
+			assert(ri->binding != ri);
+
+			if (bv->is_bidi()) {
+				g_dpt.make_deps_by(ri, ri->binding);
+			} else {
+				g_dpt.make_deps_by(ri->binding, ri);
+				g_dpt.make_deps_by(ri->binding, bri);
+			}
+		} else if (binding->get_token_type() == ast::token::EXPRESSION) {
+			ri->hwexpr = (ast::expression const *)binding;
+		} else if (binding->get_token_type() == ast::token::QUALIFIED_IDENTIFIER) {
+			if (bv->is_bidi())
+				ri->flags |= register_info::BIDIBIND_FLAG;
+
+			ri->bind_copy = (ast::qualified_identifier const *)binding;
+
+			// add as a dependency.
+			register_info *ori = g_dpt.ref(ri->bind_copy->get_base_identifier()->get_value());
+
+			// make ori deps by ri
+			g_dpt.make_deps_by(ori, ri);
+
+			//
+			// if the binding is bidirectional, if the target register
+			// is the same type/size of this bitfield, then make the super
+			// of this register, also the super of the register; if it
+			// has already a super, then probably that register is shared
+			// amongst different registers.
+			//
+			if (bv->is_bidi() && ori->super == 0 &&
+					(ori->type == 0 || ori->type->get_value() == 
+					 	ri->type->get_value())) {
+				ori->super = ri->super;
+				g_dpt.make_deps_by(ori->super, ori);
+			}
+		} else {
+			fprintf(stderr, "WARNING: binding token %u is not handled!\n", 
+					binding->get_token_type());
 		}
 	}
+
+	ri->bit_start = offset;
 
 	offset += max_size;
 

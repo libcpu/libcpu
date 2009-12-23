@@ -8,30 +8,46 @@ BISON=bison -d
 LDFLAGS=-g
 LIBS=
 
-OBJS=do.o lexer.o parser.o parse.o dumper.o \
-	 simple_const_expr.o sema_analyzer.o \
-	 register_def.o sub_register_def.o \
-	 expression.o unary_expression.o binary_expression.o \
-	 register_expression.o assign_expression.o \
-	 bit_slice_expression.o bit_combine_expression.o \
-	 cast_expression.o signed_expression.o \
-	 expression_dumper.o
+OBJS=main.o \
+		 strnatcmp.o \
+		 ast/lexer.o \
+		 ast/parser.o \
+		 ast/parse.o \
+		 ast/dumper.o \
+		 sema/simple_expr_evaluator.o \
+		 sema/register_dep_tracker.o \
+		 sema/convert.o \
+		 sema/expr_convert.o \
+		 sema/register_file_builder.o \
+		 c/sema_analyzer.o \
+		 c/register_def.o \
+		 c/sub_register_def.o \
+		 c/expression.o \
+		 c/cast_expression.o \
+		 c/unary_expression.o \
+		 c/binary_expression.o \
+		 c/bit_slice_expression.o \
+		 c/bit_combine_expression.o \
+		 c/register_expression.o \
+		 c/signed_expression.o \
+		 c/assign_expression.o \
+		 c/expression_dumper.o
 
 all: upcc
 
 clean:
 	$(RM) $(OBJS) upcc
-	$(RM) parser.cpp parser.hpp
-	$(RM) lexer.cpp
+	$(RM) ast/parser.cpp ast/parser.hpp
+	$(RM) ast/lexer.cpp
 
 upcc: $(OBJS)
 	$(CXX) $(LDFLAGS) -o upcc $(OBJS) $(LIBS)
 
-do.o: do.cpp ast.h parser.hpp
+main.o: main.cpp ast/ast.h ast/parser.hpp
 
-lexer.cpp: parser.hpp lexer.l ast.h
-	$(FLEX) -o lexer.cpp lexer.l
+ast/lexer.cpp: ast/parser.hpp ast/lexer.l ast/ast.h
+	$(FLEX) -o ast/lexer.cpp ast/lexer.l
 
-parser.cpp parser.hpp: parser.y ast.h
-	$(BISON) -o parser.cpp parser.y
+ast/parser.cpp ast/parser.hpp: ast/parser.y ast/ast.h
+	$(BISON) -o ast/parser.cpp ast/parser.y
 

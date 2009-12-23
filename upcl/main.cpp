@@ -2,9 +2,9 @@
 #include <cstdlib>
 #include <cerrno>
 
-#include "parse.h"
-#include "dumper.h"
-#include "c/simple_const_expr.h"
+#include "ast/parse.h"
+#include "ast/dumper.h"
+#include "sema/simple_expr_evaluator.h"
 #include "c/sema_analyzer.h"
 
 using namespace upcl;

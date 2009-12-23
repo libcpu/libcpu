@@ -1,0 +1,31 @@
+arch "8086" {
+
+	name "Intel 8086";
+
+	endian little;
+
+	byte_size 8;
+	word_size 16;
+	address_size 24;
+	psr_size 16;
+
+	register_file {
+
+		group R {
+
+			[ #i16 ax -> #i8 ( ah : al ) ],
+
+      [ #i32 eax -> #i16 ( _ : _ <-> ax ) ],
+      [ #i64 rax -> #i32 ( _ : _ <-> eax ) ]
+
+		}
+
+	}
+}
+
+insn aad {
+
+	//al = %CC ( ( ah * 10 ) + al, [ Z, N, P ] );
+	ah = 0;
+
+}
