@@ -17,6 +17,11 @@ class register_dep_tracker {
 private:
 	typedef std::map <std::string, register_info *> name_info_map;
 
+public:
+	enum {
+		NOT_CHILD_FLAG = (1 << 31)
+	};
+
 private:
 	name_info_map        m_regs;
 	register_info_vector m_vregs;
@@ -51,6 +56,9 @@ public:
 			unsigned flags = 0);
 
 public:
+	void resolve();
+
+public:
 	// get regs with no deps.
 	void get_indep_regs(register_info_vector &regs) const;
 
@@ -60,10 +68,6 @@ public:
 		register_info *dep);
 
 	void remove_deps_on(register_info *master, register_info *dep);
-
-	// resolve dependencies between parent and subs, other deps
-	// are kept intact.
-	void resolve_subs();
 
 public:
 	inline size_t get_stub_count() const
@@ -76,6 +80,11 @@ public:
 	inline size_t get_deps_count() const
 	{ return m_deps; }
 
+private:
+	void resolve_subs();
+	void fix_binding();
+	void fix_indir_deps();
+	
 public:
 	void dump();
 	void dump_top();

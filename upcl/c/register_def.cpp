@@ -231,7 +231,20 @@ register_def::add_uow(register_def *rdef)
 	return true;
 }
 
-void
-test_reg_def()
+bool
+register_def::is_uow() const
 {
+	return !m_uow.empty();
+}
+
+void
+register_def::set_register_set(register_set *set)
+{
+	m_set = set;
+}
+
+register_set *
+register_def::get_register_set() const
+{
+	return m_set;
 }

@@ -125,13 +125,14 @@ register_dep_tracker::add(register_info *super, std::string const &name,
 	}
 
 	info->type = type;
-	info->flags = flags & ~register_info::UNRESOLVED_FLAG;
+	info->flags = flags & ~(register_info::UNRESOLVED_FLAG | NOT_CHILD_FLAG);
 	info->super = super;
 
 	if (super != 0) {
 		make_deps_by(super, info);
 
-		super->subs.push_back(info);
+		if ((flags & NOT_CHILD_FLAG) == 0)
+			super->subs.push_back(info);
 	}
 
 	return info;
@@ -154,14 +155,15 @@ register_dep_tracker::add(register_info *super, std::string const &name,
 	}
 
 	info->type = type;
-	info->flags = flags & ~register_info::UNRESOLVED_FLAG;
+	info->flags = flags & ~(register_info::UNRESOLVED_FLAG | NOT_CHILD_FLAG);
 	info->super = super;
 	info->splitter = splitter;
 
 	if (super != 0) {
 		make_deps_by(super, info);
 
-		super->subs.push_back(info);
+		if ((flags & NOT_CHILD_FLAG) == 0)
+			super->subs.push_back(info);
 	}
 
 	return info;
@@ -184,7 +186,8 @@ register_dep_tracker::get_indep_regs(register_info_vector &regs) const
 	for (register_info_vector::const_iterator i = m_vregs.begin();
 			i != m_vregs.end(); i++) {
 
-		if (((*i)->flags & register_info::UNRESOLVED_FLAG) != 0 ||
+		if (((*i)->flags & (register_info::UNRESOLVED_FLAG |
+						register_info::FULLALIAS_FLAG)) != 0 ||
 				(*i)->name[0] == '$' || (*i)->name[0] == '%' ||
 				(*i)->name[(*i)->name.length()-1] == '?')
 			continue;
@@ -212,6 +215,19 @@ void
 register_dep_tracker::make_deps_by(register_info *master, register_info *dep)
 {
 	assert(dep != master);
+
+#if 0
+	printf("DEP: '%s' is a dependency of '%s'\n",
+			master->name.c_str(), dep->name.c_str());
+#endif
+
+	if (master->deps_on.find(dep) != master->deps_on.end()) {
+#if 0
+		fprintf(stderr, "warning: circular dependency between '%s' and '%s'\n",
+				master->name.c_str(), dep->name.c_str());
+#endif
+		return;
+	}
 
 	dep->deps_on.insert(master);
 	master->deps_by.insert(dep);
@@ -289,7 +305,8 @@ register_dep_tracker::get_indep_regs_count() const
 	for (register_info_vector::const_iterator i = m_vregs.begin();
 			i != m_vregs.end(); i++) {
 
-		if (((*i)->flags & register_info::UNRESOLVED_FLAG) != 0 ||
+		if (((*i)->flags & (register_info::UNRESOLVED_FLAG |
+						register_info::FULLALIAS_FLAG)) != 0 ||
 				(*i)->name[0] == '$' || (*i)->name[0] == '%' ||
 				(*i)->name[(*i)->name.length()-1] == '?')
 			continue;
@@ -424,6 +441,75 @@ register_dep_tracker::dump_top()
 
 		printf("Top Register: %s\n", i->first.c_str());
 	}
+}
+
+// bind_copy field reference a fully qualified identifier, this
+// can be solved only after all definitions have been recorded.
+void
+register_dep_tracker::fix_binding()
+{
+	for (register_info_vector::iterator i = m_vregs.begin();
+			i != m_vregs.end(); i++) {
+
+		if (((*i)->flags & register_info::UNRESOLVED_FLAG) != 0 ||
+				(*i)->name[0] == '%')
+			continue;
+
+		if ((*i)->bind_copy != 0) {
+			fprintf(stderr, "info: fixing binding for register '%s' to '%s'\n",
+					(*i)->name.c_str(),
+					(*i)->bind_copy->get_base_identifier()->get_value().c_str());
+		}
+	}
+
+}
+
+// indirect dependencies may incorrectly resolved as
+// independent, if the register is completely aliased
+// flag as such.
+void
+register_dep_tracker::fix_indir_deps()
+{
+	for (register_info_vector::iterator i = m_vregs.begin();
+			i != m_vregs.end(); i++) {
+
+		if ((*i)->name[0] == '%' || (*i)->type == 0)
+			continue;
+
+		if (((*i)->flags & (register_info::BIDIBIND_FLAG | register_info::REGALIAS_FLAG)) != 0 &&
+				(atoi((*i)->type->get_value().c_str()+2) == 
+					atoi((*i)->binding->type->get_value().c_str()+2))) {
+#if 0
+			printf("FULL %s->%s!\n",
+					(*i)->name.c_str(),
+					(*i)->binding->name.c_str());
+#endif
+			(*i)->flags |= register_info::FULLALIAS_FLAG;
+
+		} else {
+
+			size_t reg_size = 0, nregs = 0;
+			for (register_info_vector::iterator j = (*i)->subs.begin();
+					j != (*i)->subs.end(); j++) {
+				if (((*j)->flags & register_info::BIDIBIND_FLAG) != 0 &&
+						(*j)->binding != 0) {
+					reg_size += atoi((*j)->binding->type->get_value().c_str()+2);
+					nregs++;
+				}
+			}
+
+			if (reg_size >= (size_t)atoi((*i)->type->get_value().c_str()+2))
+				(*i)->flags |= register_info::FULLALIAS_FLAG;
+		}
+	}
+}
+
+void
+register_dep_tracker::resolve()
+{
+	fix_binding();
+	resolve_subs();
+	fix_indir_deps();
 }
 
 void

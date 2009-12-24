@@ -53,7 +53,15 @@ arch "8086" {
 
 		group F {
 
-			[ 8 ** #f80 st? ],
+			// FORM1
+			//[ 8 ** #i80 st_mmx? -> [ #i16 _, #i64 _ ] ],
+			//[ 8 ** #f80 st? -> st_mmx? ],
+			//[ 8 ** #i64 mm? -> st_mmx? ],
+
+			//FORM2
+			[ 8 ** #i64 mm? ],
+			[ 8 ** #i80 st_mmx? -> [ #i16 _, #i64 _ <-> mm? ] ],
+			[ 8 ** #f80 st? -> st_mmx? ],
 
 			[ #i16 sw -> explicit [ #i1 [ B, C3 ],
 									#i3 TOP,

@@ -11,6 +11,7 @@ public:
 			size_t first_bit, size_t bit_count, c::expression *expression)
 		: sub_register_def(master, name, ty, first_bit, bit_count, false)
 	{
+		register_def::change_flags(REGISTER_FLAG_HARDWIRED);
 		register_def::set_expression(expression);
 	}
 };

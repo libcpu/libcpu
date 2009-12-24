@@ -12,12 +12,14 @@ class register_def;
 class sub_register_def;
 typedef std::vector <sub_register_def *> sub_register_vector;
 typedef std::set <register_def *> register_def_set;
+typedef std::vector <register_def *> register_def_vector;
 typedef std::map <std::string, sub_register_def *> named_sub_register_map;
 
 enum special_register {
   NO_SPECIAL_REGISTER = 0,
 
   SPECIAL_REGISTER_PC,
+  SPECIAL_REGISTER_NPC,
   SPECIAL_REGISTER_PSR,
 
   SPECIAL_REGISTER_C,
@@ -31,6 +33,8 @@ enum {
 	REGISTER_FLAG_HARDWIRED = 1
 };
 
+class register_set;
+
 class register_def {
 
 	unsigned m_flags;
@@ -42,6 +46,7 @@ class register_def {
 	sub_register_vector m_subs;
 	named_sub_register_map m_named_subs;
 	register_def_set m_uow;
+	register_set *m_set;
 
 protected:
 	register_def(unsigned flags, std::string const &name, c::type *type)
@@ -54,6 +59,17 @@ public:
 		: m_flags(0), m_name(name), m_type(type),
 		m_special_bind(NO_SPECIAL_REGISTER), m_bind(0), m_expr(0)
 	{ }
+
+protected:
+	inline void change_flags(unsigned set, unsigned clr = 0)
+	{ m_flags = (m_flags & ~clr) | set; }
+
+protected:
+	friend class register_set;
+	virtual void set_register_set(register_set *set);
+
+public:
+	virtual register_set *get_register_set() const;
 
 protected:
 	friend class sub_register_def;
@@ -86,6 +102,7 @@ public:
 
 public:
 	virtual bool add_uow(register_def *rdef);
+	virtual bool is_uow() const;
 };
 
 } }

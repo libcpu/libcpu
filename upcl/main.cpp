@@ -62,8 +62,6 @@ identifier const *identifier::get_base() const
 
 } }
 
-extern void test_reg_def();
-
 int main(int ac, char **av)
 {
 	if (ac < 2) {
@@ -90,8 +88,6 @@ int main(int ac, char **av)
 	} else {
 		fprintf(stderr, "error parsing.\n");
 	}
-
-  test_reg_def();
 
 	return 0;
 }

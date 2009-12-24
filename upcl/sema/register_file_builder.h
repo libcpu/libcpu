@@ -3,11 +3,18 @@
 
 #include "sema/register_dep_tracker.h"
 #include "c/register_def.h"
+#include "c/register_set.h"
 
 namespace upcl { namespace sema {
 
 class register_file_builder {
-	register_dep_tracker *m_rdt;
+	typedef std::map<std::string, c::register_def *> named_register_def_map;
+
+	register_dep_tracker   *m_rdt;
+	c::register_def_vector  m_rdefs;
+	c::register_set_vector  m_rsets;
+	named_register_def_map  m_named_rdefs;
+
 
 public:
 	register_file_builder();
@@ -16,7 +23,10 @@ public:
 
 private:
 	bool analyze_top(register_info const *);
-	//	void analyze_many(std::string const &, register_info_vector const &, size_t);
+	bool analyze_many(std::string const &, register_info_vector const &);
+
+private:
+	c::register_def *create_top(register_info const *ri);
 
 private:
 	c::register_def *create_sub(register_info const *, c::register_def *,

@@ -337,7 +337,6 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 
 	// if this register has binding track its dependencies.
 	if (binding != 0) {
-		printf("binding : %u\n", binding->get_token_type());
 		switch (binding->get_token_type()) {
 			case ast::token::REGISTER_SPLITTER1:
 			case ast::token::REGISTER_SPLITTER2:
@@ -432,6 +431,8 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 					// get all seen literals, they are dependencies.
 					x.get_used_literals(alias_deps);
 				}
+
+				alias_reg = 0;
 			}
 		}
 	}
@@ -479,7 +480,12 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 						n + alias_start_index);
 			}
 
-			ri = g_dpt.add(g_dpt.ref(aname), rname, type, reg_def);
+			ri = g_dpt.add(g_dpt.ref(aname), rname, type, reg_def, 
+					register_dep_tracker::NOT_CHILD_FLAG);
+			ri->binding = g_dpt.ref(aname);
+
+			if (aname[0] != '%')
+				ri->flags |= register_info::REGALIAS_FLAG;
 
 			// bind complex indexing expression
 			if (ri != 0 && complex_alias_index_expr != 0) {
@@ -701,9 +707,11 @@ sema_analyzer::process_bound_value_dep(register_info *bri, size_t &offset,
 			// _ is the base register repeat index.
 			e.set_var("_", bri->repeat_index);
 
+#if 0
 			fprintf(stderr, "INFO: %s has bound an identifier '%s'.\n",
 					ri->name.c_str(),
 					bid->get_value().c_str());
+#endif
 
 			std::string rname(bid->get_value());
 
@@ -756,12 +764,11 @@ sema_analyzer::process_bound_value_dep(register_info *bri, size_t &offset,
 			ri->binding = g_dpt.ref(rname);
 			assert(ri->binding != ri);
 
-			if (bv->is_bidi()) {
+			if (bv->is_bidi())
 				g_dpt.make_deps_by(ri, ri->binding);
-			} else {
+			else
 				g_dpt.make_deps_by(ri->binding, ri);
-				g_dpt.make_deps_by(ri->binding, bri);
-			}
+			g_dpt.make_deps_by(ri->binding, bri);
 		} else if (binding->get_token_type() == ast::token::EXPRESSION) {
 			ri->hwexpr = (ast::expression const *)binding;
 		} else if (binding->get_token_type() == ast::token::QUALIFIED_IDENTIFIER) {

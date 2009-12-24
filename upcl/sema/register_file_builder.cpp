@@ -2,8 +2,11 @@
 #include "sema/register_info.h"
 #include "sema/convert.h"
 
+#include "c/register_set.h"
 #include "c/sub_register_def.h"
+#include "c/bound_register_def.h"
 #include "c/bound_sub_register_def.h"
+#include "c/hardwired_register_def.h"
 #include "c/hardwired_sub_register_def.h"
 
 #include <sstream>
@@ -33,18 +36,25 @@ make_c_compat_name(std::string const &name)
 }
 
 static void
-cg_print_typed_var(size_t data_size, size_t nbits,
-		std::string const &name)
+cg_print_typed_var(size_t data_size, size_t nbits, std::string const &name,
+		std::string const &comment = std::string())
 {
-	printf("uint%zu_t %s", data_size,
-			make_c_compat_name(name).c_str());
+	std::stringstream ss;
+
+	ss << "uint" << data_size << "_t " << make_c_compat_name(name);
 
 	if (nbits > 64)
-		printf("[%zu]", nbits / data_size);
+		ss << '[' << ((nbits+data_size-1) / data_size) << ']';
 	else if (nbits < data_size)
-		printf(" : %zu", nbits);
+		ss << " : " << nbits;
 
-	printf (";\n");
+	ss << ';';
+	if (!comment.empty())
+		ss << " // " << comment;
+
+	ss << std::endl;
+
+	printf("%s", ss.str().c_str());
 }
 
 static void
@@ -66,7 +76,25 @@ cg_dump(c::register_def *def, bool maybe_unused = true)
 	else if (nbits <= 64)
 		nbits = 64;
 	else
-		nbits = ((nbits + 63) / 64) * 64;
+		nbits = 64; // ((nbits + 63) / 64) * 64;
+
+	std::string comment;
+	if (def->is_sub_register())
+		comment = "sub";
+	if (def->is_hardwired()) {
+		if (!comment.empty()) comment += ", ";
+		comment += "hardwired";
+	} else if (def->get_bound_special_register() != c::NO_SPECIAL_REGISTER) {
+		if (!comment.empty()) comment += ", ";
+		comment += "bound to special register";
+	} else if (def->get_bound_register() != 0) {
+		if (!comment.empty()) comment += ", ";
+		comment += "bound to register";
+	}
+	if (def->is_uow()) {
+		if (!comment.empty()) comment += ", ";
+		comment += "update-on-write";
+	}
 
 	c::sub_register_vector const &sub =
 		def->get_sub_register_vector();
@@ -74,20 +102,41 @@ cg_dump(c::register_def *def, bool maybe_unused = true)
 	if (!sub.empty()) {
 		printf("union {\n");
 		cg_print_typed_var(nbits, def->get_type()->get_bits(),
-				def->get_name());
+				def->get_name(), comment);
 		printf("struct {\n");
+		size_t total = 0;
 		for(c::sub_register_vector::const_iterator i = sub.begin();
-				i != sub.end(); i++)
+				i != sub.end(); i++) {
+			total += (*i)->get_type()->get_bits();
 			cg_dump(*i, false);
+		}
+		size_t unused_bits =
+		 (((def->get_type()->get_bits()+nbits-1)/nbits)*nbits) - total;
+		if (unused_bits != 0) {
+			std::stringstream ss;
+			ss << "__unused_" << def->get_name() << '_' << total;
+			cg_print_typed_var(nbits, unused_bits, ss.str());
+		}
 		printf("};\n");
-		printf("} %s;\n", def->get_name().c_str());
+		printf("} %s;", def->get_name().c_str());
+		if (!comment.empty())
+			printf(" // %s", comment.c_str());
+		printf("\n");
 	} else {
+		size_t unused_bits = (maybe_unused && nbits <= 64 &&
+				nbits > def->get_type()->get_bits() ?
+				(nbits - def->get_type()->get_bits()) : 0);
+
+		if (unused_bits != 0)
+			printf("struct {\n");
+
 		cg_print_typed_var(nbits, def->get_type()->get_bits(),
-				def->get_name());
-		if (maybe_unused && nbits <= 64 &&
-				nbits > def->get_type()->get_bits()) {
-			cg_print_typed_var(nbits, nbits - def->get_type()->get_bits(),
+				def->get_name(), comment);
+
+		if (unused_bits != 0) {
+			cg_print_typed_var(nbits, unused_bits,
 				"__unused_" + def->get_name());
+			printf("};\n");
 		}
 	}
 }
@@ -218,7 +267,7 @@ register_file_builder::analyze(register_dep_tracker *rdt)
 {
 	printf("register_file_builder starts analysis.\n");
 
-	rdt->resolve_subs();
+	rdt->resolve();
 	//rdt->dump();
 
 	// find all registers with no dependencies.
@@ -243,46 +292,123 @@ register_file_builder::analyze(register_dep_tracker *rdt)
 			if (!analyze_top(i->regs[0]))
 				return false;
 		} else {
-			printf("Register Set '%s' Type '%s' Count %zu\n", 
-					i->name.c_str(), i->type.c_str(),
-					i->regs.size());
+			if (!analyze_many(i->name, i->regs))
+				return false;
 		}
 	}
 
 	return true;
 }
 
-std::vector<c::register_def *> g_rdefs;
+bool
+register_file_builder::analyze_many(std::string const &rset_name,
+		register_info_vector const &riv)
+{
+	printf("Register set '%s'\n", rset_name.c_str());
+
+	c::register_set *rset = new c::register_set(rset_name, riv.size());
+	if (rset == 0)
+		return false;
+
+	for (register_info_vector::const_iterator i = riv.begin();
+			i != riv.end(); i++) {
+
+		c::register_def *rdef = create_top(*i);
+		if (rdef == 0)
+			return false;
+
+		rset->set((*i)->repeat_index, rdef);
+		m_rdefs.push_back(rdef);
+		m_named_rdefs[(*i)->name] = rdef;
+	}
+
+	m_rsets.push_back(rset);
+
+	return true;
+}
 
 bool
 register_file_builder::analyze_top(register_info const *ri)
 {
-	// XXX CHECK BINDING TO SPECIAL REGISTER!
+	c::register_def *rdef = create_top(ri);
+	if (rdef == 0)
+		return false;
+
+	m_rdefs.push_back(rdef);
+	m_named_rdefs[ri->name] = rdef;
+
+	return true;
+}
+
+c::register_def *
+register_file_builder::create_top(register_info const *ri)
+{
+#if 0
 	printf("Register '%s' Type '%s'\n", 
 			ri->name.c_str(), ri->type->get_value().c_str());
+#endif
+
 
 	c::type *rtype = convert_type(ri->type);
 	if (rtype == 0)
-		return false;
+		return 0;
 
-	c::register_def *rdef = new c::register_def(ri->name, rtype);
-	if (rdef == 0) {
-		fprintf(stderr, "error: cannot create register.\n");
-		return false;
+	c::register_def *rdef = 0;
+
+	// hardwired?
+	if (ri->hwexpr != 0) {
+		c::expression *expr = convert_expression(ri->hwexpr);
+		if (expr == 0)
+			return 0;
+
+		rdef = new c::hardwired_register_def(ri->name, expr, rtype);
+	} else if (ri->binding != 0) {
+		c::special_register preg = c::NO_SPECIAL_REGISTER;
+
+		// bound to special?
+		if (ri->binding->name[0] == '%') {
+			// yep, this can be only: PSR, PC or NPC.
+			std::string pseudo_name(ri->binding->name.substr(1));
+			if (pseudo_name == "PC")
+				preg = c::SPECIAL_REGISTER_PC;
+			else if (pseudo_name == "NPC")
+				preg = c::SPECIAL_REGISTER_NPC;
+			else if (pseudo_name == "PSR")
+				preg = c::SPECIAL_REGISTER_PSR;
+			else {
+				fprintf(stderr, "error: register '%s' binds pseudo register '%s' which is not recognized.\n",
+						ri->name.c_str(), pseudo_name.c_str());
+				return false;
+			}
+		} else {
+			assert(0 && "Binding to a register is not yet implemented.");
+		}
+
+		rdef = new c::bound_register_def(ri->name, rtype, preg);
+	} else if (ri->special_eval != 0) {
+		// special evaluation?
+	} else {
+		// normal register
+		rdef = new c::register_def(ri->name, rtype);
 	}
 
+	if (rdef == 0) {
+		fprintf(stderr, "error: cannot create register '%s'.\n",
+				ri->name.c_str());
+		return 0;
+	}
+
+	// create sub registers.
 	for(register_info_vector::const_iterator i = ri->subs.begin();
 			i != ri->subs.end(); i++) {
 
 		c::register_def *sub = create_sub(ri, rdef, *i);
 		if (sub == 0)
-			return false;
+			return 0;
 	}
 
 	cg_dump(rdef);
-
-	g_rdefs.push_back(rdef);
-	return true;
+	return rdef;
 }
 
 c::register_def *
@@ -314,16 +440,7 @@ register_file_builder::create_sub(register_info const *top_ri,
 	// to the bound register.
 	else if (sub_ri->flags & register_info::BIDIBIND_FLAG) {
 		c::type *bind_type;
-		register_info *binding_ri;
-
-//		printf("BIDIBIND!\n");
-		if (sub_ri->bind_copy != 0) {
-			// XXX
-			printf("BIDIBIND copy?\n");
-			return 0;
-		} else {
-			binding_ri = sub_ri->binding;
-		}
+		register_info *binding_ri = sub_ri->binding;
 
 		bind_type = convert_type(binding_ri->type);
 		if (bind_type == 0)
@@ -360,26 +477,28 @@ register_file_builder::create_sub(register_info const *top_ri,
 					type, sub_ri->bit_start, type->get_bits(),
 					true);
 
-			// if the bound register has been generated, reference it,
-			// otherwise record for lazy resolving.
-			//
-			// find first in the sub registers of our top register.
-			c::register_def *bound =
-				top_rdef->get_sub_register(sub_ri->binding->name);
-			
-			if (bound == 0)
-				bound = 0; // XXX resolve globally
+			if (sub_ri->binding->name != top_ri->name) {
+				// if the bound register has been generated, reference it,
+				// otherwise record for lazy resolving.
+				//
+				// find first in the sub registers of our top register.
+				c::register_def *bound =
+				 top_rdef->get_sub_register(sub_ri->binding->name);
 
-			if (bound != 0) {
-				if (!bound->add_uow(rdef)) {
-					fprintf(stderr, "fatal error: register '%s' binds to itself.\n",
-							bound->get_name().c_str());
-					return 0;
+				if (bound == 0)
+					bound = m_named_rdefs[sub_ri->binding->name];
+
+				if (bound != 0) {
+					if (!bound->add_uow(rdef)) {
+						fprintf(stderr, "fatal error: register '%s' binds to itself.\n",
+								bound->get_name().c_str());
+						return 0;
+					}
+				} else {
+					// record for lazy resolving.
+					//m_lazy_uow[sub_ri->binding->name].push_back(rdef);
+					assert(0 && "IMPLEMENT ME ! (record lazy resolving!)");
 				}
-			} else {
-				// record for lazy resolving.
-				//m_lazy_uow[sub_ri->binding->name].push_back(rdef);
-				assert(0 && "IMPLEMENT ME ! (record lazy resolving!)");
 			}
 		}
 	}
@@ -395,9 +514,6 @@ register_file_builder::create_sub(register_info const *top_ri,
 	}
 
 	if (rdef != 0) {
-//		fprintf(stderr, "CREATED SUBREG %s\n",
-//				rdef->get_name().c_str());
-
 		for(register_info_vector::const_iterator i = sub_ri->subs.begin();
 				i != sub_ri->subs.end(); i++) {
 
