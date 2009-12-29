@@ -5,7 +5,7 @@ ADD_EXECUTABLE(test_m88k main.cpp)
 TARGET_LINK_LIBRARIES(test_m88k cpu)
 
 ### Run88 
-IF(NOT MSVC)
+IF(APPLE)
 	INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/test/libnix/xec-compat/lib
 						${CMAKE_SOURCE_DIR}/test/libnix/xec-compat/engine
 						${CMAKE_SOURCE_DIR}/test/libnix/xec-compat/arch
