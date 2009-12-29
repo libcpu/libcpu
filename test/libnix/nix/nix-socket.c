@@ -376,7 +376,7 @@ nix_getpeereid(int fd, nix_uid_t *euid, nix_gid_t *egid, nix_env_t *env)
 	int      rfd;
 #if defined(HAVE_GETPEERUCRED)
 	ucred_t *uc;
-#else
+#elif defined(HAVE_GETPEEREID)
 	uid_t    uid;
 	gid_t    gid;
 #endif
@@ -413,7 +413,7 @@ nix_getpeereid(int fd, nix_uid_t *euid, nix_gid_t *egid, nix_env_t *env)
 #if defined(HAVE_GETPEERUCRED)
 		*euid = ucred_geteuid(uc);
 		*egid = ucred_getegid(uc);
-#else
+#elif defined(HAVE_GETPEEREID)
 		*euid = uid;
 		*egid = gid;
 #endif
