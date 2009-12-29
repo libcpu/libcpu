@@ -23,8 +23,6 @@
 #cmakedefine HAVE_CLOCK_SETTIME 1
 #cmakedefine HAVE_FDATASYNC 1
 #cmakedefine HAVE_GETHOSTID 1
-#cmakedefine HAVE_GETRESGID 1
-#cmakedefine HAVE_GETRESUID 1
 #cmakedefine HAVE_ISSETUGID 1
 #cmakedefine HAVE_KQUEUE 1
 #cmakedefine HAVE_NICE 1
@@ -34,8 +32,6 @@
 #cmakedefine HAVE_SETFSGID 1
 #cmakedefine HAVE_SETFSUID 1
 #cmakedefine HAVE_SETHOSTID 1
-#cmakedefine HAVE_SETREGID 1
-#cmakedefine HAVE_SETREUID 1
 
 #cmakedefine HAVE_GETFSSTAT 1
 
@@ -73,18 +69,26 @@
 #define _BSD_SOURCE
 #include <features.h>
 
+#endif /* HAVE_FEATURES_H */
+
 /*
- * For glibc: hide chflags and fchflags.
+ * For glibc: hide some functions
  *
- * Reason: glibc exports the chflags and fchflags symbols, so the
- * cmake feature tests for the functions succeed, but the functions
- * are not declared in any public header, so the build fails. The
- * glibc maintainer has declared that he won't fix this (ugh).
+ * Reasons:
+ * - glibc exports the chflags and fchflags symbols, so the cmake
+ *   feature tests for the functions succeed, but the functions are
+ *   not declared in any public header, so the build fails.
+ *
+ * - glibc provides [gs]etres[ug]id (nonstandard hpux funcs), but only
+ *   declares them if _GNU_SOURCE is defined. The feature test passes,
+ *   but not the build. Since we don't care about these functions on
+ *   !hpux, we hide them manually.
  */
 #if !defined(__GLIBC__)
 #cmakedefine HAVE_CHFLAGS 1
 #cmakedefine HAVE_FCHFLAGS 1
+#cmakedefine HAVE_GETRESGID 1
+#cmakedefine HAVE_GETRESUID 1
 #endif /* !__GLIBC__ */
-#endif /* HAVE_FEATURES_H */
 
 #endif  /* !__nix_config_h */
