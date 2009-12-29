@@ -6,6 +6,7 @@ include(CheckCXXSourceCompiles)
 check_include_file(sys/resource.h HAVE_SYS_RESOURCE_H)
 check_symbol_exists(getrusage sys/resource.h HAVE_GETRUSAGE)
 check_library_exists(readline readline "" HAVE_LIBREADLINE)
+check_library_exists(rt clock_gettime "" HAVE_LIBRT)
 check_include_file(netinet/in.h HAVE_NETINET_IN_H)
 
 CHECK_CXX_SOURCE_COMPILES("
