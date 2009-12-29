@@ -18,11 +18,9 @@
 #cmakedefine HAVE_ACCT 1
 #cmakedefine HAVE_ADJFREQ 1
 #cmakedefine HAVE_ADJTIME 1
-#cmakedefine HAVE_CHFLAGS 1
 #cmakedefine HAVE_CLOCK_GETRES 1
 #cmakedefine HAVE_CLOCK_GETTIME 1
 #cmakedefine HAVE_CLOCK_SETTIME 1
-#cmakedefine HAVE_FCHFLAGS 1
 #cmakedefine HAVE_FDATASYNC 1
 #cmakedefine HAVE_GETHOSTID 1
 #cmakedefine HAVE_GETRESGID 1
@@ -73,6 +71,20 @@
 #if defined(HAVE_FEATURES_H)
 #define _XOPEN_SOURCE 500
 #define _BSD_SOURCE
-#endif
+#include <features.h>
+
+/*
+ * For glibc: hide chflags and fchflags.
+ *
+ * Reason: glibc exports the chflags and fchflags symbols, so the
+ * cmake feature tests for the functions succeed, but the functions
+ * are not declared in any public header, so the build fails. The
+ * glibc maintainer has declared that he won't fix this (ugh).
+ */
+#if !defined(__GLIBC__)
+#cmakedefine HAVE_CHFLAGS 1
+#cmakedefine HAVE_FCHFLAGS 1
+#endif /* !__GLIBC__ */
+#endif /* HAVE_FEATURES_H */
 
 #endif  /* !__nix_config_h */

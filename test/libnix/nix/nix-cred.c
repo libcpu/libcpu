@@ -5,6 +5,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/reboot.h>
 
 #include "nix.h"
 

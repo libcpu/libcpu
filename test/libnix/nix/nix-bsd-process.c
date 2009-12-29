@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/resource.h>
+#include <sys/wait.h>
 
 #include "nix.h"
 
