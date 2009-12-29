@@ -2,6 +2,13 @@ PROJECT(libloader)
 
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBCPU_RUNTIME_OUTPUT_DIRECTORY})
 
+INCLUDE(CheckIncludeFiles)
+
+CHECK_INCLUDE_FILES(endian.h HAVE_ENDIAN_H)
+
+INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR})
+CONFIGURE_FILE(loader_config.h.cmake ${PROJECT_BINARY_DIR}/loader_config.h)
+
 # Generate elf32.c and elf64.c
 FILE(READ "@PROJECT_SOURCE_DIR@/elf/elfXX.c" elfXX)
 
@@ -22,4 +29,3 @@ ADD_LIBRARY(libloader SHARED
             elf/elf_common.c
             ${PROJECT_BINARY_DIR}/elf32.c
             ${PROJECT_BINARY_DIR}/elf64.c)
-

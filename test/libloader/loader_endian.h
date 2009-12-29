@@ -29,6 +29,8 @@
 #ifndef __loader_endian_h
 #define __loader_endian_h
 
+#include "loader_config.h"
+
 #ifdef __APPLE__
 #include <libkern/OSByteOrder.h>
 
@@ -38,6 +40,17 @@
 #define loader_swap_big_32(x) OSSwapBigToHostInt32 (x)
 #define loader_swap_little_64(x) OSSwapLittleToHostInt64 (x)
 #define loader_swap_big_64(x) OSSwapBigToHostInt64 (x)
+
+#elif defined(HAVE_ENDIAN_H)
+#include <endian.h>
+
+#define loader_swap_little_16(x) le16toh(x)
+#define loader_swap_big_16(x) be16toh(x)
+#define loader_swap_little_32(x) le32toh(x)
+#define loader_swap_big_32(x) be32toh(x)
+#define loader_swap_little_64(x) le64toh(x)
+#define loader_swap_big_64(x) be64toh(x)
+
 #else
 #error "Define endian swap functions."
 #endif
