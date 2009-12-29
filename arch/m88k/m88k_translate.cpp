@@ -241,6 +241,49 @@ arch_m88k_set_fpr(cpu_t *cpu, bool xfr, m88k_reg_t r,
 	}
 }
 
+static Value *
+arch_m88k_load_fp32(cpu_t *cpu, Value *address, BasicBlock *bb)
+{
+	return FPBITCAST80(arch_load32_aligned(cpu, address, bb));
+}
+
+static void
+arch_m88k_store_fp32(cpu_t *cpu, Value *value, Value *address, BasicBlock *bb)
+{
+	arch_store32_aligned(cpu, address, IBITCAST32(FPBITCAST32(value)), bb);
+}
+
+static Value *
+arch_m88k_load_fp64(cpu_t *cpu, Value *address, BasicBlock *bb)
+{
+	Value *hi = arch_load32_aligned(cpu, address, bb);
+	Value *lo = arch_load32_aligned(cpu, ADD(address, CONST(4)), bb);
+
+	return FPBITCAST80(OR(SHL(ZEXT64(hi), CONST64(32)), ZEXT64(lo)));
+}
+
+static void
+arch_m88k_store_fp64(cpu_t *cpu, Value *value, Value *address, BasicBlock *bb)
+{
+	Value *v = IBITCAST64(FPBITCAST64(value));
+	Value *hi = TRUNC32(LSHR(v, CONST64(32)));
+	Value *lo = TRUNC32(v);
+
+	arch_store32_aligned(cpu, address, hi, bb);
+	arch_store32_aligned(cpu, ADD(address, CONST32(4)), lo, bb);
+}
+
+static Value *
+arch_m88k_load_fp80(cpu_t *cpu, Value *address, BasicBlock *bb)
+{
+	return FPCONST80(0);
+}
+
+static void
+arch_m88k_store_fp80(cpu_t *cpu, Value *value, Value *address, BasicBlock *bb)
+{
+}
+
 #define GET_FPR(x,r,t)   arch_m88k_get_fpr(cpu, x, r, t, bb)
 #define SET_FPR(x,r,t,v) arch_m88k_set_fpr(cpu, x, r, t, v, bb)
 
@@ -861,14 +904,16 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 			break;
 
 		case M88K_OPC_LDA_X:
-			BAD;
+			LET32(instr.rd(), ADD(R32(instr.rs1()), SHL(R32(instr.rs2()),
+				CONST32(4))));
 			break;
 
 		case M88K_OPC_LD:
 			if (fmt == M88K_IFMT_MEM)
 				LOAD32(instr.rd(), ADD(R32(instr.rs1()), UIMM));
 			else if (fmt == M88K_IFMT_XMEM) {
-				BAD;
+				LETFP(instr.rd(), arch_m88k_load_fp32(cpu,
+					ADD(R32(instr.rs1()), UIMM), bb));
 			} else if (fmt == M88K_TFMT_REG) {
 				LOAD32(instr.rd(), ADD(R32(instr.rs1()), R32(instr.rs2())));
 			} else if (fmt == M88K_TFMT_REGS) {
@@ -909,8 +954,6 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 		case M88K_OPC_LD_HU:
 			if (fmt == M88K_IFMT_MEM) {
 				LOAD16(instr.rd(), ADD(R32(instr.rs1()), UIMM));
-			} else if (fmt == M88K_IFMT_XMEM) {
-				BAD;
 			} else if (fmt == M88K_TFMT_REG) {
 				LOAD16(instr.rd(), ADD(R32(instr.rs1()), R32(instr.rs2())));
 			} else if (fmt == M88K_TFMT_REGS) {
@@ -927,9 +970,8 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 				LOAD32(instr.rd() | 1, ADD(ADD(R32(instr.rs1()), UIMM),
 					CONST32(4)));
 			} else if (fmt == M88K_IFMT_XMEM) {
-				if (instr.rd() == 0)
-					break;
-				BAD;
+				LETFP(instr.rd(), arch_m88k_load_fp64(cpu,
+					ADD(R32(instr.rs1()), UIMM), bb));
 			} else if (fmt == M88K_TFMT_REG) {
 				LOAD32(instr.rd() & ~1, ADD(R32(instr.rs1()), R32(instr.rs2())));
 				LOAD32(instr.rd() | 1, ADD(R32(instr.rs1()),
@@ -945,17 +987,16 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 			break;
 
 		case M88K_OPC_LD_X:
-			if (instr.rd() == 0)
-				break;
-			DEBUG_ME();
-			//BAD;
+			LETFP(instr.rd(), arch_m88k_load_fp80(cpu,
+				ADD(R32(instr.rs1()), UIMM), bb));
 			break;
 
 		case M88K_OPC_ST:
 			if (fmt == M88K_IFMT_MEM)
 				STORE32(R(instr.rd()), ADD(R32(instr.rs1()), UIMM));
 			else if (fmt == M88K_IFMT_XMEM) {
-				DEBUG_ME();//BAD;
+				arch_m88k_store_fp32(cpu, GET_FPR(true, instr.rd(), 2),
+						ADD(R32(instr.rs1()), UIMM), bb);
 			} else if (fmt == M88K_TFMT_REG) {
 				STORE32(R(instr.rd()), ADD(R32(instr.rs1()), R32(instr.rs2())));
 			} else if (fmt == M88K_TFMT_REGS) {
@@ -992,10 +1033,8 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 				STORE32(R(instr.rd() | 1), ADD(ADD(R32(instr.rs1()), UIMM),
 					CONST32(4)));
 			} else if (fmt == M88K_IFMT_XMEM) {
-				if (instr.rd() == 0)
-					break;
-				DEBUG_ME();
-				//BAD;
+				arch_m88k_store_fp64(cpu, GET_FPR(true, instr.rd(), 2),
+						ADD(R32(instr.rs1()), UIMM), bb);
 			} else if (fmt == M88K_TFMT_REG) {
 				STORE32(R(instr.rd() & ~1), ADD(R32(instr.rs1()), R32(instr.rs2())));
 				STORE32(R(instr.rd() | 1), ADD(R32(instr.rs1()),
@@ -1009,8 +1048,8 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 			break;
 
 		case M88K_OPC_ST_X:
-			DEBUG_ME();
-			//BAD;
+			arch_m88k_store_fp80(cpu, GET_FPR(true, instr.rd(), 2),
+					ADD(R32(instr.rs1()), UIMM), bb);
 			break;
 
 		case M88K_OPC_XMEM:
