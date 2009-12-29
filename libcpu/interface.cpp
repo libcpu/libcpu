@@ -70,7 +70,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 
 	llvm::InitializeNativeTarget();
 
-	cpu = (cpu_t*)malloc(sizeof(cpu_t));
+	cpu = new cpu_t;
 	assert(cpu != NULL);
 	memset(&cpu->info, 0, sizeof(cpu->info));
 	memset(&cpu->rf, 0, sizeof(cpu->rf));
@@ -180,10 +180,6 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 			^ IS_LITTLE_ENDIAN(cpu))
 		cpu->flags |= CPU_FLAG_SWAPMEM;
 
-	// initialize bb caching map
-    // XXX: allocate cpu with new() to avoid need for this hack
-    new (&cpu->func_bb) funcbb_map();
-
 	cpu->timer_total[TIMER_TAG] = 0;
 	cpu->timer_total[TIMER_FE] = 0;
 	cpu->timer_total[TIMER_BE] = 0;
@@ -198,10 +194,12 @@ cpu_free(cpu_t *cpu)
 	if (cpu->f.done != NULL)
 		cpu->f.done(cpu);
 	if (cpu->exec_engine != NULL) {
-    if (cpu->cur_func != NULL)
-      cpu->exec_engine->freeMachineCodeForFunction(cpu->cur_func);
+		if (cpu->cur_func != NULL) {
+			cpu->exec_engine->freeMachineCodeForFunction(cpu->cur_func);
+			cpu->cur_func->eraseFromParent();
+		}
 		delete cpu->exec_engine;
-  }
+	}
 	if (cpu->in_ptr_fpr != NULL)
 		free(cpu->in_ptr_fpr);
 	if (cpu->ptr_fpr != NULL)
@@ -214,7 +212,8 @@ cpu_free(cpu_t *cpu)
 		free(cpu->in_ptr_gpr);
 	if (cpu->ptr_gpr != NULL)
 		free(cpu->ptr_gpr);
-	free(cpu);
+
+	delete cpu;
 }
 
 void

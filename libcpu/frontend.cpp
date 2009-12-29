@@ -104,11 +104,14 @@ arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext,
 	return v;
 }
 
+#undef getType // XXX clash with LLVM
 void
 arch_put_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits,
 	BasicBlock *bb)
 {
 	assert(index < cpu->info.register_count[CPU_REG_FPR]);
+	if (bits == 0)
+		bits = v->getType()->getPrimitiveSizeInBits();
 	assert(bits == cpu->info.float_size);
 
 	/* store value, unless it's R0 (on certain RISCs) */
@@ -116,6 +119,7 @@ arch_put_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits,
 		new StoreInst(v, cpu->ptr_fpr[index], bb);
 	}
 }
+#define getType(x) (Type::get##x(_CTX()))//XXX
 
 //XXX TODO
 // The guest CPU can be little endian or big endian, so we need both

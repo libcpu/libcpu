@@ -53,7 +53,7 @@ int
 nix_bsd_gethostid(char *buf, size_t bufsiz, nix_env_t *env)
 {
 #if defined (HAVE_GETHOSTID) && defined (HAVE_SETHOSTID)
-	if (g_hostid == 0xba550770)
+	if (g_hostid == (long)0xba550770L)
 		g_hostid = gethostid();
 #endif
 

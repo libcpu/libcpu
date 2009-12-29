@@ -188,14 +188,14 @@ obsd41_ioctl_dispatch(nix_env_t        *env,
 					  obsd41_ulong_t    request,
 					  obsd41_uintptr_t  arg)
 {
-	XEC_LOG (g_bsd_log, XEC_LOG_DEBUG, 0,
-			 "group='%c' command=%u length=%u [%c%c%c]\n",
-			 OBSD41_IOCGROUP (request),
-			 request & 0xff,
-			 OBSD41_IOCPARM_LEN(request),
-			 (request & OBSD41_IOC_VOID) ? 'v' : '-',
-			 (request & OBSD41_IOC_IN)   ? 'i' : '-',
-			 (request & OBSD41_IOC_OUT)  ? 'o' : '-');
+	XEC_LOG(g_bsd_log, XEC_LOG_DEBUG, 0,
+			"group='%c' command=%u length=%u [%c%c%c]\n",
+			OBSD41_IOCGROUP (request),
+			request & 0xff,
+			OBSD41_IOCPARM_LEN(request),
+			(request & OBSD41_IOC_VOID) ? 'v' : '-',
+			(request & OBSD41_IOC_IN)   ? 'i' : '-',
+			(request & OBSD41_IOC_OUT)  ? 'o' : '-');
 
 	nix_env_set_errno(env, 0);
 	switch (OBSD41_IOCGROUP(request)) {
@@ -205,6 +205,6 @@ obsd41_ioctl_dispatch(nix_env_t        *env,
 
 	return (0); // XXX
 
-	nix_env_set_errno (env, EINVAL);
+	nix_env_set_errno(env, EINVAL);
 	return (-1);
 }

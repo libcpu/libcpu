@@ -1072,12 +1072,15 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 		if (*p == '?') {
 			idbg_help(p + 1);
 		} else if (last_command == 1 || *p == 's') {
-			idbg_examine_instruction(&ctx, cpu->f.get_pc(cpu, cpu->rf.grf));
+			idbg_examine(&ctx, cpu->f.get_pc(cpu, cpu->rf.grf), 1,
+				F_INSTRUCTION, 0);
 			rc = idbg_step(&ctx);
 			if (rc != JIT_RETURN_SINGLESTEP)
 				return rc;
 			last_command = 1;
 		} else if (last_command == 2 || *p == '.') {
+			idbg_examine(&ctx, cpu->f.get_pc(cpu, cpu->rf.grf), 1,
+				F_INSTRUCTION, 0);
 			rc = idbg_step_diff(&ctx);
 			if (rc != JIT_RETURN_SINGLESTEP)
 				return rc;

@@ -6,12 +6,12 @@ typedef uint32_t nix_sa_family_t;
 
 struct nix_sockaddr {
 	nix_sa_family_t sa_family;
-	char            sa_data[256 - sizeof (nix_sa_family_t)];
+	char            sa_data[256 - sizeof(nix_sa_family_t)];
 };
 
 struct nix_sockaddr_storage {
 	nix_sa_family_t ss_family;
-	char            ss_data[256 - sizeof (nix_sa_family_t)];
+	char            ss_data[256 - sizeof(nix_sa_family_t)];
 };
 
 struct nix_sockaddr_in {

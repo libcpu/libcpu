@@ -68,7 +68,8 @@ log_timestamp (FILE *fp)
   strftime (timestamp, sizeof (timestamp), "%Y-%m-%d %H:%M:%S",
     localtime ( (const time_t *)&tv.tv_sec));
 
-  fprintf (fp, "[%s.%03u]", timestamp, tv.tv_usec / 1000);
+  fprintf (fp, "[%s.%03lu]", timestamp,
+           (unsigned long)(tv.tv_usec / 1000));
 }
 
 static void
