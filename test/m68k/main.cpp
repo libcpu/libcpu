@@ -75,7 +75,8 @@ load_code(char *filename, uint8_t *RAM, int ramsize, addr_t *s, addr_t *e, addr_
 					curhunk++;
 					hunk_address[curhunk] = cur_address;
 					n = get32(f);
-					fread(&RAM[cur_address], 1, n*4, f);
+					if (!fread(&RAM[cur_address], 1, n*4, f))
+					  return 0;
 					cur_address += n*4;
 					break;
 				case 0x03EC: /* hunk_reloc */
