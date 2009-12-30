@@ -1,0 +1,39 @@
+arch "m68k" {
+
+	name "Motorola 68000";
+
+	endian big;
+
+	byte_size 8;
+	word_size 16;
+	address_size 32;
+	psr_size 16;
+
+	register_file {
+		// General purpose register group
+		group R {
+			// 8 data registers
+			[ 8 ** #i32 d? ],
+			// 8 address registers
+			[ 8 ** #i32 a? ],
+
+			// stack pointer is the 8th address register
+			[ #i32 sp <- a8 ]
+		}
+
+		group S {
+			[ #i32 pc -> %PC ]
+			[ #i16 sr -> %PSR explicit [ #i2 0,
+						     #i1 state,
+						     #i2 0,
+						     #i3 imask,
+						     #i3 0,
+						     #i1 X <- C,
+						     #i1 N -> %N,
+						     #i1 Z -> %Z,
+						     #i1 V -> %V,
+						     #i1 C -> %C ] ]
+			[ #i8 ccr <- sr ]
+		}
+	}
+}
