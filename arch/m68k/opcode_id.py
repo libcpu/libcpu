@@ -53,8 +53,6 @@ def make_include_file(opcodes):
 #ifndef OPCODE_ID_H_
 #define OPCODE_ID_H_
 
-#include <stdint.h>
-
 %s
 
 OpcodeID identify_opcode(uint16_t word);
@@ -65,6 +63,7 @@ OpcodeID identify_opcode(uint16_t word);
 
 def make_implementation_file(opcodes):
     return '''
+#include "libcpu.h"
 #include "opcode_id.h"
 
 namespace {
