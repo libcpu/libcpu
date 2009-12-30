@@ -188,6 +188,7 @@ register_dep_tracker::get_indep_regs(register_info_vector &regs) const
 
 		if (((*i)->flags & (register_info::UNRESOLVED_FLAG |
 						register_info::FULLALIAS_FLAG)) != 0 ||
+				((*i)->super != 0 && (*i)->super->name[0] != '%') ||
 				(*i)->name[0] == '$' || (*i)->name[0] == '%' ||
 				(*i)->name[(*i)->name.length()-1] == '?')
 			continue;

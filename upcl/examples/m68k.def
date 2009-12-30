@@ -10,6 +10,7 @@ arch "m68k" {
 	psr_size 16;
 
 	register_file {
+
 		// General purpose register group
 		group R {
 			// 8 data registers
@@ -22,7 +23,7 @@ arch "m68k" {
 		}
 
 		group S {
-			[ #i32 pc -> %PC ]
+			[ #i32 pc -> %PC ],
 			[ #i16 sr -> %PSR explicit [ #i2 0,
 						     #i1 state,
 						     #i2 0,
@@ -32,8 +33,10 @@ arch "m68k" {
 						     #i1 N -> %N,
 						     #i1 Z -> %Z,
 						     #i1 V -> %V,
-						     #i1 C -> %C ] ]
+						     #i1 C -> %C ] ],
 			[ #i8 ccr <- sr ]
 		}
 	}
 }
+
+insn a : ;

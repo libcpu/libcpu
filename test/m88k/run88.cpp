@@ -373,11 +373,11 @@ main(int ac, char **av, char **ep)
 
 #ifdef DEBUGGER
 	debugging = true;
-#endif
-
+#else
 	fprintf(stderr, "Translating..."); fflush(stderr);
 	cpu_translate(cpu);
 	fprintf(stderr, "done.\n");
+#endif
 
 	aspace_unlock();
 

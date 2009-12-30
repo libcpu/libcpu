@@ -10,9 +10,6 @@
  *   * Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in
  *     the documentation and/or other materials provided with the distribution.
- *   * Neither the name of the author nor the names of its contributors
- *     may be used to endorse or promote products derived from this software
- *     without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
@@ -102,7 +99,7 @@ main(int ac, char **av)
 
 	i = NULL;
 	status = loader_image_get_section_iterator(image, 0, &i);
-	if (LOADER_SUCCEEDED(i)) {
+	if (LOADER_SUCCEEDED(status)) {
 		loader_section_t section;
 
 		printf ("Got section iterator\n");
@@ -124,9 +121,8 @@ main(int ac, char **av)
 		i = NULL;
 	}
 
-
 	status = loader_image_get_symbol_iterator(image, 0, &i);
-	if (LOADER_SUCCEEDED(i)) {
+	if (LOADER_SUCCEEDED(status)) {
 		loader_symbol_t symbol;
 
 		printf ("Got symbol iterator\n");
@@ -153,7 +149,7 @@ main(int ac, char **av)
 
 
 	status = loader_image_get_symbol_iterator(image, LOADER_IMAGE_ITERATE_SYMBOL_DYNAMIC, &i);
-	if (LOADER_SUCCEEDED(i)) {
+	if (LOADER_SUCCEEDED(status)) {
 		loader_symbol_t symbol;
 
 		printf ("Got dynamic symbol iterator\n");

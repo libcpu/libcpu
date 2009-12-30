@@ -238,7 +238,7 @@ make_index_expr_relative(upcl::ast::expression *index_expr, uint64_t index)
 //   8086. 
 //   Most common use is PSR handling.
 //
-// - Aliasing registers (right binding operator ->)
+// - Aliasing registers (left binding operator <-)
 //
 //   
 // - Hardwiring values (left binding operator <-)
