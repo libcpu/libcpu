@@ -511,15 +511,15 @@ register_dep_tracker::fix_indir_deps()
 			if (reg_size >= (size_t)atoi((*i)->type->get_value().c_str()+2)) {
 
 				(*i)->flags |= register_info::FULLALIAS_FLAG;
-			}
 
-			// reverse dependencies
-			for (std::vector <std::pair <register_info *, register_info *> >
-					::iterator j = deps.begin(); j != deps.end(); j++) {
+				// reverse dependencies
+				for (std::vector <std::pair <register_info *, register_info *> >
+						::iterator j = deps.begin(); j != deps.end(); j++) {
 
-				remove_deps_on(j->second, j->first);
-				make_deps_by(j->second, j->first);
+					remove_deps_on(j->second, j->first);
+					make_deps_by(j->second, j->first);
 
+				}
 			}
 		}
 	}
