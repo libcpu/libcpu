@@ -477,9 +477,11 @@ register_dep_tracker::fix_indir_deps()
 		if ((*i)->name[0] == '%' || (*i)->type == 0)
 			continue;
 
-		if (((*i)->flags & (register_info::BIDIBIND_FLAG | register_info::REGALIAS_FLAG)) != 0 &&
-				(atoi((*i)->type->get_value().c_str()+2) == 
-					atoi((*i)->binding->type->get_value().c_str()+2))) {
+		if (((*i)->flags & (register_info::BIDIBIND_FLAG 
+						| register_info::REGALIAS_FLAG)) != 0 &&
+				((*i)->binding->type == 0 ||
+				 (atoi((*i)->type->get_value().c_str()+2) == 
+					atoi((*i)->binding->type->get_value().c_str()+2)))) {
 #if 0
 			printf("FULL %s->%s!\n",
 					(*i)->name.c_str(),
@@ -534,6 +536,7 @@ register_dep_tracker::resolve()
 	fix_indir_deps();
 }
 
+// resolve bitfields internal referencing.
 void
 register_dep_tracker::resolve_subs()
 {

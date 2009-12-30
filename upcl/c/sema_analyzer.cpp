@@ -14,6 +14,13 @@ using upcl::sema::register_file_builder;
 using upcl::sema::register_info;
 using upcl::sema::register_info_vector;
 
+namespace {
+
+	static inline bool is_repeat_identifier(std::string const &s)
+	{ return (!s.empty() && s[s.length()-1] == '?'); }
+
+}
+
 sema_analyzer::sema_analyzer()
 	: m_arch_tags()
 {
@@ -472,8 +479,12 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 			// if the indexing expression is complex, it is possible that
 			// this expression must be evaluated at translation time, so
 			// we make a reference to the repeatable identifier instead
-			// of the target register.
-			if (complex_alias_index_expr != 0) {
+			// of the target register; this is also true when a register
+			// references a repeatable register like the case of the
+			// stack pointer in m68k.
+			if (complex_alias_index_expr != 0 ||
+					(is_repeat_identifier(alias_reg->get_value()) &&
+					 !is_repeat_identifier(rname))) {
 				aname = alias_reg->get_value();
 			} else {
 				aname = make_repeat_register_name(alias_reg,
