@@ -260,7 +260,7 @@ register_dep_tracker::remove_deps_on(register_info *master, register_info *dep)
 		m_deps--;
 	}
 
-	i = master->deps_on.begin();
+	i = master->deps_on.find(dep);
 	if (i != master->deps_on.end()) {
 		master->deps_on.erase(i);
 		m_deps--;
@@ -485,21 +485,42 @@ register_dep_tracker::fix_indir_deps()
 					(*i)->binding->name.c_str());
 #endif
 			(*i)->flags |= register_info::FULLALIAS_FLAG;
-
+			
 		} else {
+
+			std::vector <std::pair <register_info *, register_info *> > deps;
 
 			size_t reg_size = 0, nregs = 0;
 			for (register_info_vector::iterator j = (*i)->subs.begin();
 					j != (*i)->subs.end(); j++) {
+
 				if (((*j)->flags & register_info::BIDIBIND_FLAG) != 0 &&
 						(*j)->binding != 0) {
+
 					reg_size += atoi((*j)->binding->type->get_value().c_str()+2);
 					nregs++;
+
+					// reverse dependencies
+					remove_deps_on((*j)->binding, *j);
+					make_deps_by((*j)->binding, *j);
+
+					deps.push_back(std::pair<register_info *, register_info *> (*i, (*j)->binding));
 				}
 			}
 
-			if (reg_size >= (size_t)atoi((*i)->type->get_value().c_str()+2))
+			if (reg_size >= (size_t)atoi((*i)->type->get_value().c_str()+2)) {
+
 				(*i)->flags |= register_info::FULLALIAS_FLAG;
+			}
+
+			// reverse dependencies
+			for (std::vector <std::pair <register_info *, register_info *> >
+					::iterator j = deps.begin(); j != deps.end(); j++) {
+
+				remove_deps_on(j->second, j->first);
+				make_deps_by(j->second, j->first);
+
+			}
 		}
 	}
 }
