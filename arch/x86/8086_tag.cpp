@@ -1,6 +1,6 @@
+#include "libcpu.h"
 #include "8086_decode.h"
 #include "8086_isa.h"
-#include "libcpu.h"
 #include "tag.h"
 
 int

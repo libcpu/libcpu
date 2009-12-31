@@ -1,10 +1,6 @@
 #ifndef I8086_DECODE_H
 #define I8086_DECODE_H
 
-#include "libcpu.h"
-
-#include <stdint.h>
-
 enum x86_operand_type {
 	OP_REG,
 	OP_IMM,
