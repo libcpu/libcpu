@@ -111,7 +111,7 @@ arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 			instr->op_bytes++;
 			break;
 		default:
-			goto done_prefixes;	
+			goto done_prefixes;
 		}
 	}
 
