@@ -1,3 +1,6 @@
+#ifndef I8086_ISA_H
+#define I8086_ISA_H
+
 /*
  * 8086 instruction set. See the following URL for further information:
 
@@ -121,3 +124,5 @@ enum {
 	INSTR_XLATB,
 	INSTR_XOR,
 };
+
+#endif /* I8086_ISA_H */
