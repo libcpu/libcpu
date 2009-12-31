@@ -4,145 +4,164 @@
 #include "libcpu.h"
 #include "8086_isa.h"
 
-static const char* mnemo[] = {
-	/* [INSTR_AAA] */ 	 "AAA",
-	/* [INSTR_AAD] */ 	 "AAD",
-	/* [INSTR_AAM] */ 	 "AAM",
-	/* [INSTR_AAS] */ 	 "AAS",
-	/* [INSTR_ADC] */ 	 "ADC",
-	/* [INSTR_ADD] */ 	 "ADD",
-	/* [INSTR_AND] */ 	 "AND",
-	/* [INSTR_CALL] */ 	 "CALL",
-	/* [INSTR_CBW] */ 	 "CBW",
-	/* [INSTR_CLC] */ 	 "CLC",
-	/* [INSTR_CLD] */ 	 "CLD",
-	/* [INSTR_CLI] */ 	 "CLI",
-	/* [INSTR_CMC] */ 	 "CMC",
-	/* [INSTR_CMP] */ 	 "CMP",
-	/* [INSTR_CMPSB] */ 	 "CMPSB",
-	/* [INSTR_CMPSW] */ 	 "CMPSW",
-	/* [INSTR_CWD] */ 	 "CWD",
-	/* [INSTR_DAA] */ 	 "DAA",
-	/* [INSTR_DAS] */ 	 "DAS",
-	/* [INSTR_DEC] */ 	 "DEC",
-	/* [INSTR_DIV] */ 	 "DIV",
-	/* [INSTR_HLT] */ 	 "HLT",
-	/* [INSTR_IDIV] */ 	 "IDIV",
-	/* [INSTR_IMUL] */ 	 "IMUL",
-	/* [INSTR_IN] */ 	 "IN",
-	/* [INSTR_INC] */ 	 "INC",
-	/* [INSTR_INT] */ 	 "INT",
-	/* [INSTR_INTO] */ 	 "INTO",
-	/* [INSTR_IRET] */ 	 "IRET",
-	/* [INSTR_JA] */ 	 "JA",
-	/* [INSTR_JAE] */ 	 "JAE",
-	/* [INSTR_JB] */ 	 "JB",
-	/* [INSTR_JBE] */ 	 "JBE",
-	/* [INSTR_JC] */ 	 "JC",
-	/* [INSTR_JCXZ] */ 	 "JCXZ",
-	/* [INSTR_JE] */ 	 "JE",
-	/* [INSTR_JG] */ 	 "JG",
-	/* [INSTR_JGE] */ 	 "JGE",
-	/* [INSTR_JL] */ 	 "JL",
-	/* [INSTR_JLE] */ 	 "JLE",
-	/* [INSTR_JMP] */ 	 "JMP",
-	/* [INSTR_JNA] */ 	 "JNA",
-	/* [INSTR_JNAE] */ 	 "JNAE",
-	/* [INSTR_JNB] */ 	 "JNB",
-	/* [INSTR_JNBE] */ 	 "JNBE",
-	/* [INSTR_JNC] */ 	 "JNC",
-	/* [INSTR_JNE] */ 	 "JNE",
-	/* [INSTR_JNG] */ 	 "JNG",
-	/* [INSTR_JNGE] */ 	 "JNGE",
-	/* [INSTR_JNL] */ 	 "JNL",
-	/* [INSTR_JNLE] */ 	 "JNLE",
-	/* [INSTR_JNO] */ 	 "JNO",
-	/* [INSTR_JNP] */ 	 "JNP",
-	/* [INSTR_JNS] */ 	 "JNS",
-	/* [INSTR_JNZ] */ 	 "JNZ",
-	/* [INSTR_JO] */ 	 "JO",
-	/* [INSTR_JP] */ 	 "JP",
-	/* [INSTR_JPE] */ 	 "JPE",
-	/* [INSTR_JPO] */ 	 "JPO",
-	/* [INSTR_JS] */ 	 "JS",
-	/* [INSTR_JZ] */ 	 "JZ",
-	/* [INSTR_LAHF] */ 	 "LAHF",
-	/* [INSTR_LDS] */ 	 "LDS",
-	/* [INSTR_LEA] */ 	 "LEA",
-	/* [INSTR_LES] */ 	 "LES",
-	/* [INSTR_LODSB] */ 	 "LODSB",
-	/* [INSTR_LODSW] */ 	 "LODSW",
-	/* [INSTR_LOOP] */ 	 "LOOP",
-	/* [INSTR_LOOPE] */ 	 "LOOPE",
-	/* [INSTR_LOOPNE] */ 	 "LOOPNE",
-	/* [INSTR_LOOPNZ] */ 	 "LOOPNZ",
-	/* [INSTR_LOOPZ] */ 	 "LOOPZ",
-	/* [INSTR_MOV] */ 	 "MOV",
-	/* [INSTR_MOVSB] */ 	 "MOVSB",
-	/* [INSTR_MOVSW] */ 	 "MOVSW",
-	/* [INSTR_MUL] */ 	 "MUL",
-	/* [INSTR_NEG] */ 	 "NEG",
-	/* [INSTR_NOP] */ 	 "NOP",
-	/* [INSTR_NOT] */ 	 "NOT",
-	/* [INSTR_OR] */ 	 "OR",
-	/* [INSTR_OUT] */ 	 "OUT",
-	/* [INSTR_POP] */ 	 "POP",
-	/* [INSTR_POPA] */ 	 "POPA",
-	/* [INSTR_POPF] */ 	 "POPF",
-	/* [INSTR_PUSH] */ 	 "PUSH",
-	/* [INSTR_PUSHA] */ 	 "PUSHA",
-	/* [INSTR_PUSHF] */ 	 "PUSHF",
-	/* [INSTR_RCL] */ 	 "RCL",
-	/* [INSTR_RCR] */ 	 "RCR",
-	/* [INSTR_REP] */ 	 "REP",
-	/* [INSTR_REPE] */ 	 "REPE",
-	/* [INSTR_REPNE] */ 	 "REPNE",
-	/* [INSTR_REPNZ] */ 	 "REPNZ",
-	/* [INSTR_REPZ] */ 	 "REPZ",
-	/* [INSTR_RET] */ 	 "RET",
-	/* [INSTR_RETF] */ 	 "RETF",
-	/* [INSTR_ROL] */ 	 "ROL",
-	/* [INSTR_ROR] */ 	 "ROR",
-	/* [INSTR_SAHF] */ 	 "SAHF",
-	/* [INSTR_SAL] */ 	 "SAL",
-	/* [INSTR_SAR] */ 	 "SAR",
-	/* [INSTR_SBB] */ 	 "SBB",
-	/* [INSTR_SCASB] */ 	 "SCASB",
-	/* [INSTR_SCASW] */ 	 "SCASW",
-	/* [INSTR_SHL] */ 	 "SHL",
-	/* [INSTR_SHR] */ 	 "SHR",
-	/* [INSTR_STC] */ 	 "STC",
-	/* [INSTR_STD] */ 	 "STD",
-	/* [INSTR_STI] */ 	 "STI",
-	/* [INSTR_STOSB] */ 	 "STOSB",
-	/* [INSTR_STOSW] */ 	 "STOSW",
-	/* [INSTR_SUB] */ 	 "SUB",
-	/* [INSTR_TEST] */ 	 "TEST",
-	/* [INSTR_XCHG] */ 	 "XCHG",
-	/* [INSTR_XLATB] */ 	 "XLATB",
-	/* [INSTR_XOR] */ 	 "XOR",
+/* Decoded x86 instruction */
+struct x86_instr {
+	int		type;
+
+	int		nr_prefixes;
+	uint8_t		opcode;
+	int		w;		/* word/byte */
+	int		d;		/* direction (or s = sign extension) */
+	int		reg;
+
+	uint8_t		imm_lo;
+	uint8_t		imm_hi;
 };
 
+static const char* mnemo[] = {
+	/* [INSTR_AAA] */ 	 "aaa",
+	/* [INSTR_AAD] */ 	 "aad",
+	/* [INSTR_AAM] */ 	 "aam",
+	/* [INSTR_AAS] */ 	 "aas",
+	/* [INSTR_ADC] */ 	 "adc",
+	/* [INSTR_ADD] */ 	 "add",
+	/* [INSTR_AND] */ 	 "and",
+	/* [INSTR_CALL] */ 	 "call",
+	/* [INSTR_CBW] */ 	 "cbw",
+	/* [INSTR_CLC] */ 	 "clc",
+	/* [INSTR_CLD] */ 	 "cld",
+	/* [INSTR_CLI] */ 	 "cli",
+	/* [INSTR_CMC] */ 	 "cmc",
+	/* [INSTR_CMP] */ 	 "cmp",
+	/* [INSTR_CMPSB] */ 	 "cmpsb",
+	/* [INSTR_CMPSW] */ 	 "cmpsw",
+	/* [INSTR_CWD] */ 	 "cwd",
+	/* [INSTR_DAA] */ 	 "daa",
+	/* [INSTR_DAS] */ 	 "das",
+	/* [INSTR_DEC] */ 	 "dec",
+	/* [INSTR_DIV] */ 	 "div",
+	/* [INSTR_HLT] */ 	 "hlt",
+	/* [INSTR_IDIV] */ 	 "idiv",
+	/* [INSTR_IMUL] */ 	 "imul",
+	/* [INSTR_IN] */ 	 "in",
+	/* [INSTR_INC] */ 	 "inc",
+	/* [INSTR_INT] */ 	 "int",
+	/* [INSTR_INTO] */ 	 "into",
+	/* [INSTR_IRET] */ 	 "iret",
+	/* [INSTR_JA] */ 	 "ja",
+	/* [INSTR_JAE] */ 	 "jae",
+	/* [INSTR_JB] */ 	 "jb",
+	/* [INSTR_JBE] */ 	 "jbe",
+	/* [INSTR_JC] */ 	 "jc",
+	/* [INSTR_JCXZ] */ 	 "jcxz",
+	/* [INSTR_JE] */ 	 "je",
+	/* [INSTR_JG] */ 	 "jg",
+	/* [INSTR_JGE] */ 	 "jge",
+	/* [INSTR_JL] */ 	 "jl",
+	/* [INSTR_JLE] */ 	 "jle",
+	/* [INSTR_JMP] */ 	 "jmp",
+	/* [INSTR_JNA] */ 	 "jna",
+	/* [INSTR_JNAE] */ 	 "jnae",
+	/* [INSTR_JNB] */ 	 "jnb",
+	/* [INSTR_JNBE] */ 	 "jnbe",
+	/* [INSTR_JNC] */ 	 "jnc",
+	/* [INSTR_JNE] */ 	 "jne",
+	/* [INSTR_JNG] */ 	 "jng",
+	/* [INSTR_JNGE] */ 	 "jnge",
+	/* [INSTR_JNL] */ 	 "jnl",
+	/* [INSTR_JNLE] */ 	 "jnle",
+	/* [INSTR_JNO] */ 	 "jno",
+	/* [INSTR_JNP] */ 	 "jnp",
+	/* [INSTR_JNS] */ 	 "jns",
+	/* [INSTR_JNZ] */ 	 "jnz",
+	/* [INSTR_JO] */ 	 "jo",
+	/* [INSTR_JP] */ 	 "jp",
+	/* [INSTR_JPE] */ 	 "jpe",
+	/* [INSTR_JPO] */ 	 "jpo",
+	/* [INSTR_JS] */ 	 "js",
+	/* [INSTR_JZ] */ 	 "jz",
+	/* [INSTR_LAHF] */ 	 "lahf",
+	/* [INSTR_LDS] */ 	 "lds",
+	/* [INSTR_LEA] */ 	 "lea",
+	/* [INSTR_LES] */ 	 "les",
+	/* [INSTR_LODSB] */ 	 "lodsb",
+	/* [INSTR_LODSW] */ 	 "lodsw",
+	/* [INSTR_LOOP] */ 	 "loop",
+	/* [INSTR_LOOPE] */ 	 "loope",
+	/* [INSTR_LOOPNE] */ 	 "loopne",
+	/* [INSTR_LOOPNZ] */ 	 "loopnz",
+	/* [INSTR_LOOPZ] */ 	 "loopz",
+	/* [INSTR_MOV] */ 	 "mov",
+	/* [INSTR_MOVSB] */ 	 "movsb",
+	/* [INSTR_MOVSW] */ 	 "movsw",
+	/* [INSTR_MUL] */ 	 "mul",
+	/* [INSTR_NEG] */ 	 "neg",
+	/* [INSTR_NOP] */ 	 "nop",
+	/* [INSTR_NOT] */ 	 "not",
+	/* [INSTR_OR] */ 	 "or",
+	/* [INSTR_OUT] */ 	 "out",
+	/* [INSTR_POP] */ 	 "pop",
+	/* [INSTR_POPA] */ 	 "popa",
+	/* [INSTR_POPF] */ 	 "popf",
+	/* [INSTR_PUSH] */ 	 "push",
+	/* [INSTR_PUSHA] */ 	 "pusha",
+	/* [INSTR_PUSHF] */ 	 "pushf",
+	/* [INSTR_RCL] */ 	 "rcl",
+	/* [INSTR_RCR] */ 	 "rcr",
+	/* [INSTR_REP] */ 	 "rep",
+	/* [INSTR_REPE] */ 	 "repe",
+	/* [INSTR_REPNE] */ 	 "repne",
+	/* [INSTR_REPNZ] */ 	 "repnz",
+	/* [INSTR_REPZ] */ 	 "repz",
+	/* [INSTR_RET] */ 	 "ret",
+	/* [INSTR_RETF] */ 	 "retf",
+	/* [INSTR_ROL] */ 	 "rol",
+	/* [INSTR_ROR] */ 	 "ror",
+	/* [INSTR_SAHF] */ 	 "sahf",
+	/* [INSTR_SAL] */ 	 "sal",
+	/* [INSTR_SAR] */ 	 "sar",
+	/* [INSTR_SBB] */ 	 "sbb",
+	/* [INSTR_SCASB] */ 	 "scasb",
+	/* [INSTR_SCASW] */ 	 "scasw",
+	/* [INSTR_SHL] */ 	 "shl",
+	/* [INSTR_SHR] */ 	 "shr",
+	/* [INSTR_STC] */ 	 "stc",
+	/* [INSTR_STD] */ 	 "std",
+	/* [INSTR_STI] */ 	 "sti",
+	/* [INSTR_STOSB] */ 	 "stosb",
+	/* [INSTR_STOSW] */ 	 "stosw",
+	/* [INSTR_SUB] */ 	 "sub",
+	/* [INSTR_TEST] */ 	 "test",
+	/* [INSTR_XCHG] */ 	 "xchg",
+	/* [INSTR_XLATB] */ 	 "xlatb",
+	/* [INSTR_XOR] */ 	 "xor",
+};
+
+static const char *to_mnemonic(struct x86_instr *instr)
+{
+	return mnemo[instr->type];
+}
+
 static const char *reg_names[] = {
-	"AL",
-	"CL",
-	"DL",
-	"BL",
-	"AH",
-	"CH",
-	"DH",
-	"BH",
+	"al",
+	"cl",
+	"dl",
+	"bl",
+	"ah",
+	"ch",
+	"dh",
+	"bh",
 };
 
 static const char *reg_names_wide[] = {
-	"AX",
-	"CX",
-	"DX",
-	"BX",
-	"SP",
-	"BP",
-	"SI",
-	"DI",
+	"ax",
+	"cx",
+	"dx",
+	"bx",
+	"sp",
+	"bp",
+	"si",
+	"di",
 };
 
 static const char *to_reg_name(int reg_num, int w)
@@ -152,14 +171,6 @@ static const char *to_reg_name(int reg_num, int w)
 
 	return reg_names[reg_num];
 }
-
-struct x86_instr {
-	int		nr_prefixes;
-	uint8_t		opcode;
-	int		w;		/* word/byte */
-	int		d;		/* direction (or s = sign extension) */
-	int		reg;
-};
 
 static int
 arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
@@ -188,13 +199,15 @@ done_prefixes:
 
 	switch (instr->opcode) {
 	case 0xb0:	/* Move imm8 to reg8 */
+		instr->type	= INSTR_MOV;
 		instr->w	= 0;
-		instr->d	= 0;
+		instr->d	= 1;
 		instr->reg	= opcode & 0x03;
 		break;
 	case 0xb8:	/* Move imm16 to reg16 */
+		instr->type	= INSTR_MOV;
 		instr->w	= 1;
-		instr->d	= 0;
+		instr->d	= 1;
 		instr->reg	= opcode & 0x03;
 		break;
 	default:
@@ -202,6 +215,8 @@ done_prefixes:
 		instr->d	= opcode & 0x02;
 		break;
 	}
+	instr->imm_lo	= RAM[pc++];	
+	instr->imm_hi	= RAM[pc++];	
 
 	return 0;
 }
@@ -225,11 +240,18 @@ int
 arch_8086_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 {
 	struct x86_instr instr;
+	char operands[32];
 
 	if (arch_8086_decode_instr(&instr, cpu->RAM, pc) != 0)
 		return -1;
 
-        snprintf(line, max_line, "%x %s", instr.opcode, to_reg_name(instr.reg, instr.w));
+	/* AT&T syntax operands */
+	if (instr.d)
+		snprintf(operands, sizeof(operands), "$0x%02x%02x,%s", instr.imm_hi, instr.imm_lo, to_reg_name(instr.reg, instr.w));
+	else
+		snprintf(operands, sizeof(operands), "%s,$0x%02x%02x", to_reg_name(instr.reg, instr.w), instr.imm_hi, instr.imm_lo);
+
+        snprintf(line, max_line, "%s\t%s", to_mnemonic(&instr), operands);
 
         return arch_8086_instr_length(&instr);
 }
