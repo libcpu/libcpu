@@ -25,8 +25,9 @@ enum x86_instr_flags {
 	SrcImm16		= (1U << 12),
 	SrcMask			= SrcNone|SrcImm8|SrcImm16,
 
-	DstReg			= (1U << 13),
-	DstMask			= DstReg,
+	DstNone			= (1U << 13),
+	DstReg			= (1U << 14),
+	DstMask			= DstNone|DstReg,
 };
 
 struct x86_instr {

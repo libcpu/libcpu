@@ -53,7 +53,7 @@ static unsigned long decode_table[256] = {
 	INSTR_MOV|SrcImm16|DstReg, INSTR_MOV|SrcImm16|DstReg, INSTR_MOV|SrcImm16|DstReg, INSTR_MOV|SrcImm16|DstReg,
 	0, 0, 0, 0,
 	/* 0xC0 - 0xC7 */
-	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, INSTR_RET|SrcNone|DstNone, 0, 0, 0, 0,
 	/* 0xC8 - 0xCF */
 	0, 0, 0, 0, 0, 0, 0, 0,
 	/* 0xD0 - 0xD7 */
