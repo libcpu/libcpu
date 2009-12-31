@@ -155,6 +155,8 @@ fp_cast(cpu_t *cpu, uint32_t bits, Value *v, BasicBlock *bb)
 		case 128: return arch_cast_fp128(cpu, v, bb);
 		default: abort();
 	}
+	/* NOTREACHED */
+	return NULL;
 }
 
 //////////////////////////////////////////////////////////////////////
