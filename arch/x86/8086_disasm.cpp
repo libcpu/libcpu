@@ -126,7 +126,7 @@ static const char* mnemo[] = {
 
 static const char *to_mnemonic(struct x86_instr *instr)
 {
-	return mnemo[instr->type];
+	return mnemo[x86_instr_type(instr)];
 }
 
 static const char *reg_names[] = {
@@ -151,12 +151,28 @@ static const char *reg_names_wide[] = {
 	"di",
 };
 
-static const char *to_reg_name(int reg_num, int w)
+static const char *to_reg_name(int reg_num, int byte_op)
 {
-	if (w)
-		return reg_names_wide[reg_num];
+	if (byte_op)
+		return reg_names[reg_num];
 
-	return reg_names[reg_num];
+	return reg_names_wide[reg_num];
+}
+
+static int
+print_operand(char *operands, size_t size, struct x86_instr *instr, struct x86_operand *operand)
+{
+	int ret;
+
+	switch (operand->type) {
+	case OP_IMM:
+		ret = snprintf(operands, size, "$0x%x", operand->imm);
+		break;
+	case OP_REG:
+		ret = snprintf(operands, size, "%s", to_reg_name(operand->reg, instr->flags & ByteOp));
+		break;
+	}
+	return ret;
 }
 
 int
@@ -164,15 +180,17 @@ arch_8086_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 {
 	struct x86_instr instr;
 	char operands[32];
+	int len = 0;
 
-	if (arch_8086_decode_instr(&instr, cpu->RAM, pc) != 0)
-		return -1;
+	if (arch_8086_decode_instr(&instr, cpu->RAM, pc) != 0) {
+		fprintf(stderr, "error: unable to decode opcode %x\n", cpu->RAM[pc]);
+		exit(1);
+	}
 
 	/* AT&T syntax operands */
-	if (instr.d)
-		snprintf(operands, sizeof(operands), "$0x%02x%02x,%s", instr.imm_hi, instr.imm_lo, to_reg_name(instr.reg, instr.w));
-	else
-		snprintf(operands, sizeof(operands), "%s,$0x%02x%02x", to_reg_name(instr.reg, instr.w), instr.imm_hi, instr.imm_lo);
+	len += print_operand(operands+len, sizeof(operands)-len, &instr, &instr.src);
+	len += snprintf(operands+len, sizeof(operands)-len, ",");
+	len += print_operand(operands+len, sizeof(operands)-len, &instr, &instr.dst);
 
         snprintf(line, max_line, "%s\t%s", to_mnemonic(&instr), operands);
 
