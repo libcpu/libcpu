@@ -64,9 +64,9 @@
 typedef struct _idbg {
 	cpu_t *cpu;
 
-	unsigned old_flags;
-	unsigned old_optimize_flags;
-	unsigned old_debug_flags;
+	uint32_t old_flags;
+	uint64_t old_optimize_flags;
+	uint32_t old_debug_flags;
 
 	unsigned gpr_format;
 	unsigned gpr_count;
