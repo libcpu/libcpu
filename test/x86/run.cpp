@@ -27,14 +27,12 @@ debug_function(cpu_t *cpu)
 int
 main(int argc, char **argv)
 {
-	char *s_arch;
 	char *executable;
 	cpu_arch_t arch;
 	cpu_t *cpu;
 	uint8_t *RAM;
 	FILE *f;
 	int ramsize;
-	int r1, r2;
 
 	int singlestep = SINGLESTEP_NONE;
 	int log = 1;
