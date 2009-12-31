@@ -187,10 +187,17 @@ arch_8086_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 		exit(1);
 	}
 
+	operands[0] = '\0';
+
 	/* AT&T syntax operands */
-	len += print_operand(operands+len, sizeof(operands)-len, &instr, &instr.src);
-	len += snprintf(operands+len, sizeof(operands)-len, ",");
-	len += print_operand(operands+len, sizeof(operands)-len, &instr, &instr.dst);
+	if (!(instr.flags & SrcNone))
+		len += print_operand(operands+len, sizeof(operands)-len, &instr, &instr.src);
+
+	if (!(instr.flags & SrcNone) && !(instr.flags & DstNone))
+		len += snprintf(operands+len, sizeof(operands)-len, ",");
+
+	if (!(instr.flags & DstNone))
+		len += print_operand(operands+len, sizeof(operands)-len, &instr, &instr.dst);
 
         snprintf(line, max_line, "%s\t%s", to_mnemonic(&instr), operands);
 
