@@ -23,6 +23,7 @@
 #include "arch/mips/libcpu_mips.h"
 #include "arch/m88k/libcpu_m88k.h"
 #include "arch/arm/libcpu_arm.h"
+#include "arch/x86/libcpu_8086.h"
 
 #define IS_LITTLE_ENDIAN(cpu) (((cpu)->info.common_flags & CPU_FLAG_ENDIAN_MASK) == CPU_FLAG_ENDIAN_LITTLE)
 
@@ -95,6 +96,9 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 			break;
 		case CPU_ARCH_ARM:
 			cpu->f = arch_func_arm;
+			break;
+		case CPU_ARCH_8086:
+			cpu->f = arch_func_8086;
 			break;
 		default:
 			printf("illegal arch: %d\n", arch);
