@@ -13,7 +13,7 @@ arch_8086_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 static int
 arch_8086_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
-	return -1;
+	return 0;
 }
 
 static void
