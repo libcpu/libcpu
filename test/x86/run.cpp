@@ -8,7 +8,7 @@
 #include "arch/arm/libcpu_arm.h"
 #include "arch/m88k/libcpu_m88k.h"
 #include "arch/m88k/m88k_isa.h"
-#include "arch/x86/libcpu_8086.h"
+#include "arch/x86/libcpu_x86.h"
 
 #define RET_MAGIC 0x4D495354
 

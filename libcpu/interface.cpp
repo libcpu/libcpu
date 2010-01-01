@@ -23,7 +23,7 @@
 #include "arch/mips/libcpu_mips.h"
 #include "arch/m88k/libcpu_m88k.h"
 #include "arch/arm/libcpu_arm.h"
-#include "arch/x86/libcpu_8086.h"
+#include "arch/x86/libcpu_x86.h"
 
 #define IS_LITTLE_ENDIAN(cpu) (((cpu)->info.common_flags & CPU_FLAG_ENDIAN_MASK) == CPU_FLAG_ENDIAN_LITTLE)
 

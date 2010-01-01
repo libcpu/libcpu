@@ -1,7 +1,7 @@
 PROJECT(x86)
 
 ADD_LIBRARY(x86 STATIC
-			8086_decode.cpp
-			8086_disasm.cpp
-			8086_tag.cpp
-			8086_translate.cpp)
+			x86_decode.cpp
+			x86_disasm.cpp
+			x86_tag.cpp
+			x86_translate.cpp)

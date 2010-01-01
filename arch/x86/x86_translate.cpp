@@ -1,8 +1,8 @@
 #include "libcpu.h"
-#include "8086_isa.h"
-#include "8086_cc.h"
+#include "x86_isa.h"
+#include "x86_cc.h"
 #include "frontend.h"
-#include "libcpu_8086.h"
+#include "libcpu_x86.h"
 
 Value *
 arch_8086_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)

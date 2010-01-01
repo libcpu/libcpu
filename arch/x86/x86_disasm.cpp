@@ -2,8 +2,8 @@
 #include <stdio.h>
 
 #include "libcpu.h"
-#include "8086_isa.h"
-#include "8086_decode.h"
+#include "x86_isa.h"
+#include "x86_decode.h"
 
 static const char* mnemo[] = {
 	/* [INSTR_AAA] */	 "aaa",
