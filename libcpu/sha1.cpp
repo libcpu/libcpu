@@ -15,8 +15,6 @@
  34AA973C D4C4DAA4 F61EEB2B DBAD2731 6534016F
 */
 
-/* Can't we link w/openssl? -stevi */
-
 #define SHA1HANDSOFF
 
 #if HAVE_CONFIG_H

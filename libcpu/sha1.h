@@ -6,8 +6,6 @@
 
 */
 
-/* Can't we just link w/openssl? -stevi */
-
 #ifndef _SHA1_H
 # define _SHA1_H
 
