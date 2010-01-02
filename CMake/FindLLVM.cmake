@@ -16,7 +16,7 @@
 if (MSVC)
   set(LLVM_ROOT "C:/Program Files/LLVM")
   if (NOT IS_DIRECTORY ${LLVM_ROOT})
-      message(FATAL_ERROR "Could NOT find LLVM")
+    message(FATAL_ERROR "Could NOT find LLVM")
   endif ()
 
   message(STATUS "Found LLVM: ${LLVM_ROOT}")
@@ -36,45 +36,47 @@ if (LLVM_INCLUDE_DIR)
 else (LLVM_INCLUDE_DIR)
 
   find_program(LLVM_CONFIG_EXECUTABLE
-      NAMES llvm-config
-      PATHS
-      /opt/local/bin
-      /opt/llvm/2.6/bin
-      /opt/llvm/bin
-  )
+    NAMES llvm-config
+    PATHS
+    /opt/local/bin
+    /opt/llvm/2.6/bin
+    /opt/llvm/bin
+    )
 
   find_program(LLVM_GCC_EXECUTABLE
-      NAMES llvm-gcc llvmgcc
-      PATHS
-      /opt/local/bin
-      /opt/llvm/2.6/bin
-      /opt/llvm/bin
-      /Developer/usr/bin
-  )
+    NAMES llvm-gcc llvmgcc
+    PATHS
+    /opt/local/bin
+    /opt/llvm/2.6/bin
+    /opt/llvm/bin
+    /Developer/usr/bin
+    /usr/lib/llvm/llvm/gcc-4.2/bin
+    )
 
   find_program(LLVM_GXX_EXECUTABLE
-      NAMES llvm-g++ llvmg++
-      PATHS
-      /opt/local/bin
-      /opt/llvm/2.6/bin
-      /opt/llvm/bin
-      /Developer/usr/bin
-  )
+    NAMES llvm-g++ llvmg++
+    PATHS
+    /opt/local/bin
+    /opt/llvm/2.6/bin
+    /opt/llvm/bin
+    /Developer/usr/bin
+    /usr/lib/llvm/llvm/gcc-4.2/bin
+    )
 
   if(LLVM_GCC_EXECUTABLE)
-      MESSAGE(STATUS "LLVM llvm-gcc found at: ${LLVM_GCC_EXECUTABLE}")
-      #CMAKE_FORCE_C_COMPILER(${LLVM_GCC_EXECUTABLE} GNU)
+    MESSAGE(STATUS "LLVM llvm-gcc found at: ${LLVM_GCC_EXECUTABLE}")
+    #CMAKE_FORCE_C_COMPILER(${LLVM_GCC_EXECUTABLE} GNU)
   endif(LLVM_GCC_EXECUTABLE)
 
   if(LLVM_GXX_EXECUTABLE)
-      MESSAGE(STATUS "LLVM llvm-g++ found at: ${LLVM_GXX_EXECUTABLE}")
-      #CMAKE_FORCE_CXX_COMPILER(${LLVM_GXX_EXECUTABLE} GNU)
+    MESSAGE(STATUS "LLVM llvm-g++ found at: ${LLVM_GXX_EXECUTABLE}")
+    #CMAKE_FORCE_CXX_COMPILER(${LLVM_GXX_EXECUTABLE} GNU)
   endif(LLVM_GXX_EXECUTABLE)
   
   if(LLVM_CONFIG_EXECUTABLE)
-      MESSAGE(STATUS "LLVM llvm-config found at: ${LLVM_CONFIG_EXECUTABLE}")
+    MESSAGE(STATUS "LLVM llvm-config found at: ${LLVM_CONFIG_EXECUTABLE}")
   else(LLVM_CONFIG_EXECUTABLE)
-      MESSAGE(FATAL_ERROR "Could NOT find LLVM")
+    MESSAGE(FATAL_ERROR "Could NOT find LLVM")
   endif(LLVM_CONFIG_EXECUTABLE)
 
   MACRO(FIND_LLVM_LIBS LLVM_CONFIG_EXECUTABLE _libname_ LIB_VAR OBJECT_VAR)
@@ -85,44 +87,44 @@ else (LLVM_INCLUDE_DIR)
   ENDMACRO(FIND_LLVM_LIBS)
   
   
-   # this function borrowed from PlPlot, Copyright (C) 2006  Alan W. Irwin
-   function(TRANSFORM_VERSION numerical_result version)
-   # internal_version ignores everything in version after any character that
-   # is not 0-9 or ".".  This should take care of the case when there is
-   # some non-numerical data in the patch version.
-   #message(STATUS "DEBUG: version = ${version}")
-   string(REGEX REPLACE "^([0-9.]+).*$" "\\1" internal_version ${version})
+  # this function borrowed from PlPlot, Copyright (C) 2006  Alan W. Irwin
+  function(TRANSFORM_VERSION numerical_result version)
+    # internal_version ignores everything in version after any character that
+    # is not 0-9 or ".".  This should take care of the case when there is
+    # some non-numerical data in the patch version.
+    #message(STATUS "DEBUG: version = ${version}")
+    string(REGEX REPLACE "^([0-9.]+).*$" "\\1" internal_version ${version})
     
-      # internal_version is normally a period-delimited triplet string of the form
-      # "major.minor.patch", but patch and/or minor could be missing.
-      # Transform internal_version into a numerical result that can be compared.
-      string(REGEX REPLACE "^([0-9]*).+$" "\\1" major ${internal_version})
-      string(REGEX REPLACE "^[0-9]*\\.([0-9]*).*$" "\\1" minor ${internal_version})
-      #string(REGEX REPLACE "^[0-9]*\\.[0-9]*\\.([0-9]*)$" "\\1" patch ${internal_version})
+    # internal_version is normally a period-delimited triplet string of the form
+    # "major.minor.patch", but patch and/or minor could be missing.
+    # Transform internal_version into a numerical result that can be compared.
+    string(REGEX REPLACE "^([0-9]*).+$" "\\1" major ${internal_version})
+    string(REGEX REPLACE "^[0-9]*\\.([0-9]*).*$" "\\1" minor ${internal_version})
+    #string(REGEX REPLACE "^[0-9]*\\.[0-9]*\\.([0-9]*)$" "\\1" patch ${internal_version})
     
-      #if(NOT patch MATCHES "[0-9]+")
-      #  set(patch 0)
-      #endif(NOT patch MATCHES "[0-9]+")
-      set(patch 0)
+    #if(NOT patch MATCHES "[0-9]+")
+    #  set(patch 0)
+    #endif(NOT patch MATCHES "[0-9]+")
+    set(patch 0)
     
-      if(NOT minor MATCHES "[0-9]+")
-        set(minor 0)
-      endif(NOT minor MATCHES "[0-9]+")
+    if(NOT minor MATCHES "[0-9]+")
+      set(minor 0)
+    endif(NOT minor MATCHES "[0-9]+")
     
-      if(NOT major MATCHES "[0-9]+")
-        set(major 0)
-      endif(NOT major MATCHES "[0-9]+")
-      #message(STATUS "DEBUG: internal_version = ${internal_version}")
-      #message(STATUS "DEBUG: major = ${major}")
-      #message(STATUS "DEBUG: minor= ${minor}")
-      #message(STATUS "DEBUG: patch = ${patch}")
-      math(EXPR internal_numerical_result
-        #"${major}*1000000 + ${minor}*1000 + ${patch}"
-        "${major}*1000000 + ${minor}*1000"
-        )
-      #message(STATUS "DEBUG: ${numerical_result} = ${internal_numerical_result}")
-      set(${numerical_result} ${internal_numerical_result} PARENT_SCOPE)
-   endfunction(TRANSFORM_VERSION)
+    if(NOT major MATCHES "[0-9]+")
+      set(major 0)
+    endif(NOT major MATCHES "[0-9]+")
+    #message(STATUS "DEBUG: internal_version = ${internal_version}")
+    #message(STATUS "DEBUG: major = ${major}")
+    #message(STATUS "DEBUG: minor= ${minor}")
+    #message(STATUS "DEBUG: patch = ${patch}")
+    math(EXPR internal_numerical_result
+      #"${major}*1000000 + ${minor}*1000 + ${patch}"
+      "${major}*1000000 + ${minor}*1000"
+      )
+    #message(STATUS "DEBUG: ${numerical_result} = ${internal_numerical_result}")
+    set(${numerical_result} ${internal_numerical_result} PARENT_SCOPE)
+  endfunction(TRANSFORM_VERSION)
   
   
   exec_program(${LLVM_CONFIG_EXECUTABLE} ARGS --version OUTPUT_VARIABLE LLVM_STRING_VERSION )
