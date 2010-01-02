@@ -389,7 +389,11 @@ LOAD() {
 			RAM[memp++] = '"';
 			for (i=0; i<16; i++)
 				RAM[memp+i] = ' ';
-			getcwd((char*)&RAM[memp], 256);
+			if (!getcwd((char*)&RAM[memp], 256)) {
+				C = 1;
+				A = kernal_status = KERN_ERR_FILE_NOT_FOUND;
+				return;
+			}
 			memp += strlen((char*)&RAM[memp]); /* only 16 on COMMODORE DOS */
 			RAM[memp++] = '"';
 			RAM[memp++] = ' ';
