@@ -25,14 +25,19 @@ struct x86_operand {
 
 enum x86_instr_flags {
 	ModRM			= (1U << 8),
-	ByteOp			= (1U << 9),	/* Byte Operands */
 
-	SrcNone			= (1U << 10),
-	SrcImm8			= (1U << 11),
-	SrcImm16		= (1U << 12),
+	/* Operand sizes */
+	WidthByte		= (1U << 9),	/* 8 bits */
+	WidthWide		= (1U << 10),	/* 16 bits or 32 bits */
+	WidthMask		= WidthByte|WidthWide,
+
+	/* Source operand */
+	SrcNone			= (1U << 11),
+	SrcImm			= (1U << 12),
 	SrcReg			= (1U << 13),
-	SrcMask			= SrcNone|SrcImm8|SrcImm16|SrcReg,
+	SrcMask			= SrcNone|SrcImm|SrcReg,
 
+	/* Destination operand */
 	DstNone			= (1U << 14),
 	DstReg			= (1U << 15),
 	DstMem			= (1U << 16),
@@ -45,6 +50,7 @@ struct x86_instr {
 	unsigned long		nr_bytes;
 
 	uint8_t			opcode;		/* Opcode byte */
+	uint8_t			width;
 	uint8_t			mod;		/* Mod */
 	uint8_t			rm;		/* R/M */
 	uint8_t			reg_opc;	/* Reg/Opcode */

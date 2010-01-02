@@ -129,7 +129,7 @@ static const char *to_mnemonic(struct x86_instr *instr)
 	return mnemo[x86_instr_type(instr)];
 }
 
-static const char *reg_names[] = {
+static const char *byte_reg_names[] = {
 	"%al",
 	"%cl",
 	"%dl",
@@ -140,7 +140,7 @@ static const char *reg_names[] = {
 	"%bh",
 };
 
-static const char *reg_names_wide[] = {
+static const char *word_reg_names[] = {
 	"%ax",
 	"%cx",
 	"%dx",
@@ -151,7 +151,7 @@ static const char *reg_names_wide[] = {
 	"%di",
 };
 
-static const char *mem_reg_names[] = {
+static const char *mem_byte_reg_names[] = {
 	"%bx+si",
 	"%bx+di",
 	"%bp+si",
@@ -178,12 +178,12 @@ static const char *sign_to_str(int n)
 	return "-";
 }
 
-static const char *to_reg_name(int reg_num, int byte_op)
+static const char *to_reg_name(struct x86_instr *instr, int reg_num)
 {
-	if (byte_op)
-		return reg_names[reg_num];
+	if (instr->flags & WidthByte)
+		return byte_reg_names[reg_num];
 
-	return reg_names_wide[reg_num];
+	return word_reg_names[reg_num];
 }
 
 static int
@@ -196,13 +196,13 @@ print_operand(char *operands, size_t size, struct x86_instr *instr, struct x86_o
 		ret = snprintf(operands, size, "$0x%x", operand->imm);
 		break;
 	case OP_REG:
-		ret = snprintf(operands, size, "%s", to_reg_name(operand->reg, instr->flags & ByteOp));
+		ret = snprintf(operands, size, "%s", to_reg_name(instr, operand->reg));
 		break;
 	case OP_MEM:
-		ret = snprintf(operands, size, "%s(%s)", seg_override_names[instr->seg_override], mem_reg_names[operand->reg]);
+		ret = snprintf(operands, size, "%s(%s)", seg_override_names[instr->seg_override], mem_byte_reg_names[operand->reg]);
 		break;
 	case OP_MEM_DISP:
-		ret = snprintf(operands, size, "%s%s0x%x(%s)", seg_override_names[instr->seg_override], sign_to_str(operand->disp), abs(operand->disp), mem_reg_names[operand->reg]);
+		ret = snprintf(operands, size, "%s%s0x%x(%s)", seg_override_names[instr->seg_override], sign_to_str(operand->disp), abs(operand->disp), mem_byte_reg_names[operand->reg]);
 		break;
 	}
 	return ret;

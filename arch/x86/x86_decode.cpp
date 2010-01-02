@@ -139,8 +139,8 @@ static unsigned long decode_table[256] = {
 	/*[0x85]*/	0,
 	/*[0x86]*/	0,
 	/*[0x87]*/	0,
-	/*[0x88]*/	INSTR_MOV|ModRM|SrcReg|ByteOp,
-	/*[0x89]*/	INSTR_MOV|ModRM|SrcReg,
+	/*[0x88]*/	INSTR_MOV|ModRM|SrcReg|WidthByte,
+	/*[0x89]*/	INSTR_MOV|ModRM|SrcReg|WidthWide,
 	/*[0x8A]*/	0,
 	/*[0x8B]*/	0,
 	/*[0x8C]*/	0,
@@ -187,10 +187,10 @@ static unsigned long decode_table[256] = {
 	/*[0xB5]*/	0,
 	/*[0xB6]*/	0,
 	/*[0xB7]*/	0,
-	/*[0xB8]*/	INSTR_MOV|SrcImm16|DstReg,
-	/*[0xB9]*/	INSTR_MOV|SrcImm16|DstReg,
-	/*[0xBA]*/	INSTR_MOV|SrcImm16|DstReg,
-	/*[0xBB]*/	INSTR_MOV|SrcImm16|DstReg,
+	/*[0xB8]*/	INSTR_MOV|SrcImm|DstReg|WidthWide,
+	/*[0xB9]*/	INSTR_MOV|SrcImm|DstReg|WidthWide,
+	/*[0xBA]*/	INSTR_MOV|SrcImm|DstReg|WidthWide,
+	/*[0xBB]*/	INSTR_MOV|SrcImm|DstReg|WidthWide,
 	/*[0xBC]*/	0,
 	/*[0xBD]*/	0,
 	/*[0xBE]*/	0,
@@ -298,7 +298,7 @@ decode_src_operand(struct x86_instr *instr)
 	switch (instr->flags & SrcMask) {
 	case SrcNone:
 		break;
-	case SrcImm16:
+	case SrcImm:
 		operand->type	= OP_IMM;
 		operand->imm	= instr->imm_data;
 		break;
@@ -310,27 +310,47 @@ decode_src_operand(struct x86_instr *instr)
 }
 
 static void
-decode_imm16(struct x86_instr *instr, uint8_t imm_lo, uint8_t imm_hi)
+decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
-	instr->imm_data	= (imm_hi << 8) | imm_lo;
+	addr_t new_pc = *pc;
 
-	instr->nr_bytes	+= 2;
+	switch (instr->flags & WidthMask) {
+	case WidthWide: {
+		uint8_t imm_lo = RAM[new_pc++];
+		uint8_t imm_hi = RAM[new_pc++];
+
+		instr->imm_data	= (int16_t)((imm_hi << 8) | imm_lo);
+		instr->nr_bytes	+= 2;
+		break;
+	}
+	case WidthByte:
+		instr->imm_data	= (int8_t)RAM[new_pc++];
+		instr->nr_bytes	+= 1;
+		break;
+	}
+	*pc = new_pc;
 }
 
 static void
-decode_disp16(struct x86_instr *instr, uint8_t disp_lo, uint8_t disp_hi)
+decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
-	instr->disp	= (int16_t)((disp_hi << 8) | disp_lo);
+	addr_t new_pc = *pc;
 
-	instr->nr_bytes	+= 2;
-}
+	switch (instr->flags & DstMask) {
+	case DstMemDisp16: {
+		uint8_t disp_lo = RAM[new_pc++];
+		uint8_t disp_hi = RAM[new_pc++];
 
-static void
-decode_disp8(struct x86_instr *instr, uint8_t disp)
-{
-	instr->disp	= (int8_t)disp;
-
-	instr->nr_bytes	+= 1;
+		instr->disp	= (int16_t)((disp_hi << 8) | disp_lo);
+		instr->nr_bytes	+= 2;
+		break;
+	}
+	case DstMemDisp8:
+		instr->disp	= (int8_t)RAM[new_pc++];
+		instr->nr_bytes	+= 1;
+		break;
+	}
+	*pc = new_pc;
 }
 
 static void
@@ -402,14 +422,11 @@ done_prefixes:
 	if (instr->flags & ModRM)
 		decode_modrm_byte(instr, RAM[pc++]);
 
-	if (instr->flags & DstMemDisp8)
-		decode_disp8(instr, RAM[pc+0]);
+	if (instr->flags & DstMemDisp8 || instr->flags & DstMemDisp16)
+		decode_disp(instr, RAM, &pc);
 
-	if (instr->flags & DstMemDisp16)
-		decode_disp16(instr, RAM[pc+0], RAM[pc+1]);
-
-	if (instr->flags & SrcImm16)
-		decode_imm16(instr, RAM[pc+0], RAM[pc+1]);
+	if (instr->flags & SrcImm)
+		decode_imm(instr, RAM, &pc);
 
 	decode_src_operand(instr);
 
