@@ -86,6 +86,9 @@ decode_dst_operand(struct x86_instr *instr)
 		else
 			operand->reg	= instr->opcode & 0x03;
 		break;
+	case DstMem:
+		operand->type	= OP_MEM;
+		operand->reg	= instr->rm;
 	}
 }
 

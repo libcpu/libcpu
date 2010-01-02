@@ -151,6 +151,17 @@ static const char *reg_names_wide[] = {
 	"di",
 };
 
+static const char *mem_reg_names[] = {
+	"bx+si",
+	"bx+di",
+	"bp+si",
+	"bp+di",
+	"si",
+	"di",
+	NULL,
+	"bx",
+};
+
 static const char *to_reg_name(int reg_num, int byte_op)
 {
 	if (byte_op)
@@ -170,6 +181,9 @@ print_operand(char *operands, size_t size, struct x86_instr *instr, struct x86_o
 		break;
 	case OP_REG:
 		ret = snprintf(operands, size, "%s", to_reg_name(operand->reg, instr->flags & ByteOp));
+		break;
+	case OP_MEM:
+		ret = snprintf(operands, size, "(%s)", mem_reg_names[operand->reg]);
 		break;
 	}
 	return ret;
