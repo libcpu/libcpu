@@ -19,17 +19,24 @@ enum x86_instr_flags {
 	SrcNone			= (1U << 10),
 	SrcImm8			= (1U << 11),
 	SrcImm16		= (1U << 12),
-	SrcMask			= SrcNone|SrcImm8|SrcImm16,
+	SrcReg			= (1U << 13),
+	SrcMask			= SrcNone|SrcImm8|SrcImm16|SrcReg,
 
-	DstNone			= (1U << 13),
-	DstReg			= (1U << 14),
+	DstNone			= (1U << 14),
+	DstReg			= (1U << 15),
 	DstMask			= DstNone|DstReg,
 };
 
 struct x86_instr {
-	uint8_t			opcode;		/* opcode byte */
-	unsigned long		op_bytes;
-	unsigned long		flags;		/* see enum x86_instr_flags */
+	unsigned long		nr_bytes;
+
+	uint8_t			opcode;		/* Opcode byte */
+	uint8_t			mod;		/* Mod */
+	uint8_t			rm;		/* R/M */
+	uint8_t			reg_opc;	/* Reg/Opcode */
+	unsigned long		imm_data;	/* Immediate data */
+
+	unsigned long		flags;		/* See enum x86_instr_flags */
 	struct x86_operand	src;
 	struct x86_operand	dst;
 };

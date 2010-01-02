@@ -38,7 +38,7 @@ static unsigned long decode_table[256] = {
 	/* 0x80 - 0x87 */
 	0, 0, 0, 0, 0, 0, 0, 0,
 	/* 0x88 - 0x8F */
-	0, 0, 0, 0, 0, 0, 0, 0,
+	0, INSTR_MOV|ModRM|SrcReg|DstReg, 0, 0, 0, 0, 0, 0,
 	/* 0x90 - 0x97 */
 	0, 0, 0, 0, 0, 0, 0, 0,
 	/* 0x98 - 0x9F */
@@ -71,25 +71,59 @@ static unsigned long decode_table[256] = {
 };
 
 static void
-decode_imm_operand(struct x86_instr *instr, struct x86_operand *operand, uint8_t imm_lo, uint8_t imm_hi)
+decode_dst_operand(struct x86_instr *instr)
 {
-	operand->type	= OP_IMM;
-	operand->imm	= (imm_hi << 8) | imm_lo;
+	struct x86_operand *operand = &instr->dst;
 
-	instr->op_bytes += 2;
+	switch (instr->flags & DstMask) {
+	case DstNone:
+		break;
+	case DstReg:
+		operand->type	= OP_REG;
+
+		if (instr->flags & ModRM)
+			operand->reg	= instr->rm;
+		else
+			operand->reg	= instr->opcode & 0x03;
+		break;
+	}
 }
 
 static void
-decode_reg_operand(struct x86_instr *instr, struct x86_operand *operand)
+decode_src_operand(struct x86_instr *instr)
 {
-	operand->type	= OP_REG;
-	operand->reg	= instr->opcode & 0x03;
+	struct x86_operand *operand = &instr->src;
+
+	switch (instr->flags & SrcMask) {
+	case SrcNone:
+		break;
+	case SrcImm16:
+		operand->type	= OP_IMM;
+		operand->imm	= instr->imm_data;
+		break;
+	case SrcReg:
+		operand->type	= OP_REG;
+		operand->reg	= instr->reg_opc;
+		break;
+	}
+}
+
+static void
+decode_imm_data(struct x86_instr *instr, uint8_t imm_lo, uint8_t imm_hi)
+{
+	instr->imm_data	= (imm_hi << 8) | imm_lo;
+
+	instr->nr_bytes	+= 2;
 }
 
 static void
 decode_modrm_byte(struct x86_instr *instr, uint8_t modrm)
 {
-	instr->op_bytes++;
+	instr->mod	= (modrm & 0xc0) >> 6;
+	instr->reg_opc	= (modrm & 0x38) >> 3;
+	instr->rm	= (modrm & 0x07);
+
+	instr->nr_bytes++;
 }
 
 int
@@ -97,7 +131,7 @@ arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 {
 	uint8_t opcode;
 
-	instr->op_bytes = 1;
+	instr->nr_bytes = 1;
 
 	/* Prefixes */
 	for (;;) {
@@ -108,7 +142,7 @@ arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 		case 0x3e:	/* DS override */
 		case 0xf2:	/* REPNE/REPNZ */
 		case 0xf3:	/* REP/REPE/REPZ */
-			instr->op_bytes++;
+			instr->nr_bytes++;
 			break;
 		default:
 			goto done_prefixes;
@@ -128,19 +162,12 @@ done_prefixes:
 	if (instr->flags & ModRM)
 		decode_modrm_byte(instr, RAM[pc++]);
 
-	switch (instr->flags & SrcMask) {
-	case SrcNone:
-		break;
-	case SrcImm16:
-		decode_imm_operand(instr, &instr->src, RAM[pc+0], RAM[pc+1]);
-		break;
-	}
+	if (instr->flags & SrcImm16)
+		decode_imm_data(instr, RAM[pc+0], RAM[pc+1]);
 
-	switch (instr->flags & DstMask) {
-	case DstReg:
-		decode_reg_operand(instr, &instr->dst);
-		break;
-	}
+	decode_src_operand(instr);
+
+	decode_dst_operand(instr);
 
 	return 0;
 }
@@ -148,5 +175,5 @@ done_prefixes:
 int
 arch_8086_instr_length(struct x86_instr *instr)
 {
-	return instr->op_bytes;
+	return instr->nr_bytes;
 }
