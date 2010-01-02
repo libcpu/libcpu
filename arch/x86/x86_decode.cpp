@@ -281,8 +281,8 @@ decode_dst_operand(struct x86_instr *instr)
 		operand->type	= OP_MEM;
 		operand->reg	= instr->rm;
 		break;
-	case DstMemDisp8:
-	case DstMemDisp16:
+	case DstMemDispByte:
+	case DstMemDispWide:
 		operand->type	= OP_MEM_DISP;
 		operand->reg	= instr->rm;
 		operand->disp	= instr->disp;
@@ -337,7 +337,7 @@ decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 	addr_t new_pc = *pc;
 
 	switch (instr->flags & DstMask) {
-	case DstMemDisp16: {
+	case DstMemDispWide: {
 		uint8_t disp_lo = RAM[new_pc++];
 		uint8_t disp_hi = RAM[new_pc++];
 
@@ -345,7 +345,7 @@ decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 		instr->nr_bytes	+= 2;
 		break;
 	}
-	case DstMemDisp8:
+	case DstMemDispByte:
 		instr->disp	= (int8_t)RAM[new_pc++];
 		instr->nr_bytes	+= 1;
 		break;
@@ -365,10 +365,10 @@ decode_modrm_byte(struct x86_instr *instr, uint8_t modrm)
 		instr->flags	|= DstMem;
 		break;
 	case 0x01:
-		instr->flags	|= DstMemDisp8;
+		instr->flags	|= DstMemDispByte;
 		break;
 	case 0x02:
-		instr->flags	|= DstMemDisp16;
+		instr->flags	|= DstMemDispWide;
 		break;
 	case 0x03:
 		instr->flags	|= DstReg;

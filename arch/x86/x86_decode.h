@@ -41,11 +41,11 @@ enum x86_instr_flags {
 	DstNone			= (1U << 14),
 	DstReg			= (1U << 15),
 	DstMem			= (1U << 16),
-	DstMemDisp8		= (1U << 17),
-	DstMemDisp16		= (1U << 18),
-	DstMask			= DstNone|DstReg|DstMem|DstMemDisp8|DstMemDisp16,
+	DstMemDispByte		= (1U << 17),	/* 8 bits */
+	DstMemDispWide		= (1U << 18),	/* 16 bits or 32 bits */
+	DstMask			= DstNone|DstReg|DstMem|DstMemDispByte|DstMemDispWide,
 
-	MemDispMask		= DstMemDisp8|DstMemDisp16,
+	MemDispMask		= DstMemDispByte|DstMemDispWide,
 };
 
 struct x86_instr {
