@@ -6,6 +6,8 @@
 #include <map>
 #include <set>
 
+#include "libcpu.h"
+
 namespace upcl {
 
 typedef std::vector<std::string> string_vector;

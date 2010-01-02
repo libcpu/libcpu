@@ -143,8 +143,8 @@ needs_bitfield_split(c::register_def *reg)
 void
 cg_generate_gen_get_reg_set()
 {
-	printf("static cpu_value_t *arch_%s_gen_get_reg(arch_%s_t *arch, size_t reg_name)\n");
+	//printf("static cpu_value_t *arch_%s_gen_get_reg(arch_%s_t *arch, size_t reg_name)\n");
 	printf("{\n");
-	printf("\tif (index >= %zu) return NULL;");
+	//printf("\tif (index >= %zu) return NULL;");
 	printf("}\n");
 }

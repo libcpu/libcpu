@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
 #include <cmath>
 
 #include "c/binary_expression.h"
@@ -458,8 +459,8 @@ namespace {
 
 			case binary_expression::OR:
 				// If OR zero or LHS == RHS, return LHS.
-				if (expr2->evaluate(value, sign) && value == 0 ||
-						expr1->is_equal(expr2))
+				if ((expr2->evaluate(value, sign) && value == 0) ||
+					expr1->is_equal(expr2))
 					return expr1;
 				// Do the same but with RHS.
 				else if (expr1->evaluate(value, sign) && value == 0)

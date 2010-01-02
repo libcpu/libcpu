@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstdlib>
 #include <cmath>
 
 #include "c/unary_expression.h"

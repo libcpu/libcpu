@@ -80,6 +80,7 @@ register_def::add_sub(sub_register_def *alias)
 
 	m_subs.push_back(alias);
 	m_named_subs[alias->get_name()] = alias;
+	return true;
 }
 
 type *

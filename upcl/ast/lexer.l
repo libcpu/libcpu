@@ -3,7 +3,7 @@
 
 using namespace upcl;
 
-#include "ast/parser.hpp"
+#include "parser.hpp"
 
 %}
 
