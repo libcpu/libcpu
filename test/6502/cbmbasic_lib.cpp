@@ -2,6 +2,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <direct.h>  // getcwd
+#else
+#include <unistd.h>
+#endif
+#include "stat.h"
+#include "readdir.h"
 #define SETZ(a) Z=a;
 #define SETN(a) N=a;
 #define SETSZ(a) Z = (a)? 0:1; N = ((signed char)(a))<0?1:0
@@ -102,12 +109,6 @@ CHRGOT() {
 /* KERNAL interface implementation                          */
 /* http://members.tripod.com/~Frank_Kontros/kernal/addr.htm */
 /************************************************************/
-
-#if !defined(sun) && !defined(_WIN32)
-#include <unistd.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#endif
 
 /* KERNAL constants */
 #if 0
@@ -371,7 +372,7 @@ LOAD() {
 			A = kernal_status = KERN_ERR_MISSING_FILE_NAME;
 			return;
 		}
-#if !defined(sun) && !defined(_WIN32) && !defined(linux)
+
 		if (RAM[kernal_filename]=='$') {
 			DIR *dirp;
 			struct dirent *dp;
@@ -404,6 +405,7 @@ LOAD() {
 			
 			dirp = opendir(".");
 			while ((dp = readdir(dirp))) {
+				size_t namlen = strlen(dp->d_name);
 				stat(dp->d_name, &st);
 				file_size = (st.st_size + 253)/254;
 				if (file_size>0xFFFF)
@@ -422,12 +424,12 @@ LOAD() {
 					}
 				}
 				RAM[memp++] = '"';
-				if (dp->d_namlen>16)
-					dp->d_namlen=16; /* TODO hack */
-				memcpy(&RAM[memp], dp->d_name, dp->d_namlen);
-				memp += dp->d_namlen;
+				if (namlen>16)
+					namlen=16; /* TODO hack */
+				memcpy(&RAM[memp], dp->d_name, namlen);
+				memp += namlen;
 				RAM[memp++] = '"';
-				for (i=dp->d_namlen; i<16; i++)
+				for (i=namlen; i<16; i++)
 					RAM[memp++] = ' ';
 				RAM[memp++] = ' ';
 				RAM[memp++] = 'P';
@@ -454,7 +456,6 @@ for (i=0; i<255; i++) {
 */
 			goto load_noerr;
 		}
-#endif
 
 		savedbyte = RAM[kernal_filename+kernal_filename_len]; /* TODO possible overflow */
 		RAM[kernal_filename+kernal_filename_len] = 0;
