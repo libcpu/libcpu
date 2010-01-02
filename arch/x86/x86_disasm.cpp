@@ -130,44 +130,44 @@ static const char *to_mnemonic(struct x86_instr *instr)
 }
 
 static const char *reg_names[] = {
-	"al",
-	"cl",
-	"dl",
-	"bl",
-	"ah",
-	"ch",
-	"dh",
-	"bh",
+	"%al",
+	"%cl",
+	"%dl",
+	"%bl",
+	"%ah",
+	"%ch",
+	"%dh",
+	"%bh",
 };
 
 static const char *reg_names_wide[] = {
-	"ax",
-	"cx",
-	"dx",
-	"bx",
-	"sp",
-	"bp",
-	"si",
-	"di",
+	"%ax",
+	"%cx",
+	"%dx",
+	"%bx",
+	"%sp",
+	"%bp",
+	"%si",
+	"%di",
 };
 
 static const char *mem_reg_names[] = {
-	"bx+si",
-	"bx+di",
-	"bp+si",
-	"bp+di",
-	"si",
-	"di",
+	"%bx+si",
+	"%bx+di",
+	"%bp+si",
+	"%bp+di",
+	"%si",
+	"%di",
 	NULL,
-	"bx",
+	"%bx",
 };
 
 static const char *seg_override_names[] = {
 	"",
-	"es:",
-	"cs:",
-	"ss:",
-	"ds:",
+	"%es:",
+	"%cs:",
+	"%ss:",
+	"%ds:",
 };
 
 static const char *to_reg_name(int reg_num, int byte_op)
