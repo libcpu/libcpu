@@ -38,7 +38,7 @@ static unsigned long decode_table[256] = {
 	/* 0x80 - 0x87 */
 	0, 0, 0, 0, 0, 0, 0, 0,
 	/* 0x88 - 0x8F */
-	0, INSTR_MOV|ModRM|SrcReg|DstReg, 0, 0, 0, 0, 0, 0,
+	0, INSTR_MOV|ModRM|SrcReg, 0, 0, 0, 0, 0, 0,
 	/* 0x90 - 0x97 */
 	0, 0, 0, 0, 0, 0, 0, 0,
 	/* 0x98 - 0x9F */
@@ -109,11 +109,27 @@ decode_src_operand(struct x86_instr *instr)
 }
 
 static void
-decode_imm_data(struct x86_instr *instr, uint8_t imm_lo, uint8_t imm_hi)
+decode_imm16(struct x86_instr *instr, uint8_t imm_lo, uint8_t imm_hi)
 {
 	instr->imm_data	= (imm_hi << 8) | imm_lo;
 
 	instr->nr_bytes	+= 2;
+}
+
+static void
+decode_disp16(struct x86_instr *instr, uint8_t disp_lo, uint8_t disp_hi)
+{
+	instr->disp	= (disp_hi << 8) | disp_lo;
+
+	instr->nr_bytes	+= 2;
+}
+
+static void
+decode_disp8(struct x86_instr *instr, uint8_t disp)
+{
+	instr->disp	= disp;
+
+	instr->nr_bytes	+= 1;
 }
 
 static void
@@ -123,6 +139,20 @@ decode_modrm_byte(struct x86_instr *instr, uint8_t modrm)
 	instr->reg_opc	= (modrm & 0x38) >> 3;
 	instr->rm	= (modrm & 0x07);
 
+	switch (instr->mod) {
+	case 0x00:
+		instr->flags	|= DstMem;
+		break;
+	case 0x01:
+		instr->flags	|= DstMemDisp8;
+		break;
+	case 0x02:
+		instr->flags	|= DstMemDisp16;
+		break;
+	case 0x03:
+		instr->flags	|= DstReg;
+		break;
+	}
 	instr->nr_bytes++;
 }
 
@@ -162,8 +192,14 @@ done_prefixes:
 	if (instr->flags & ModRM)
 		decode_modrm_byte(instr, RAM[pc++]);
 
+	if (instr->flags & DstMemDisp8)
+		decode_disp8(instr, RAM[pc+0]);
+
+	if (instr->flags & DstMemDisp16)
+		decode_disp16(instr, RAM[pc+0], RAM[pc+1]);
+
 	if (instr->flags & SrcImm16)
-		decode_imm_data(instr, RAM[pc+0], RAM[pc+1]);
+		decode_imm16(instr, RAM[pc+0], RAM[pc+1]);
 
 	decode_src_operand(instr);
 

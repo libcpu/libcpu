@@ -24,7 +24,10 @@ enum x86_instr_flags {
 
 	DstNone			= (1U << 14),
 	DstReg			= (1U << 15),
-	DstMask			= DstNone|DstReg,
+	DstMem			= (1U << 16),
+	DstMemDisp8		= (1U << 17),
+	DstMemDisp16		= (1U << 18),
+	DstMask			= DstNone|DstReg|DstMem|DstMemDisp8|DstMemDisp16,
 };
 
 struct x86_instr {
@@ -34,6 +37,7 @@ struct x86_instr {
 	uint8_t			mod;		/* Mod */
 	uint8_t			rm;		/* R/M */
 	uint8_t			reg_opc;	/* Reg/Opcode */
+	unsigned long		disp;		/* Address displacement */
 	unsigned long		imm_data;	/* Immediate data */
 
 	unsigned long		flags;		/* See enum x86_instr_flags */
