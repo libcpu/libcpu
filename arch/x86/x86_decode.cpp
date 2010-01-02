@@ -139,7 +139,7 @@ static unsigned long decode_table[256] = {
 	/*[0x85]*/	0,
 	/*[0x86]*/	0,
 	/*[0x87]*/	0,
-	/*[0x88]*/	0,
+	/*[0x88]*/	INSTR_MOV|ModRM|SrcReg|ByteOp,
 	/*[0x89]*/	INSTR_MOV|ModRM|SrcReg,
 	/*[0x8A]*/	0,
 	/*[0x8B]*/	0,
