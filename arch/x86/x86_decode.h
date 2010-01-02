@@ -7,6 +7,14 @@ enum x86_operand_type {
 	OP_MEM,
 };
 
+enum x86_seg_override {
+	NO_OVERRIDE,
+	ES_OVERRIDE,
+	CS_OVERRIDE,
+	SS_OVERRIDE,
+	DS_OVERRIDE,
+};
+
 struct x86_operand {
 	enum x86_operand_type	type;
 	uint8_t			reg;
@@ -42,6 +50,7 @@ struct x86_instr {
 	unsigned long		imm_data;	/* Immediate data */
 
 	unsigned long		flags;		/* See enum x86_instr_flags */
+	enum x86_seg_override	seg_override;
 	struct x86_operand	src;
 	struct x86_operand	dst;
 };

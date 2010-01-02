@@ -162,6 +162,14 @@ static const char *mem_reg_names[] = {
 	"bx",
 };
 
+static const char *seg_override_names[] = {
+	"",
+	"es:",
+	"cs:",
+	"ss:",
+	"ds:",
+};
+
 static const char *to_reg_name(int reg_num, int byte_op)
 {
 	if (byte_op)
@@ -183,7 +191,7 @@ print_operand(char *operands, size_t size, struct x86_instr *instr, struct x86_o
 		ret = snprintf(operands, size, "%s", to_reg_name(operand->reg, instr->flags & ByteOp));
 		break;
 	case OP_MEM:
-		ret = snprintf(operands, size, "(%s)", mem_reg_names[operand->reg]);
+		ret = snprintf(operands, size, "%s(%s)", seg_override_names[instr->seg_override], mem_reg_names[operand->reg]);
 		break;
 	}
 	return ret;

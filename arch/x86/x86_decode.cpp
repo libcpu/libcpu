@@ -167,19 +167,28 @@ arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 	instr->nr_bytes = 1;
 
 	/* Prefixes */
+	instr->seg_override	= NO_OVERRIDE;
 	for (;;) {
 		switch (opcode = RAM[pc++]) {
-		case 0x26:	/* ES override */
-		case 0x2e:	/* CS override */
-		case 0x36:	/* SS override */
-		case 0x3e:	/* DS override */
+		case 0x26:
+			instr->seg_override	= ES_OVERRIDE;
+			break;
+		case 0x2e:
+			instr->seg_override	= CS_OVERRIDE;
+			break;
+		case 0x36:
+			instr->seg_override	= SS_OVERRIDE;
+			break;
+		case 0x3e:
+			instr->seg_override	= DS_OVERRIDE;
+			break;
 		case 0xf2:	/* REPNE/REPNZ */
 		case 0xf3:	/* REP/REPE/REPZ */
-			instr->nr_bytes++;
 			break;
 		default:
 			goto done_prefixes;
 		}
+		instr->nr_bytes++;
 	}
 
 done_prefixes:
