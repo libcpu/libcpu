@@ -113,8 +113,10 @@ stat_to_nix_stat(struct stat const *in,
 	timespec_to_nix_timespec(&in->st_mtimespec, &out->st_mtimespec);
 	timespec_to_nix_timespec(&in->st_ctimespec, &out->st_ctimespec);
 #endif
-#if defined (__FreeBSD__) || defined (__NetBSD__) || defined (__OpenBSD__)
+#if defined (__OpenBSD__)
 	timespec_to_nix_timespec(&in->__st_birthtimespec, &out->st_btimespec);
+#elif defined (__FreeBSD__) || defined (__NetBSD__)
+        timespec_to_nix_timespec(&in->st_birthtimespec, &out->st_btimespec);
 #else
 	memset(&out->st_btimespec, 0, sizeof (out->st_btimespec));
 #endif

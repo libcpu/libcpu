@@ -48,6 +48,16 @@
 #define loader_swap_little_64(x) le64toh(x)
 #define loader_swap_big_64(x) be64toh(x)
 
+#elif defined(HAVE_SYS_ENDIAN_H)
+#include <sys/endian.h>
+
+#define loader_swap_little_16(x) le16toh(x)
+#define loader_swap_big_16(x) be16toh(x)
+#define loader_swap_little_32(x) le32toh(x)
+#define loader_swap_big_32(x) be32toh(x)
+#define loader_swap_little_64(x) le64toh(x)
+#define loader_swap_big_64(x) be64toh(x)
+
 #else
 #error "Define endian swap functions."
 #endif

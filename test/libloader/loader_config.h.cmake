@@ -2,5 +2,6 @@
 #define __loader_config_h
 
 #cmakedefine HAVE_ENDIAN_H
+#cmakedefine HAVE_SYS_ENDIAN_H
 
 #endif /* !__loader_config_h */
