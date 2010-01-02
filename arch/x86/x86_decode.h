@@ -1,5 +1,5 @@
-#ifndef I8086_DECODE_H
-#define I8086_DECODE_H
+#ifndef X86_DECODE_H
+#define X86_DECODE_H
 
 enum x86_operand_type {
 	OP_REG,
@@ -76,4 +76,4 @@ arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc);
 int
 arch_8086_instr_length(struct x86_instr *instr);
 
-#endif /* I8086_DECODE_H */
+#endif /* X86_DECODE_H */
