@@ -319,12 +319,12 @@ decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 		uint8_t imm_lo = RAM[new_pc++];
 		uint8_t imm_hi = RAM[new_pc++];
 
-		instr->imm_data	= (int16_t)((imm_hi << 8) | imm_lo);
+		instr->imm_data	= (uint16_t)((imm_hi << 8) | imm_lo);
 		instr->nr_bytes	+= 2;
 		break;
 	}
 	case WidthByte:
-		instr->imm_data	= (int8_t)RAM[new_pc++];
+		instr->imm_data	= (uint8_t)RAM[new_pc++];
 		instr->nr_bytes	+= 1;
 		break;
 	}

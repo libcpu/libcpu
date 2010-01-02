@@ -19,8 +19,8 @@ enum x86_seg_override {
 struct x86_operand {
 	enum x86_operand_type	type;
 	uint8_t			reg;
-	int			disp;
-	uint8_t			imm;
+	int32_t			disp;		/* address displacement can be negative */
+	uint32_t		imm;
 };
 
 enum x86_instr_flags {
@@ -56,8 +56,8 @@ struct x86_instr {
 	uint8_t			mod;		/* Mod */
 	uint8_t			rm;		/* R/M */
 	uint8_t			reg_opc;	/* Reg/Opcode */
-	int			disp;		/* Address displacement */
-	unsigned long		imm_data;	/* Immediate data */
+	uint32_t		disp;		/* Address displacement */
+	uint32_t		imm_data;	/* Immediate data */
 
 	unsigned long		flags;		/* See enum x86_instr_flags */
 	enum x86_seg_override	seg_override;
