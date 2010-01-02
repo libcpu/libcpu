@@ -189,7 +189,7 @@ static const char *to_reg_name(int reg_num, int byte_op)
 static int
 print_operand(char *operands, size_t size, struct x86_instr *instr, struct x86_operand *operand)
 {
-	int ret;
+	int ret = 0;
 
 	switch (operand->type) {
 	case OP_IMM:

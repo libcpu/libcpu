@@ -1,7 +1,7 @@
 PROJECT(m68k)
 
 ADD_CUSTOM_COMMAND(OUTPUT opcode_id.h opcode_id.cpp
-			COMMAND python
+			COMMAND ${PYTHON_EXECUTABLE}
 			ARGS ${CMAKE_CURRENT_SOURCE_DIR}/opcode_id.py
 			${CMAKE_CURRENT_SOURCE_DIR}/opcode_id.tab
 			${CMAKE_CURRENT_BINARY_DIR}/opcode_id.h

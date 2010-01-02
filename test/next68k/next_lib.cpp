@@ -147,7 +147,7 @@
 #define CAST_ADDR(a) ((a)&0xFFFF) /* HACK: limit address bus to 16 bit */
 #define CAST32(a) (*(uint32_t*)(&(a)))
 #define RAM32(a) (CAST32(RAM[CAST_ADDR(a)]))
-#define STORE32(a,b) (RAM32(a) = htonl(b)) 
+#define STORE32(a,b) (RAM32(a) = htonl((uint32_t)(b))) 
 
 void
 init_os(uint8_t *RAM, int argc, char **argv) {

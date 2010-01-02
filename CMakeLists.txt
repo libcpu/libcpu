@@ -40,6 +40,15 @@ IF(MSVC)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
 ENDIF()
 
+#
+# Find Python.
+#
+INCLUDE(FindPythonInterp)
+IF(NOT PYTHONINTERP_FOUND)
+	message(FATAL_ERROR "Could not find Python, but Python 2.6 or later is required")
+ENDIF()
+
+
 SET(LIBCPU_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/libcpu)
 
 #

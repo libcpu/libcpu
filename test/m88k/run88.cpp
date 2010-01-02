@@ -61,7 +61,7 @@ run88_mem_gmap(xec_mem_if_t *self, xec_haddr_t addr, size_t len, unsigned flags)
 	//	(unsigned long long)addr, RAM, (unsigned long long)dist);
 
 	if (sizeof(dist) == sizeof(uint64_t)) {
-		if (dist >= RAM_SIZE && dist < (uintptr_t)(4ULL * 1024 * 1024 * 1024))
+		if (dist >= RAM_SIZE && dist <= (uintptr_t)(4ULL * 1024 * 1024 * 1024 - 1))
 			return (dist);
 		else
 			assert(0 && "The address isn't in the low 4G!");

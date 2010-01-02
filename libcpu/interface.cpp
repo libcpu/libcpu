@@ -323,7 +323,7 @@ void breakpoint() {}
 int
 cpu_run(cpu_t *cpu, debug_function_t debug_function)
 {
-	addr_t pc, orig_pc = 0;
+	addr_t pc = 0, orig_pc = 0;
 	uint32_t i;
 	int ret;
 	bool success;
