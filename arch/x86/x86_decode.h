@@ -44,6 +44,8 @@ enum x86_instr_flags {
 	DstMemDisp8		= (1U << 17),
 	DstMemDisp16		= (1U << 18),
 	DstMask			= DstNone|DstReg|DstMem|DstMemDisp8|DstMemDisp16,
+
+	MemDispMask		= DstMemDisp8|DstMemDisp16,
 };
 
 struct x86_instr {

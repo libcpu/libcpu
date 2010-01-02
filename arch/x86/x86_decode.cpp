@@ -422,7 +422,7 @@ done_prefixes:
 	if (instr->flags & ModRM)
 		decode_modrm_byte(instr, RAM[pc++]);
 
-	if (instr->flags & DstMemDisp8 || instr->flags & DstMemDisp16)
+	if (instr->flags & MemDispMask)
 		decode_disp(instr, RAM, &pc);
 
 	if (instr->flags & SrcImm)
