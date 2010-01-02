@@ -89,6 +89,13 @@ decode_dst_operand(struct x86_instr *instr)
 	case DstMem:
 		operand->type	= OP_MEM;
 		operand->reg	= instr->rm;
+		break;
+	case DstMemDisp8:
+	case DstMemDisp16:
+		operand->type	= OP_MEM_DISP;
+		operand->reg	= instr->rm;
+		operand->disp	= instr->disp;
+		break;
 	}
 }
 
@@ -122,7 +129,7 @@ decode_imm16(struct x86_instr *instr, uint8_t imm_lo, uint8_t imm_hi)
 static void
 decode_disp16(struct x86_instr *instr, uint8_t disp_lo, uint8_t disp_hi)
 {
-	instr->disp	= (disp_hi << 8) | disp_lo;
+	instr->disp	= (int16_t)((disp_hi << 8) | disp_lo);
 
 	instr->nr_bytes	+= 2;
 }
@@ -130,7 +137,7 @@ decode_disp16(struct x86_instr *instr, uint8_t disp_lo, uint8_t disp_hi)
 static void
 decode_disp8(struct x86_instr *instr, uint8_t disp)
 {
-	instr->disp	= disp;
+	instr->disp	= (int8_t)disp;
 
 	instr->nr_bytes	+= 1;
 }

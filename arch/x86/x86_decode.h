@@ -5,6 +5,7 @@ enum x86_operand_type {
 	OP_REG,
 	OP_IMM,
 	OP_MEM,
+	OP_MEM_DISP,
 };
 
 enum x86_seg_override {
@@ -18,6 +19,7 @@ enum x86_seg_override {
 struct x86_operand {
 	enum x86_operand_type	type;
 	uint8_t			reg;
+	int			disp;
 	uint8_t			imm;
 };
 
@@ -46,7 +48,7 @@ struct x86_instr {
 	uint8_t			mod;		/* Mod */
 	uint8_t			rm;		/* R/M */
 	uint8_t			reg_opc;	/* Reg/Opcode */
-	unsigned long		disp;		/* Address displacement */
+	int			disp;		/* Address displacement */
 	unsigned long		imm_data;	/* Immediate data */
 
 	unsigned long		flags;		/* See enum x86_instr_flags */
