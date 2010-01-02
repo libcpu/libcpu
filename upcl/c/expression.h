@@ -59,8 +59,10 @@ public:
 	{ return fromInteger(static_cast<uint64_t>(x), bits); }
 	static expression *fromInteger(int32_t x, unsigned bits)
 	{ return fromInteger(static_cast<int64_t>(x), bits); }
-	// static expression *fromInteger(size_t x, unsigned bits)
-	// { return fromInteger(static_cast<uint64_t>(x), bits); }
+#if defined(__APPLE__) // XXX size_t results ambiguous on darwin, solve this!
+	static expression *fromInteger(size_t x, unsigned bits)
+	{ return fromInteger(static_cast<uint64_t>(x), bits); }
+#endif
 
 public:
 	static expression *Neg(expression *a);
