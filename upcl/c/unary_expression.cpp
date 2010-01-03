@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cmath>
 
+#include "rint.h"
 #include "c/unary_expression.h"
 #include "c/integer_expression.h"
 #include "c/float_expression.h"
