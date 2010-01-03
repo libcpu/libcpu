@@ -52,6 +52,16 @@ enum x86_instr_flags {
 	MemDispMask		= DstMemDispByte|DstMemDispWide,
 };
 
+/*
+ *	Addressing modes.
+ */
+enum x86_addmode {
+	ADDMODE_REG		= SrcReg|DstNone,	/* register */
+	ADDMODE_IMM_REG		= SrcImm|DstReg,	/* immediate -> register */
+	ADDMODE_IMPLIED		= SrcNone|DstNone,	/* no operands */
+	ADDMODE_REG_RM		= SrcReg|ModRM		/* register -> register/memory */
+};
+
 struct x86_instr {
 	unsigned long		nr_bytes;
 
