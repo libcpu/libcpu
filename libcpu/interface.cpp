@@ -179,11 +179,11 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	// XXX there is a better way to do this?
 	std::string data_layout = cpu->exec_engine->getTargetData()->getStringRepresentation();
 	if (data_layout.find("f80") != std::string::npos) {
-		log("INFO: FP80 supported.\n");
+		LOG("INFO: FP80 supported.\n");
 		cpu->flags |= CPU_FLAG_FP80;
 	}
 	if (data_layout.find("f128") != std::string::npos) {
-		log("INFO: FP128 supported.\n");
+		LOG("INFO: FP128 supported.\n");
 		cpu->flags |= CPU_FLAG_FP128;
 	}
 
@@ -290,18 +290,18 @@ cpu_translate_function(cpu_t *cpu)
 		cpu->mod->dump();
 
 	if (cpu->flags_optimize != CPU_OPTIMIZE_NONE) {
-		log("*** Optimizing...");
+		LOG("*** Optimizing...");
 		optimize(cpu);
-		log("done.\n");
+		LOG("done.\n");
 		if (cpu->flags_debug & CPU_DEBUG_PRINT_IR_OPTIMIZED)
 			cpu->mod->dump();
 	}
 
-	log("*** Translating...");
+	LOG("*** Translating...");
 	update_timing(cpu, TIMER_BE, true);
 	cpu->fp[cpu->functions] = cpu->exec_engine->getPointerToFunction(cpu->cur_func);
 	update_timing(cpu, TIMER_BE, false);
-	log("done.\n");
+	LOG("done.\n");
 
 	cpu->functions++;
 }

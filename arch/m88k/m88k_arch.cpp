@@ -72,7 +72,7 @@ arch_m88k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	rf->frf = fp_reg;
 	rf->vrf = NULL;
 
-	log("Motorola 88110 initialized.\n");
+	LOG("Motorola 88110 initialized.\n");
 }
 
 static void

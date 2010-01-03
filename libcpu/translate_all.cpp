@@ -30,14 +30,14 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	addr_t pc;
 	pc = cpu->code_start;
 	while (pc < cpu->code_end) {
-		//log("%04X: %d\n", pc, get_tag(cpu, pc));
+		//LOG("%04X: %d\n", pc, get_tag(cpu, pc));
 		if (is_start_of_basicblock(cpu, pc) && !already_is_an_entry_in_some_function(cpu,pc)) {
 			create_basicblock(cpu, pc, cpu->cur_func, BB_TYPE_NORMAL);
 			bbs++;
 		}
 		pc++;
 	}
-	log("bbs: %d\n", bbs);
+	LOG("bbs: %d\n", bbs);
 
 	// create dispatch basicblock
 	BasicBlock* bb_dispatch = BasicBlock::Create(_CTX(), "dispatch", cpu->cur_func, 0);
@@ -46,7 +46,7 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 
 	for (pc = cpu->code_start; pc < cpu->code_end; pc++) {
 		if (needs_dispatch_entry(cpu, pc) && !(get_tag(cpu, pc) & TAG_TRANSLATED)) {
-			log("info: adding case: %llx\n", pc);
+			LOG("info: adding case: %llx\n", pc);
 			ConstantInt* c = ConstantInt::get(getIntegerType(cpu->info.address_size), pc);
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, pc, bb_ret, BB_TYPE_NORMAL);
 			sw->addCase(c, target);
@@ -71,7 +71,7 @@ printf("already_is_an_entry_in_some_function! %llx\n", pc);
 		if (needs_dispatch_entry(cpu, pc))
 			or_tag(cpu, pc, TAG_TRANSLATED);
 
-		log("basicblock: L%08llx\n", (unsigned long long)pc);
+		LOG("basicblock: L%08llx\n", (unsigned long long)pc);
 
 		do {
 			tag_t dummy1;
@@ -114,7 +114,7 @@ printf("already_is_an_entry_in_some_function! %llx\n", pc);
 		/* link with next basic block if there isn't a control flow instr. already */
 		if (bb_cont) {
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, pc, bb_ret, BB_TYPE_NORMAL);
-			log("info: linking continue $%04llx!\n", (unsigned long long)pc);
+			LOG("info: linking continue $%04llx!\n", (unsigned long long)pc);
 			BranchInst::Create(target, bb_cont);
 		}
     }
