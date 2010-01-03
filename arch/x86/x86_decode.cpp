@@ -191,10 +191,10 @@ static unsigned long decode_table[256] = {
 	/*[0xB9]*/	INSTR_MOV|SrcImm|DstReg|WidthWide,
 	/*[0xBA]*/	INSTR_MOV|SrcImm|DstReg|WidthWide,
 	/*[0xBB]*/	INSTR_MOV|SrcImm|DstReg|WidthWide,
-	/*[0xBC]*/	0,
-	/*[0xBD]*/	0,
-	/*[0xBE]*/	0,
-	/*[0xBF]*/	0,
+	/*[0xBC]*/	INSTR_MOV|SrcImm|DstReg|WidthWide,
+	/*[0xBD]*/	INSTR_MOV|SrcImm|DstReg|WidthWide,
+	/*[0xBE]*/	INSTR_MOV|SrcImm|DstReg|WidthWide,
+	/*[0xBF]*/	INSTR_MOV|SrcImm|DstReg|WidthWide,
 	/*[0xC0]*/	0,
 	/*[0xC1]*/	0,
 	/*[0xC2]*/	0,
@@ -275,7 +275,7 @@ decode_dst_operand(struct x86_instr *instr)
 		if (instr->flags & ModRM)
 			operand->reg	= instr->rm;
 		else
-			operand->reg	= instr->opcode & 0x03;
+			operand->reg	= instr->opcode & 0x07;
 		break;
 	case DstMem:
 		operand->type	= OP_MEM;
