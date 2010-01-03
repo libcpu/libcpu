@@ -180,7 +180,7 @@ static const char *sign_to_str(int n)
 
 static const char *to_reg_name(struct x86_instr *instr, int reg_num)
 {
-	if (instr->flags & WidthByte)
+	if (instr->flags & WIDTH_BYTE)
 		return byte_reg_names[reg_num];
 
 	return word_reg_names[reg_num];
@@ -223,13 +223,13 @@ arch_8086_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 	operands[0] = '\0';
 
 	/* AT&T syntax operands */
-	if (!(instr.flags & SrcNone))
+	if (!(instr.flags & SRC_NONE))
 		len += print_operand(operands+len, sizeof(operands)-len, &instr, &instr.src);
 
-	if (!(instr.flags & SrcNone) && !(instr.flags & DstNone))
+	if (!(instr.flags & SRC_NONE) && !(instr.flags & DST_NONE))
 		len += snprintf(operands+len, sizeof(operands)-len, ",");
 
-	if (!(instr.flags & DstNone))
+	if (!(instr.flags & DST_NONE))
 		len += print_operand(operands+len, sizeof(operands)-len, &instr, &instr.dst);
 
         snprintf(line, max_line, "%s\t%s", to_mnemonic(&instr), operands);

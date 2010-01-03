@@ -28,38 +28,38 @@ struct x86_operand {
 };
 
 enum x86_instr_flags {
-	ModRM			= (1U << 8),
+	MOD_RM			= (1U << 8),
 
 	/* Operand sizes */
-	WidthByte		= (1U << 9),	/* 8 bits */
-	WidthWide		= (1U << 10),	/* 16 bits or 32 bits */
-	WidthMask		= WidthByte|WidthWide,
+	WIDTH_BYTE		= (1U << 9),	/* 8 bits */
+	WIDTH_WIDE		= (1U << 10),	/* 16 bits or 32 bits */
+	WIDTH_MASK		= WIDTH_BYTE|WIDTH_WIDE,
 
 	/* Source operand */
-	SrcNone			= (1U << 11),
-	SrcImm			= (1U << 12),
-	SrcReg			= (1U << 13),
-	SrcMask			= SrcNone|SrcImm|SrcReg,
+	SRC_NONE		= (1U << 11),
+	SRC_IMM			= (1U << 12),
+	SRC_REG			= (1U << 13),
+	SRC_MASK		= SRC_NONE|SRC_IMM|SRC_REG,
 
 	/* Destination operand */
-	DstNone			= (1U << 14),
-	DstReg			= (1U << 15),
-	DstMem			= (1U << 16),
-	DstMemDispByte		= (1U << 17),	/* 8 bits */
-	DstMemDispWide		= (1U << 18),	/* 16 bits or 32 bits */
-	DstMask			= DstNone|DstReg|DstMem|DstMemDispByte|DstMemDispWide,
+	DST_NONE		= (1U << 14),
+	DST_REG			= (1U << 15),
+	DST_MEM			= (1U << 16),
+	DST_MEM_DISP_BYTE	= (1U << 17),	/* 8 bits */
+	DST_MEM_DISP_WIDE	= (1U << 18),	/* 16 bits or 32 bits */
+	DST_MASK		= DST_NONE|DST_REG|DST_MEM|DST_MEM_DISP_BYTE|DST_MEM_DISP_WIDE,
 
-	MemDispMask		= DstMemDispByte|DstMemDispWide,
+	MEM_DISP_MASK		= DST_MEM_DISP_BYTE|DST_MEM_DISP_WIDE,
 };
 
 /*
  *	Addressing modes.
  */
 enum x86_addmode {
-	ADDMODE_REG		= SrcReg|DstNone,	/* register */
-	ADDMODE_IMM_REG		= SrcImm|DstReg,	/* immediate -> register */
-	ADDMODE_IMPLIED		= SrcNone|DstNone,	/* no operands */
-	ADDMODE_REG_RM		= SrcReg|ModRM		/* register -> register/memory */
+	ADDMODE_REG		= SRC_REG|DST_NONE,	/* register */
+	ADDMODE_IMM_REG		= SRC_IMM|DST_REG,	/* immediate -> register */
+	ADDMODE_IMPLIED		= SRC_NONE|DST_NONE,	/* no operands */
+	ADDMODE_REG_RM		= SRC_REG|MOD_RM	/* register -> register/memory */
 };
 
 struct x86_instr {

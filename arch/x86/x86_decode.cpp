@@ -139,8 +139,8 @@ static unsigned long decode_table[256] = {
 	/*[0x85]*/	0,
 	/*[0x86]*/	0,
 	/*[0x87]*/	0,
-	/*[0x88]*/	INSTR_MOV|ADDMODE_REG_RM|WidthByte,
-	/*[0x89]*/	INSTR_MOV|ADDMODE_REG_RM|WidthWide,
+	/*[0x88]*/	INSTR_MOV|ADDMODE_REG_RM|WIDTH_BYTE,
+	/*[0x89]*/	INSTR_MOV|ADDMODE_REG_RM|WIDTH_WIDE,
 	/*[0x8A]*/	0,
 	/*[0x8B]*/	0,
 	/*[0x8C]*/	0,
@@ -187,14 +187,14 @@ static unsigned long decode_table[256] = {
 	/*[0xB5]*/	0,
 	/*[0xB6]*/	0,
 	/*[0xB7]*/	0,
-	/*[0xB8]*/	INSTR_MOV|ADDMODE_IMM_REG|WidthWide,
-	/*[0xB9]*/	INSTR_MOV|ADDMODE_IMM_REG|WidthWide,
-	/*[0xBA]*/	INSTR_MOV|ADDMODE_IMM_REG|WidthWide,
-	/*[0xBB]*/	INSTR_MOV|ADDMODE_IMM_REG|WidthWide,
-	/*[0xBC]*/	INSTR_MOV|ADDMODE_IMM_REG|WidthWide,
-	/*[0xBD]*/	INSTR_MOV|ADDMODE_IMM_REG|WidthWide,
-	/*[0xBE]*/	INSTR_MOV|ADDMODE_IMM_REG|WidthWide,
-	/*[0xBF]*/	INSTR_MOV|ADDMODE_IMM_REG|WidthWide,
+	/*[0xB8]*/	INSTR_MOV|ADDMODE_IMM_REG|WIDTH_WIDE,
+	/*[0xB9]*/	INSTR_MOV|ADDMODE_IMM_REG|WIDTH_WIDE,
+	/*[0xBA]*/	INSTR_MOV|ADDMODE_IMM_REG|WIDTH_WIDE,
+	/*[0xBB]*/	INSTR_MOV|ADDMODE_IMM_REG|WIDTH_WIDE,
+	/*[0xBC]*/	INSTR_MOV|ADDMODE_IMM_REG|WIDTH_WIDE,
+	/*[0xBD]*/	INSTR_MOV|ADDMODE_IMM_REG|WIDTH_WIDE,
+	/*[0xBE]*/	INSTR_MOV|ADDMODE_IMM_REG|WIDTH_WIDE,
+	/*[0xBF]*/	INSTR_MOV|ADDMODE_IMM_REG|WIDTH_WIDE,
 	/*[0xC0]*/	0,
 	/*[0xC1]*/	0,
 	/*[0xC2]*/	0,
@@ -266,23 +266,23 @@ decode_dst_operand(struct x86_instr *instr)
 {
 	struct x86_operand *operand = &instr->dst;
 
-	switch (instr->flags & DstMask) {
-	case DstNone:
+	switch (instr->flags & DST_MASK) {
+	case DST_NONE:
 		break;
-	case DstReg:
+	case DST_REG:
 		operand->type	= OP_REG;
 
-		if (instr->flags & ModRM)
+		if (instr->flags & MOD_RM)
 			operand->reg	= instr->rm;
 		else
 			operand->reg	= instr->opcode & 0x07;
 		break;
-	case DstMem:
+	case DST_MEM:
 		operand->type	= OP_MEM;
 		operand->reg	= instr->rm;
 		break;
-	case DstMemDispByte:
-	case DstMemDispWide:
+	case DST_MEM_DISP_BYTE:
+	case DST_MEM_DISP_WIDE:
 		operand->type	= OP_MEM_DISP;
 		operand->reg	= instr->rm;
 		operand->disp	= instr->disp;
@@ -295,17 +295,17 @@ decode_src_operand(struct x86_instr *instr)
 {
 	struct x86_operand *operand = &instr->src;
 
-	switch (instr->flags & SrcMask) {
-	case SrcNone:
+	switch (instr->flags & SRC_MASK) {
+	case SRC_NONE:
 		break;
-	case SrcImm:
+	case SRC_IMM:
 		operand->type	= OP_IMM;
 		operand->imm	= instr->imm_data;
 		break;
-	case SrcReg:
+	case SRC_REG:
 		operand->type	= OP_REG;
 
-		if (instr->flags & ModRM)
+		if (instr->flags & MOD_RM)
 			operand->reg	= instr->reg_opc;
 		else
 			operand->reg	= instr->opcode & 0x07;
@@ -318,8 +318,8 @@ decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
 	addr_t new_pc = *pc;
 
-	switch (instr->flags & WidthMask) {
-	case WidthWide: {
+	switch (instr->flags & WIDTH_MASK) {
+	case WIDTH_WIDE: {
 		uint8_t imm_lo = RAM[new_pc++];
 		uint8_t imm_hi = RAM[new_pc++];
 
@@ -327,7 +327,7 @@ decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 		instr->nr_bytes	+= 2;
 		break;
 	}
-	case WidthByte:
+	case WIDTH_BYTE:
 		instr->imm_data	= (uint8_t)RAM[new_pc++];
 		instr->nr_bytes	+= 1;
 		break;
@@ -340,8 +340,8 @@ decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
 	addr_t new_pc = *pc;
 
-	switch (instr->flags & DstMask) {
-	case DstMemDispWide: {
+	switch (instr->flags & DST_MASK) {
+	case DST_MEM_DISP_WIDE: {
 		uint8_t disp_lo = RAM[new_pc++];
 		uint8_t disp_hi = RAM[new_pc++];
 
@@ -349,7 +349,7 @@ decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 		instr->nr_bytes	+= 2;
 		break;
 	}
-	case DstMemDispByte:
+	case DST_MEM_DISP_BYTE:
 		instr->disp	= (int8_t)RAM[new_pc++];
 		instr->nr_bytes	+= 1;
 		break;
@@ -366,16 +366,16 @@ decode_modrm_byte(struct x86_instr *instr, uint8_t modrm)
 
 	switch (instr->mod) {
 	case 0x00:
-		instr->flags	|= DstMem;
+		instr->flags	|= DST_MEM;
 		break;
 	case 0x01:
-		instr->flags	|= DstMemDispByte;
+		instr->flags	|= DST_MEM_DISP_BYTE;
 		break;
 	case 0x02:
-		instr->flags	|= DstMemDispWide;
+		instr->flags	|= DST_MEM_DISP_WIDE;
 		break;
 	case 0x03:
-		instr->flags	|= DstReg;
+		instr->flags	|= DST_REG;
 		break;
 	}
 	instr->nr_bytes++;
@@ -423,13 +423,13 @@ done_prefixes:
 	if (instr->flags == 0)	/* Unrecognized? */
 		return -1;
 
-	if (instr->flags & ModRM)
+	if (instr->flags & MOD_RM)
 		decode_modrm_byte(instr, RAM[pc++]);
 
-	if (instr->flags & MemDispMask)
+	if (instr->flags & MEM_DISP_MASK)
 		decode_disp(instr, RAM, &pc);
 
-	if (instr->flags & SrcImm)
+	if (instr->flags & SRC_IMM)
 		decode_imm(instr, RAM, &pc);
 
 	decode_src_operand(instr);
