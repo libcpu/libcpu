@@ -103,6 +103,9 @@ public:
 public:
 	virtual bool add_uow(register_def *rdef);
 	virtual bool is_uow() const;
+    
+protected:
+	virtual ~register_def() {}
 };
 
 } }

@@ -14,6 +14,9 @@ public:
 		register_def::change_flags(REGISTER_FLAG_HARDWIRED);
 		register_def::set_expression(expression);
 	}
+    
+protected:
+	virtual ~hardwired_sub_register_def() {}
 };
 
 } }

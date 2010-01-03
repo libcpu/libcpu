@@ -125,6 +125,9 @@ public:
 	inline bool is_normal() const {
 		return (!is_macro() && !is_meta() && !is_repeat());
 	}
+    
+protected:
+	virtual ~identifier() {}
 };
 
 class qualified_identifier : public token {

@@ -13,6 +13,9 @@ public:
 	{
 		register_def::set_binding(special);
 	}
+    
+protected:
+	virtual ~bound_register_def() {}
 };
 
 } }

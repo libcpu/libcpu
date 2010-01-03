@@ -26,6 +26,9 @@ public:
 
 	virtual identifier *get_base();
 	virtual identifier const *get_base() const;
+    
+protected:
+	virtual ~identifier() {}
 };
 
 identifier::identifier(identifier *base, std::string const &name)

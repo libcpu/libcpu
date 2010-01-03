@@ -12,6 +12,9 @@ public:
 			c::type *type)
 		: register_def(REGISTER_FLAG_HARDWIRED, name, type)
 	{ register_def::set_expression(expression); }
+    
+protected:
+	virtual ~hardwired_register_def() {}
 };
 
 } }

@@ -3,6 +3,9 @@ project(upcl)
 include(FindFLEX)
 include(FindBISON)
 
+# Don't use -Werror
+REMOVE_DEFINITIONS(-Werror)
+
 include_directories(BEFORE
   ${PROJECT_SOURCE_DIR}
   ${CMAKE_CURRENT_BINARY_DIR})

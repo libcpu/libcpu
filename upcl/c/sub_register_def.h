@@ -64,6 +64,9 @@ public:
 	virtual expression *get_bit_count() const;
 
 	virtual register_def *get_master_register() const;
+    
+protected:
+	virtual ~sub_register_def() {}
 };
 
 } }

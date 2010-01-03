@@ -489,11 +489,11 @@ bit_combine_expression::make_same_layout(bit_combine_expression *&expr1,
 	size_t              size_expr2 = expr2->get_type()->get_bits();
 
 	// see how both expressions are splitted.
-	for (expression_vector::const_reverse_iterator i = expr1->m_exprs.rbegin();
+	for (expression_vector::reverse_iterator i = expr1->m_exprs.rbegin();
 			i != expr1->m_exprs.rend(); i++)
 		bits1.push_back((*i)->get_type()->get_bits());
 
-	for (expression_vector::const_reverse_iterator i = expr2->m_exprs.rbegin();
+	for (expression_vector::reverse_iterator i = expr2->m_exprs.rbegin();
 			i != expr2->m_exprs.rend(); i++)
 		bits2.push_back((*i)->get_type()->get_bits());
 
