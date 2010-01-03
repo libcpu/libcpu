@@ -2,11 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef _WIN32
-#include <direct.h>  // getcwd
-#else
 #include <unistd.h>
-#endif
 #include "stat.h"
 #include "readdir.h"
 #define SETZ(a) Z=a;
