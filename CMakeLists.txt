@@ -37,7 +37,7 @@ INCLUDE(CMake/FindLLVM.cmake)
 
 INCLUDE(CMake/BuildConfigH.cmake)
 IF(MSVC)
-	add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
+	add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -Dinline=__inline)
 	include_directories(libcpu/win32/msvc)
 ENDIF()
 
