@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "libcpu.h"
 #include "arm_internal.h"
 #include "frontend.h"
