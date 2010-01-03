@@ -6,7 +6,7 @@ using namespace upcl;
 extern int yylex();
 extern void yyerror(char const *);
 
-extern ast::token *g_root;
+extern ast::token_list *g_root;
 
 %}
 
