@@ -499,8 +499,8 @@ bit_combine_expression::make_same_layout(bit_combine_expression *&expr1,
 
 	// prepare splits
 	size_t n, m;
-	ssize_t delta_expr1 = 0;
-	ssize_t delta_expr2 = 0;
+	ptrdiff_t delta_expr1 = 0;
+	ptrdiff_t delta_expr2 = 0;
 
 	for (n = m = 0; n < bits1.size() && m < bits2.size();) {
 		size_t size1 = bits1[n] + delta_expr1;
