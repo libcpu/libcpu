@@ -38,6 +38,10 @@ INCLUDE(CMake/FindLLVM.cmake)
 INCLUDE(CMake/BuildConfigH.cmake)
 IF(MSVC)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -Dinline=__inline)
+    # disable warnings for LLVM
+	add_definitions(-wd4146) # unary minus operator applied to unsigned type, result still unsigned
+    add_definitions(-wd4800) # forcing value to bool 'true' or 'false' (performance warning)
+    add_definitions(-wd4355) # 'this' : used in base member initializer list
 	include_directories(libcpu/win32/msvc)
 ENDIF()
 

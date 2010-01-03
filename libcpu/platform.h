@@ -9,10 +9,6 @@
 #  if defined(_MSC_VER)
 #    define snprintf                 _snprintf
 #    define __func__                 __FUNCTION__
-     /* disable warnings for LLVM */
-#    pragma warning(disable: 4146) /* unary minus operator applied to unsigned type, result still unsigned */
-#    pragma warning(disable: 4800) /* forcing value to bool 'true' or 'false' (performance warning) */
-#    pragma warning(disable: 4355) /* 'this' : used in base member initializer list */
 #  endif /* defined(_MSC_VER) */
 #endif /* defined(_WIN32) */
 
