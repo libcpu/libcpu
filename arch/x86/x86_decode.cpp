@@ -83,22 +83,22 @@ static unsigned long decode_table[256] = {
 	/*[0x4D]*/	0,
 	/*[0x4E]*/	0,
 	/*[0x4F]*/	0,
-	/*[0x50]*/	0,
-	/*[0x51]*/	0,
-	/*[0x52]*/	0,
-	/*[0x53]*/	0,
-	/*[0x54]*/	0,
-	/*[0x55]*/	0,
-	/*[0x56]*/	0,
-	/*[0x57]*/	0,
-	/*[0x58]*/	0,
-	/*[0x59]*/	0,
-	/*[0x5A]*/	0,
-	/*[0x5B]*/	0,
-	/*[0x5C]*/	0,
-	/*[0x5D]*/	0,
-	/*[0x5E]*/	0,
-	/*[0x5F]*/	0,
+	/*[0x50]*/	INSTR_PUSH|SrcReg|DstNone,
+	/*[0x51]*/	INSTR_PUSH|SrcReg|DstNone,
+	/*[0x52]*/	INSTR_PUSH|SrcReg|DstNone,
+	/*[0x53]*/	INSTR_PUSH|SrcReg|DstNone,
+	/*[0x54]*/	INSTR_PUSH|SrcReg|DstNone,
+	/*[0x55]*/	INSTR_PUSH|SrcReg|DstNone,
+	/*[0x56]*/	INSTR_PUSH|SrcReg|DstNone,
+	/*[0x57]*/	INSTR_PUSH|SrcReg|DstNone,
+	/*[0x58]*/	INSTR_POP|SrcReg|DstNone,
+	/*[0x59]*/	INSTR_POP|SrcReg|DstNone,
+	/*[0x5A]*/	INSTR_POP|SrcReg|DstNone,
+	/*[0x5B]*/	INSTR_POP|SrcReg|DstNone,
+	/*[0x5C]*/	INSTR_POP|SrcReg|DstNone,
+	/*[0x5D]*/	INSTR_POP|SrcReg|DstNone,
+	/*[0x5E]*/	INSTR_POP|SrcReg|DstNone,
+	/*[0x5F]*/	INSTR_POP|SrcReg|DstNone,
 	/*[0x60]*/	0,
 	/*[0x61]*/	0,
 	/*[0x62]*/	0,
@@ -304,7 +304,11 @@ decode_src_operand(struct x86_instr *instr)
 		break;
 	case SrcReg:
 		operand->type	= OP_REG;
-		operand->reg	= instr->reg_opc;
+
+		if (instr->flags & ModRM)
+			operand->reg	= instr->reg_opc;
+		else
+			operand->reg	= instr->opcode & 0x07;
 		break;
 	}
 }
