@@ -1,4 +1,7 @@
+#include "llvm/Instructions.h"
+
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "frontend.h"
 #include "arm_internal.h"
 #include "tag.h"

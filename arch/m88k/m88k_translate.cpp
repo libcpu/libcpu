@@ -1,6 +1,9 @@
+#include "llvm/Instructions.h"
+
 #define OPT_LOCAL_REGISTERS //XXX
 
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "frontend.h"
 #include "arch/m88k/libcpu_m88k.h"
 #include "m88k_internal.h"

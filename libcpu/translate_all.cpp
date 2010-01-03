@@ -4,7 +4,12 @@
  * This translates all known code by creating basic blocks and
  * filling them with instructions.
  */
+
+#include "llvm/BasicBlock.h"
+#include "llvm/Instructions.h"
+
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "basicblock.h"
 #include "disasm.h"
 #include "tag.h"

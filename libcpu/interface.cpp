@@ -7,8 +7,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "llvm/Analysis/Verifier.h"
+#include "llvm/ExecutionEngine/JIT.h"
+#include "llvm/LinkAllPasses.h"
+#include "llvm/Module.h"
+#include "llvm/Target/TargetData.h"
+#include "llvm/Target/TargetSelect.h"
+
 /* project global headers */
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "tag.h"
 #include "translate_all.h"
 #include "translate_singlestep.h"

@@ -3,7 +3,12 @@
  *
  * Basic block handling (create, lookup)
  */
+
+#include "llvm/Constants.h"
+#include "llvm/Instructions.h"
+
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "basicblock.h"
 #include "tag.h"
 

@@ -1,4 +1,7 @@
+#include "llvm/Instructions.h"
+
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "6502_isa.h"
 #include "6502_cc.h"
 #include "frontend.h"
