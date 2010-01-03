@@ -36,12 +36,16 @@ main(int argc, char **argv)
 
 	int singlestep = SINGLESTEP_NONE;
 	int log = 1;
-	int print_ir = 1;
+	int print_ir = 0;
 
 	/* parameter parsing */
 	if (argc < 2) {
-		printf("Usage: %s [binary]\n", argv[0]);
+		printf("Usage: %s [--print-ir] <binary>\n", argv[0]);
 		return 0;
+	}
+	if (!strcmp(argv[1], "--print-ir")) {
+		print_ir = 1;
+		argv++;
 	}
 	executable = argv[1];
 	arch = CPU_ARCH_8086;
