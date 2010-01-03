@@ -18,6 +18,7 @@ using namespace upcl;
 using upcl::sema::register_file_builder;
 using upcl::sema::register_dep_tracker;
 using upcl::sema::register_info;
+using upcl::sema::register_info_vector;
 
 
 #include "cg/c_register_set.cpp"
