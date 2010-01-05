@@ -261,6 +261,20 @@ static unsigned long decode_table[256] = {
 	/*[0xFF]*/	0,
 };
 
+static uint8_t
+decode_dst_reg(struct x86_instr *instr)
+{
+	uint8_t ret;
+
+	if (!(instr->flags & MOD_RM))
+		return instr->opcode & 0x07;
+
+	if (instr->flags & DIR_REVERSED)
+		return instr->rm;
+
+	return instr->reg_opc;
+}
+
 static void
 decode_dst_operand(struct x86_instr *instr)
 {
@@ -271,14 +285,7 @@ decode_dst_operand(struct x86_instr *instr)
 		break;
 	case DST_REG:
 		operand->type	= OP_REG;
-
-		if (instr->flags & MOD_RM) {
-			if (instr->flags & DIR_REVERSED)
-				operand->reg	= instr->rm;
-			else
-				operand->reg	= instr->reg_opc;
-		} else
-			operand->reg	= instr->opcode & 0x07;
+		operand->reg	= decode_dst_reg(instr);
 		break;
 	case DST_MEM:
 		operand->type	= OP_MEM;
@@ -291,6 +298,18 @@ decode_dst_operand(struct x86_instr *instr)
 		operand->disp	= instr->disp;
 		break;
 	}
+}
+
+static uint8_t
+decode_src_reg(struct x86_instr *instr)
+{
+	if (!(instr->flags & MOD_RM))
+		return instr->opcode & 0x07;
+
+	if (instr->flags & DIR_REVERSED)
+		return instr->reg_opc;
+
+	return instr->rm;
 }
 
 static void
@@ -307,14 +326,7 @@ decode_src_operand(struct x86_instr *instr)
 		break;
 	case SRC_REG:
 		operand->type	= OP_REG;
-
-		if (instr->flags & MOD_RM) {
-			if (instr->flags & DIR_REVERSED)
-				operand->reg	= instr->reg_opc;
-			else
-				operand->reg	= instr->rm;
-		} else
-			operand->reg	= instr->opcode & 0x07;
+		operand->reg	= decode_src_reg(instr);
 		break;
 	case SRC_MEM:
 		operand->type	= OP_MEM;
