@@ -141,8 +141,8 @@ static unsigned long decode_table[256] = {
 	/*[0x87]*/	0,
 	/*[0x88]*/	INSTR_MOV | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0x89]*/	INSTR_MOV | ADDMODE_REG_RM | WIDTH_FULL,
-	/*[0x8A]*/	0,
-	/*[0x8B]*/	0,
+	/*[0x8A]*/	INSTR_MOV | ADDMODE_RM_REG | WIDTH_BYTE,
+	/*[0x8B]*/	INSTR_MOV | ADDMODE_RM_REG | WIDTH_FULL,
 	/*[0x8C]*/	0,
 	/*[0x8D]*/	0,
 	/*[0x8E]*/	0,
@@ -272,9 +272,12 @@ decode_dst_operand(struct x86_instr *instr)
 	case DST_REG:
 		operand->type	= OP_REG;
 
-		if (instr->flags & MOD_RM)
-			operand->reg	= instr->rm;
-		else
+		if (instr->flags & MOD_RM) {
+			if (instr->flags & DIR_REVERSED)
+				operand->reg	= instr->rm;
+			else
+				operand->reg	= instr->reg_opc;
+		} else
 			operand->reg	= instr->opcode & 0x07;
 		break;
 	case DST_MEM:
@@ -305,11 +308,23 @@ decode_src_operand(struct x86_instr *instr)
 	case SRC_REG:
 		operand->type	= OP_REG;
 
-		if (instr->flags & MOD_RM)
-			operand->reg	= instr->reg_opc;
-		else
+		if (instr->flags & MOD_RM) {
+			if (instr->flags & DIR_REVERSED)
+				operand->reg	= instr->reg_opc;
+			else
+				operand->reg	= instr->rm;
+		} else
 			operand->reg	= instr->opcode & 0x07;
 		break;
+	case SRC_MEM:
+		operand->type	= OP_MEM;
+		operand->reg	= instr->rm;
+		break;
+	case SRC_MEM_DISP_BYTE:
+	case SRC_MEM_DISP_FULL:
+		operand->type	= OP_MEM_DISP;
+		operand->reg	= instr->rm;
+		operand->disp	= instr->disp;
 	}
 }
 
@@ -340,7 +355,8 @@ decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
 	addr_t new_pc = *pc;
 
-	switch (instr->flags & DST_MASK) {
+	switch (instr->flags & MEM_DISP_MASK) {
+	case SRC_MEM_DISP_FULL:
 	case DST_MEM_DISP_FULL: {
 		uint8_t disp_lo = RAM[new_pc++];
 		uint8_t disp_hi = RAM[new_pc++];
@@ -349,6 +365,7 @@ decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 		instr->nr_bytes	+= 2;
 		break;
 	}
+	case SRC_MEM_DISP_BYTE:
 	case DST_MEM_DISP_BYTE:
 		instr->disp	= (int8_t)RAM[new_pc++];
 		instr->nr_bytes	+= 1;
@@ -357,6 +374,20 @@ decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 	*pc = new_pc;
 }
 
+static unsigned long mod_dst_decode[] = {
+	/*[0x00]*/	DST_MEM,
+	/*[0x01]*/	DST_MEM_DISP_BYTE,
+	/*[0x02]*/	DST_MEM_DISP_FULL,
+	/*[0x03]*/	DST_REG,
+};
+
+static unsigned long mod_src_decode[] = {
+	/*[0x00]*/	SRC_MEM,
+	/*[0x01]*/	SRC_MEM_DISP_BYTE,
+	/*[0x02]*/	SRC_MEM_DISP_FULL,
+	/*[0x03]*/	SRC_REG,
+};
+
 static void
 decode_modrm_byte(struct x86_instr *instr, uint8_t modrm)
 {
@@ -364,20 +395,11 @@ decode_modrm_byte(struct x86_instr *instr, uint8_t modrm)
 	instr->reg_opc	= (modrm & 0x38) >> 3;
 	instr->rm	= (modrm & 0x07);
 
-	switch (instr->mod) {
-	case 0x00:
-		instr->flags	|= DST_MEM;
-		break;
-	case 0x01:
-		instr->flags	|= DST_MEM_DISP_BYTE;
-		break;
-	case 0x02:
-		instr->flags	|= DST_MEM_DISP_FULL;
-		break;
-	case 0x03:
-		instr->flags	|= DST_REG;
-		break;
-	}
+	if (instr->flags & DIR_REVERSED)
+		instr->flags	|= mod_dst_decode[instr->mod];
+	else
+		instr->flags	|= mod_src_decode[instr->mod];
+
 	instr->nr_bytes++;
 }
 

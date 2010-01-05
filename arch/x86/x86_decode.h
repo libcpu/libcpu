@@ -29,37 +29,42 @@ struct x86_operand {
 
 enum x86_instr_flags {
 	MOD_RM			= (1U << 8),
+	DIR_REVERSED		= (1U << 9),
 
 	/* Operand sizes */
-	WIDTH_BYTE		= (1U << 9),	/* 8 bits */
-	WIDTH_FULL		= (1U << 10),	/* 16 bits or 32 bits */
+	WIDTH_BYTE		= (1U << 10),	/* 8 bits */
+	WIDTH_FULL		= (1U << 11),	/* 16 bits or 32 bits */
 	WIDTH_MASK		= WIDTH_BYTE|WIDTH_FULL,
 
 	/* Source operand */
-	SRC_NONE		= (1U << 11),
-	SRC_IMM			= (1U << 12),
-	SRC_REG			= (1U << 13),
-	SRC_MASK		= SRC_NONE|SRC_IMM|SRC_REG,
+	SRC_NONE		= (1U << 12),
+	SRC_IMM			= (1U << 13),
+	SRC_REG			= (1U << 14),
+	SRC_MEM			= (1U << 15),
+	SRC_MEM_DISP_BYTE	= (1U << 16),
+	SRC_MEM_DISP_FULL	= (1U << 17),
+	SRC_MASK		= SRC_NONE|SRC_IMM|SRC_REG|SRC_MEM|SRC_MEM_DISP_BYTE|SRC_MEM_DISP_FULL,
 
 	/* Destination operand */
-	DST_NONE		= (1U << 14),
-	DST_REG			= (1U << 15),
-	DST_MEM			= (1U << 16),
-	DST_MEM_DISP_BYTE	= (1U << 17),	/* 8 bits */
-	DST_MEM_DISP_FULL	= (1U << 18),	/* 16 bits or 32 bits */
+	DST_NONE		= (1U << 18),
+	DST_REG			= (1U << 19),
+	DST_MEM			= (1U << 20),
+	DST_MEM_DISP_BYTE	= (1U << 21),	/* 8 bits */
+	DST_MEM_DISP_FULL	= (1U << 22),	/* 16 bits or 32 bits */
 	DST_MASK		= DST_NONE|DST_REG|DST_MEM|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
 
-	MEM_DISP_MASK		= DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
+	MEM_DISP_MASK		= SRC_MEM_DISP_BYTE|SRC_MEM_DISP_FULL|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
 };
 
 /*
  *	Addressing modes.
  */
 enum x86_addmode {
-	ADDMODE_REG		= SRC_REG|DST_NONE,	/* register */
-	ADDMODE_IMM_REG		= SRC_IMM|DST_REG,	/* immediate -> register */
-	ADDMODE_IMPLIED		= SRC_NONE|DST_NONE,	/* no operands */
-	ADDMODE_REG_RM		= SRC_REG|MOD_RM	/* register -> register/memory */
+	ADDMODE_REG		= SRC_REG|DST_NONE,		/* register */
+	ADDMODE_IMM_REG		= SRC_IMM|DST_REG,		/* immediate -> register */
+	ADDMODE_IMPLIED		= SRC_NONE|DST_NONE,		/* no operands */
+	ADDMODE_REG_RM		= SRC_REG|MOD_RM|DIR_REVERSED,	/* register -> register/memory */
+	ADDMODE_RM_REG		= DST_REG|MOD_RM,		/* register/memory -> register */
 };
 
 struct x86_instr {
