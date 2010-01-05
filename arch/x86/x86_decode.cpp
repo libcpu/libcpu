@@ -83,22 +83,22 @@ static unsigned long decode_table[256] = {
 	/*[0x4D]*/	0,
 	/*[0x4E]*/	0,
 	/*[0x4F]*/	0,
-	/*[0x50]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x51]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x52]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x53]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x54]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x55]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x56]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x57]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x58]*/	INSTR_POP | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x59]*/	INSTR_POP | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x5A]*/	INSTR_POP | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x5B]*/	INSTR_POP | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x5C]*/	INSTR_POP | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x5D]*/	INSTR_POP | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x5E]*/	INSTR_POP | ADDMODE_REG | WIDTH_WIDE,
-	/*[0x5F]*/	INSTR_POP | ADDMODE_REG | WIDTH_WIDE,
+	/*[0x50]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
+	/*[0x51]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
+	/*[0x52]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
+	/*[0x53]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
+	/*[0x54]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
+	/*[0x55]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
+	/*[0x56]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
+	/*[0x57]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
+	/*[0x58]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
+	/*[0x59]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
+	/*[0x5A]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
+	/*[0x5B]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
+	/*[0x5C]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
+	/*[0x5D]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
+	/*[0x5E]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
+	/*[0x5F]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
 	/*[0x60]*/	INSTR_PUSHA | ADDMODE_IMPLIED,
 	/*[0x61]*/	INSTR_POPA | ADDMODE_IMPLIED,
 	/*[0x62]*/	0,
@@ -140,7 +140,7 @@ static unsigned long decode_table[256] = {
 	/*[0x86]*/	0,
 	/*[0x87]*/	0,
 	/*[0x88]*/	INSTR_MOV | ADDMODE_REG_RM | WIDTH_BYTE,
-	/*[0x89]*/	INSTR_MOV | ADDMODE_REG_RM | WIDTH_WIDE,
+	/*[0x89]*/	INSTR_MOV | ADDMODE_REG_RM | WIDTH_FULL,
 	/*[0x8A]*/	0,
 	/*[0x8B]*/	0,
 	/*[0x8C]*/	0,
@@ -187,14 +187,14 @@ static unsigned long decode_table[256] = {
 	/*[0xB5]*/	0,
 	/*[0xB6]*/	0,
 	/*[0xB7]*/	0,
-	/*[0xB8]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_WIDE,
-	/*[0xB9]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_WIDE,
-	/*[0xBA]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_WIDE,
-	/*[0xBB]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_WIDE,
-	/*[0xBC]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_WIDE,
-	/*[0xBD]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_WIDE,
-	/*[0xBE]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_WIDE,
-	/*[0xBF]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_WIDE,
+	/*[0xB8]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
+	/*[0xB9]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
+	/*[0xBA]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
+	/*[0xBB]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
+	/*[0xBC]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
+	/*[0xBD]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
+	/*[0xBE]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
+	/*[0xBF]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
 	/*[0xC0]*/	0,
 	/*[0xC1]*/	0,
 	/*[0xC2]*/	0,
@@ -282,7 +282,7 @@ decode_dst_operand(struct x86_instr *instr)
 		operand->reg	= instr->rm;
 		break;
 	case DST_MEM_DISP_BYTE:
-	case DST_MEM_DISP_WIDE:
+	case DST_MEM_DISP_FULL:
 		operand->type	= OP_MEM_DISP;
 		operand->reg	= instr->rm;
 		operand->disp	= instr->disp;
@@ -319,7 +319,7 @@ decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 	addr_t new_pc = *pc;
 
 	switch (instr->flags & WIDTH_MASK) {
-	case WIDTH_WIDE: {
+	case WIDTH_FULL: {
 		uint8_t imm_lo = RAM[new_pc++];
 		uint8_t imm_hi = RAM[new_pc++];
 
@@ -341,7 +341,7 @@ decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 	addr_t new_pc = *pc;
 
 	switch (instr->flags & DST_MASK) {
-	case DST_MEM_DISP_WIDE: {
+	case DST_MEM_DISP_FULL: {
 		uint8_t disp_lo = RAM[new_pc++];
 		uint8_t disp_hi = RAM[new_pc++];
 
@@ -372,7 +372,7 @@ decode_modrm_byte(struct x86_instr *instr, uint8_t modrm)
 		instr->flags	|= DST_MEM_DISP_BYTE;
 		break;
 	case 0x02:
-		instr->flags	|= DST_MEM_DISP_WIDE;
+		instr->flags	|= DST_MEM_DISP_FULL;
 		break;
 	case 0x03:
 		instr->flags	|= DST_REG;

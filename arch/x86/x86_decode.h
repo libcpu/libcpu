@@ -32,8 +32,8 @@ enum x86_instr_flags {
 
 	/* Operand sizes */
 	WIDTH_BYTE		= (1U << 9),	/* 8 bits */
-	WIDTH_WIDE		= (1U << 10),	/* 16 bits or 32 bits */
-	WIDTH_MASK		= WIDTH_BYTE|WIDTH_WIDE,
+	WIDTH_FULL		= (1U << 10),	/* 16 bits or 32 bits */
+	WIDTH_MASK		= WIDTH_BYTE|WIDTH_FULL,
 
 	/* Source operand */
 	SRC_NONE		= (1U << 11),
@@ -46,10 +46,10 @@ enum x86_instr_flags {
 	DST_REG			= (1U << 15),
 	DST_MEM			= (1U << 16),
 	DST_MEM_DISP_BYTE	= (1U << 17),	/* 8 bits */
-	DST_MEM_DISP_WIDE	= (1U << 18),	/* 16 bits or 32 bits */
-	DST_MASK		= DST_NONE|DST_REG|DST_MEM|DST_MEM_DISP_BYTE|DST_MEM_DISP_WIDE,
+	DST_MEM_DISP_FULL	= (1U << 18),	/* 16 bits or 32 bits */
+	DST_MASK		= DST_NONE|DST_REG|DST_MEM|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
 
-	MEM_DISP_MASK		= DST_MEM_DISP_BYTE|DST_MEM_DISP_WIDE,
+	MEM_DISP_MASK		= DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
 };
 
 /*
