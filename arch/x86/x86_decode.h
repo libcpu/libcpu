@@ -48,10 +48,11 @@ enum x86_instr_flags {
 	/* Destination operand */
 	DST_NONE		= (1U << 18),
 	DST_REG			= (1U << 19),
-	DST_MEM			= (1U << 20),
-	DST_MEM_DISP_BYTE	= (1U << 21),	/* 8 bits */
-	DST_MEM_DISP_FULL	= (1U << 22),	/* 16 bits or 32 bits */
-	DST_MASK		= DST_NONE|DST_REG|DST_MEM|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
+	DST_ACC			= (1U << 20),	/* AL/AX */
+	DST_MEM			= (1U << 21),
+	DST_MEM_DISP_BYTE	= (1U << 22),	/* 8 bits */
+	DST_MEM_DISP_FULL	= (1U << 23),	/* 16 bits or 32 bits */
+	DST_MASK		= DST_NONE|DST_REG|DST_ACC|DST_MEM|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
 
 	MEM_DISP_MASK		= SRC_MEM_DISP_BYTE|SRC_MEM_DISP_FULL|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
 };
@@ -65,6 +66,7 @@ enum x86_addmode {
 	ADDMODE_IMPLIED		= SRC_NONE|DST_NONE,		/* no operands */
 	ADDMODE_REG_RM		= SRC_REG|MOD_RM|DIR_REVERSED,	/* register -> register/memory */
 	ADDMODE_RM_REG		= DST_REG|MOD_RM,		/* register/memory -> register */
+	ADDMODE_IMM_ACC		= SRC_IMM|DST_ACC,		/* immediate -> AL/AX */
 };
 
 struct x86_instr {

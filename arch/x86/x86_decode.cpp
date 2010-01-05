@@ -7,8 +7,8 @@ static unsigned long decode_table[256] = {
 	/*[0x1]*/	INSTR_ADD | ADDMODE_REG_RM | WIDTH_FULL,
 	/*[0x2]*/	INSTR_ADD | ADDMODE_RM_REG | WIDTH_BYTE,
 	/*[0x3]*/	INSTR_ADD | ADDMODE_RM_REG | WIDTH_FULL,
-	/*[0x4]*/	0,
-	/*[0x5]*/	0,
+	/*[0x4]*/	INSTR_ADD | ADDMODE_IMM_ACC | WIDTH_BYTE,
+	/*[0x5]*/	INSTR_ADD | ADDMODE_IMM_ACC | WIDTH_FULL,
 	/*[0x6]*/	0,
 	/*[0x7]*/	0,
 	/*[0x8]*/	0,
@@ -286,6 +286,10 @@ decode_dst_operand(struct x86_instr *instr)
 	case DST_REG:
 		operand->type	= OP_REG;
 		operand->reg	= decode_dst_reg(instr);
+		break;
+	case DST_ACC:
+		operand->type	= OP_REG;
+		operand->reg	= 0; /* AL/AX */
 		break;
 	case DST_MEM:
 		operand->type	= OP_MEM;
