@@ -3,10 +3,10 @@
 #include "x86_decode.h"
 
 static unsigned long decode_table[256] = {
-	/*[0x0]*/	0,
-	/*[0x1]*/	0,
-	/*[0x2]*/	0,
-	/*[0x3]*/	0,
+	/*[0x0]*/	INSTR_ADD | ADDMODE_REG_RM | WIDTH_BYTE,
+	/*[0x1]*/	INSTR_ADD | ADDMODE_REG_RM | WIDTH_FULL,
+	/*[0x2]*/	INSTR_ADD | ADDMODE_RM_REG | WIDTH_BYTE,
+	/*[0x3]*/	INSTR_ADD | ADDMODE_RM_REG | WIDTH_FULL,
 	/*[0x4]*/	0,
 	/*[0x5]*/	0,
 	/*[0x6]*/	0,
