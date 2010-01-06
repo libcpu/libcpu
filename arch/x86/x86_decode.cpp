@@ -218,7 +218,7 @@ static unsigned long decode_table[256] = {
 	/*[0xD4]*/	0,
 	/*[0xD5]*/	0,
 	/*[0xD6]*/	0,
-	/*[0xD7]*/	0,
+	/*[0xD7]*/	INSTR_XLATB | ADDMODE_IMPLIED | WIDTH_BYTE,
 	/*[0xD8]*/	0,
 	/*[0xD9]*/	0,
 	/*[0xDA]*/	0,
