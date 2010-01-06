@@ -40,18 +40,19 @@ enum x86_instr_flags {
 	SRC_NONE		= (1U << 12),
 	SRC_IMM			= (1U << 13),
 	SRC_REG			= (1U << 14),
-	SRC_MEM			= (1U << 15),
-	SRC_MEM_DISP_BYTE	= (1U << 16),
-	SRC_MEM_DISP_FULL	= (1U << 17),
-	SRC_MASK		= SRC_NONE|SRC_IMM|SRC_REG|SRC_MEM|SRC_MEM_DISP_BYTE|SRC_MEM_DISP_FULL,
+	SRC_ACC			= (1U << 15),
+	SRC_MEM			= (1U << 16),
+	SRC_MEM_DISP_BYTE	= (1U << 17),
+	SRC_MEM_DISP_FULL	= (1U << 18),
+	SRC_MASK		= SRC_NONE|SRC_IMM|SRC_REG|SRC_ACC|SRC_MEM|SRC_MEM_DISP_BYTE|SRC_MEM_DISP_FULL,
 
 	/* Destination operand */
-	DST_NONE		= (1U << 18),
-	DST_REG			= (1U << 19),
-	DST_ACC			= (1U << 20),	/* AL/AX */
-	DST_MEM			= (1U << 21),
-	DST_MEM_DISP_BYTE	= (1U << 22),	/* 8 bits */
-	DST_MEM_DISP_FULL	= (1U << 23),	/* 16 bits or 32 bits */
+	DST_NONE		= (1U << 19),
+	DST_REG			= (1U << 20),
+	DST_ACC			= (1U << 21),	/* AL/AX */
+	DST_MEM			= (1U << 22),
+	DST_MEM_DISP_BYTE	= (1U << 23),	/* 8 bits */
+	DST_MEM_DISP_FULL	= (1U << 24),	/* 16 bits or 32 bits */
 	DST_MASK		= DST_NONE|DST_REG|DST_ACC|DST_MEM|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
 
 	MEM_DISP_MASK		= SRC_MEM_DISP_BYTE|SRC_MEM_DISP_FULL|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
@@ -67,6 +68,7 @@ enum x86_addmode {
 	ADDMODE_REG_RM		= SRC_REG|MOD_RM|DIR_REVERSED,	/* register -> register/memory */
 	ADDMODE_RM_REG		= DST_REG|MOD_RM,		/* register/memory -> register */
 	ADDMODE_IMM_ACC		= SRC_IMM|DST_ACC,		/* immediate -> AL/AX */
+	ADDMODE_ACC_REG		= SRC_ACC|DST_REG,		/* AL/AX -> reg */
 };
 
 struct x86_instr {

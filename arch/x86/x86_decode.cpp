@@ -147,14 +147,14 @@ static unsigned long decode_table[256] = {
 	/*[0x8D]*/	0,
 	/*[0x8E]*/	0,
 	/*[0x8F]*/	0,
-	/*[0x90]*/	INSTR_NOP | ADDMODE_IMPLIED,
-	/*[0x91]*/	0,
-	/*[0x92]*/	0,
-	/*[0x93]*/	0,
-	/*[0x94]*/	0,
-	/*[0x95]*/	0,
-	/*[0x96]*/	0,
-	/*[0x97]*/	0,
+	/*[0x90]*/	INSTR_NOP | ADDMODE_IMPLIED,	/* xchg ax, ax */
+	/*[0x91]*/	INSTR_XCHG | ADDMODE_ACC_REG | WIDTH_FULL,
+	/*[0x92]*/	INSTR_XCHG | ADDMODE_ACC_REG | WIDTH_FULL,
+	/*[0x93]*/	INSTR_XCHG | ADDMODE_ACC_REG | WIDTH_FULL,
+	/*[0x94]*/	INSTR_XCHG | ADDMODE_ACC_REG | WIDTH_FULL,
+	/*[0x95]*/	INSTR_XCHG | ADDMODE_ACC_REG | WIDTH_FULL,
+	/*[0x96]*/	INSTR_XCHG | ADDMODE_ACC_REG | WIDTH_FULL,
+	/*[0x97]*/	INSTR_XCHG | ADDMODE_ACC_REG | WIDTH_FULL,
 	/*[0x98]*/	INSTR_CBW | ADDMODE_IMPLIED,
 	/*[0x99]*/	INSTR_CWD | ADDMODE_IMPLIED,
 	/*[0x9A]*/	0,
@@ -331,6 +331,10 @@ decode_src_operand(struct x86_instr *instr)
 	case SRC_REG:
 		operand->type	= OP_REG;
 		operand->reg	= decode_src_reg(instr);
+		break;
+	case SRC_ACC:
+		operand->type	= OP_REG;
+		operand->reg	= 0; /* AL/AX */
 		break;
 	case SRC_MEM:
 		operand->type	= OP_MEM;
