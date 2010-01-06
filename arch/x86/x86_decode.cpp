@@ -99,8 +99,8 @@ static unsigned long decode_table[256] = {
 	/*[0x5D]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
 	/*[0x5E]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
 	/*[0x5F]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
-	/*[0x60]*/	INSTR_PUSHA | ADDMODE_IMPLIED,
-	/*[0x61]*/	INSTR_POPA | ADDMODE_IMPLIED,
+	/*[0x60]*/	INSTR_PUSHA | ADDMODE_IMPLIED,		/* 80186 */
+	/*[0x61]*/	INSTR_POPA | ADDMODE_IMPLIED,		/* 80186 */
 	/*[0x62]*/	0,
 	/*[0x63]*/	0,
 	/*[0x64]*/	0,
