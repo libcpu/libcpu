@@ -163,6 +163,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 
 	// init LLVM
 	cpu->mod = new Module(cpu->info.name, _CTX());
+	cpu->mp = new ExistingModuleProvider(cpu->mod);
 	assert(cpu->mod != NULL);
 	cpu->exec_engine = ExecutionEngine::create(cpu->mod);
 	assert(cpu->exec_engine != NULL);

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "llvm/LLVMContext.h"
 #include "llvm/Module.h"
 #include "llvm/Function.h"
 #include "llvm/PassManager.h"
@@ -163,6 +164,7 @@ typedef struct cpu {
 	tag_t *tag;
 	bool tags_dirty;
 	Module *mod;
+	ExistingModuleProvider *mp;
 	void *fp[1024];
 	Function *func[1024];
 	Function *cur_func;

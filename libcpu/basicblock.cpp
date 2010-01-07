@@ -50,7 +50,7 @@ BasicBlock *
 create_basicblock(cpu_t *cpu, addr_t addr, Function *f, uint8_t bb_type) {
 	char label[17];
 	snprintf(label, sizeof(label), "%c%08llx", bb_type, (unsigned long long)addr);
-log("creating basic block %s\n", label);
+	log("creating basic block %s\n", label);
 	BasicBlock *bb = BasicBlock::Create(_CTX(), label, f, 0);
 
 	// if it's a label, cache the new basic block.
