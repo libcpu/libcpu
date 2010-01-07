@@ -338,9 +338,9 @@ main(int ac, char **av, char **ep)
 	openbsd_m88k_setup_uframe(cpu, mem_if, ac - 1, av + 1, ep, &stack_top);
 
 	/* Setup the CPU */
-	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
+	cpu_set_flags_codegen(cpu, CPU_CODEGEN_OPTIMIZE|CPU_CODEGEN_TAG_LIMIT);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
-//	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP_BB);
+	//cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP_BB);
 	cpu_set_flags_hint(cpu, CPU_HINT_TRAP_RETURNS_TWICE);
 	cpu_set_ram(cpu, RAM);
 

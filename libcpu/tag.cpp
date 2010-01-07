@@ -43,43 +43,43 @@ init_tagging(cpu_t *cpu)
 	for (i = 0; i < nitems; i++)
 		cpu->tag[i] = TAG_UNKNOWN;
 
-#ifndef LIMIT_TAGGING_DFS
-	/* calculate hash of code */
-	SHA1_CTX ctx;
-	SHA1Init(&ctx);
-	SHA1Update(&ctx, &cpu->RAM[cpu->code_start], cpu->code_end - cpu->code_start);
-	SHA1Final(cpu->code_digest, &ctx);
-	char ascii_digest[256];
-	char cache_fn[256];
-	ascii_digest[0] = 0;
-	int j; 
-	for (j=0; j<20; j++)
-		sprintf(ascii_digest+strlen(ascii_digest), "%02x", cpu->code_digest[j]);
-	log("Code Digest: %s\n", ascii_digest);
-	sprintf(cache_fn, "%slibcpu-%s.entries", get_temp_dir(), ascii_digest);
-
-	cpu->file_entries = NULL;
-
-	FILE *f;
-	if ((f = fopen(cache_fn, "r"))) {
-		log("info: entry cache found.\n");
-		while(!feof(f)) {
-			addr_t entry = 0;
-			for (i = 0; i < 4; i++) {
-				entry |= fgetc(f) << (i*8);
+	if (!(cpu->flags_codegen & CPU_CODEGEN_TAG_LIMIT)) {
+		/* calculate hash of code */
+		SHA1_CTX ctx;
+		SHA1Init(&ctx);
+		SHA1Update(&ctx, &cpu->RAM[cpu->code_start], cpu->code_end - cpu->code_start);
+		SHA1Final(cpu->code_digest, &ctx);
+		char ascii_digest[256];
+		char cache_fn[256];
+		ascii_digest[0] = 0;
+		int j; 
+		for (j=0; j<20; j++)
+			sprintf(ascii_digest+strlen(ascii_digest), "%02x", cpu->code_digest[j]);
+		log("Code Digest: %s\n", ascii_digest);
+		sprintf(cache_fn, "%slibcpu-%s.entries", get_temp_dir(), ascii_digest);
+		
+		cpu->file_entries = NULL;
+		
+		FILE *f;
+		if ((f = fopen(cache_fn, "r"))) {
+			log("info: entry cache found.\n");
+			while(!feof(f)) {
+				addr_t entry = 0;
+				for (i = 0; i < 4; i++) {
+					entry |= fgetc(f) << (i*8);
+				}
+				tag_start(cpu, entry);
 			}
-			tag_start(cpu, entry);
+			fclose(f);
+		} else {
+			log("info: entry cache NOT found.\n");
 		}
-		fclose(f);
-	} else {
-		log("info: entry cache NOT found.\n");
+		
+		if (!(cpu->file_entries = fopen(cache_fn, "a"))) {
+			printf("error appending to cache file!\n");
+			exit(1);
+		}
 	}
-
-	if (!(cpu->file_entries = fopen(cache_fn, "a"))) {
-		printf("error appending to cache file!\n");
-		exit(1);
-	}
-#endif
 }
 
 bool
@@ -120,10 +120,9 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 	tag_t tag;
 	addr_t new_pc, next_pc;
 
-#ifdef LIMIT_TAGGING_DFS
-	if (level == LIMIT_TAGGING_DFS)
+	if ((cpu->flags_codegen & CPU_CODEGEN_TAG_LIMIT)
+	    && level == LIMIT_TAGGING_DFS)
 		return;
-#endif
 
 	for(;;) {
 		if (!is_inside_code_area(cpu, pc))
@@ -204,14 +203,14 @@ tag_start(cpu_t *cpu, addr_t pc)
 
 	log("starting tagging at $%02llx\n", (unsigned long long)pc);
 
-#ifndef LIMIT_TAGGING_DFS
-	int i;
-	if (cpu->file_entries) {
-		for (i = 0; i < 4; i++)
-			fputc((pc >> (i*8))&0xFF, cpu->file_entries);
-		fflush(cpu->file_entries);
+	if (!(cpu->flags_codegen & CPU_CODEGEN_TAG_LIMIT)) {
+		int i;
+		if (cpu->file_entries) {
+			for (i = 0; i < 4; i++)
+				fputc((pc >> (i*8))&0xFF, cpu->file_entries);
+			fflush(cpu->file_entries);
+		}
 	}
-#endif
 
 	or_tag(cpu, pc, TAG_ENTRY); /* client wants to enter the guest code here */
 	tag_recursive(cpu, pc, 0);

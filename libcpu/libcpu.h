@@ -155,7 +155,7 @@ typedef struct cpu {
 	addr_t code_start;
 	addr_t code_end;
 	addr_t code_entry;
-	uint64_t flags_optimize;
+	uint32_t flags_codegen;
 	uint32_t flags_debug;
 	uint32_t flags_hint;
 	uint32_t flags;
@@ -200,10 +200,23 @@ enum {
 };
 
 //////////////////////////////////////////////////////////////////////
-// optimization flags
+// codegen flags
 //////////////////////////////////////////////////////////////////////
-#define CPU_OPTIMIZE_NONE 0x0000000000000000LL
-#define CPU_OPTIMIZE_ALL  0xFFFFFFFFFFFFFFFFLL
+#define CPU_CODEGEN_NONE 0
+
+// Run optimization passes on generated IR (disable for debugging)
+#define CPU_CODEGEN_OPTIMIZE  (1<<1)
+
+// Limits the DFS when tagging code, so that we don't
+// translate all reachable code at a time, but only a
+// certain amount of code in advance, and translate more
+// on demand.
+// If this is turned off, we do "entry caching", i.e. we
+// create a file in /tmp that holds all entries to the code
+// (i.e. all start addresses that can't be found automatically),
+// and we start tagging at these addresses on load if the
+// cache exists.
+#define CPU_CODEGEN_TAG_LIMIT (1<<2)
 
 //////////////////////////////////////////////////////////////////////
 // debug flags
@@ -243,7 +256,7 @@ typedef void (*debug_function_t)(cpu_t*);
 
 API_FUNC cpu_t *cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags);
 API_FUNC void cpu_free(cpu_t *cpu);
-API_FUNC void cpu_set_flags_optimize(cpu_t *cpu, uint64_t f);
+API_FUNC void cpu_set_flags_codegen(cpu_t *cpu, uint32_t f);
 API_FUNC void cpu_set_flags_hint(cpu_t *cpu, uint32_t f);
 API_FUNC void cpu_set_flags_debug(cpu_t *cpu, uint32_t f);
 API_FUNC void cpu_tag(cpu_t *cpu, addr_t pc);

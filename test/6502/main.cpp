@@ -99,7 +99,7 @@ main(int argc, char **argv) {
 	cpu = cpu_new(CPU_ARCH_6502, 0, CPU_6502_BRK_TRAP |
 		CPU_6502_XXX_TRAP | CPU_6502_V_IGNORE);
 
-	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
+	cpu_set_flags_codegen(cpu, CPU_CODEGEN_OPTIMIZE);
 	cpu_set_flags_debug(cpu, 0
 		| (print_ir? CPU_DEBUG_PRINT_IR : 0)
 		| (print_ir? CPU_DEBUG_PRINT_IR_OPTIMIZED : 0)

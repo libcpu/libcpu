@@ -117,7 +117,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		cpu->fp[i] = NULL;
 	cpu->functions = 0;
 
-	cpu->flags_optimize = CPU_OPTIMIZE_NONE;
+	cpu->flags_codegen = CPU_CODEGEN_OPTIMIZE;
 	cpu->flags_debug = CPU_DEBUG_NONE;
 	cpu->flags_hint = CPU_HINT_NONE;
 	cpu->flags = 0;
@@ -228,9 +228,9 @@ cpu_set_ram(cpu_t*cpu, uint8_t *r)
 }
 
 void
-cpu_set_flags_optimize(cpu_t *cpu, uint64_t f)
+cpu_set_flags_codegen(cpu_t *cpu, uint32_t f)
 {
-	cpu->flags_optimize = f;
+	cpu->flags_codegen = f;
 }
 
 void
@@ -282,7 +282,7 @@ cpu_translate_function(cpu_t *cpu)
 	if (cpu->flags_debug & CPU_DEBUG_PRINT_IR)
 		cpu->mod->dump();
 
-	if (cpu->flags_optimize != CPU_OPTIMIZE_NONE) {
+	if (cpu->flags_codegen & CPU_CODEGEN_OPTIMIZE) {
 		log("*** Optimizing...");
 		optimize(cpu);
 		log("done.\n");
@@ -356,7 +356,7 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 			}
 		}
 		if (!success) {
-			fprintf(stderr, "{%llx}", pc);
+			log("{%llx}", pc);
 			cpu_tag(cpu, pc);
 			do_translate = true;
 		}

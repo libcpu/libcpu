@@ -65,7 +65,7 @@ typedef struct _idbg {
 	cpu_t *cpu;
 
 	uint32_t old_flags;
-	uint64_t old_optimize_flags;
+	uint32_t old_codegen_flags;
 	uint32_t old_debug_flags;
 
 	unsigned gpr_format;
@@ -643,11 +643,11 @@ idbg_init(cpu_t *cpu, debug_function_t debug_func, idbg_t *ctx)
 
 	// Turn on single step
 	ctx->old_flags = cpu->flags;
-	ctx->old_optimize_flags = cpu->flags_optimize;
+	ctx->old_codegen_flags = cpu->flags_codegen;
 	ctx->old_debug_flags = cpu->flags_debug;
 
 	cpu->flags = ctx->old_flags;
-	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_NONE);
+	cpu_set_flags_codegen(cpu, ctx->old_codegen_flags & ~CPU_CODEGEN_OPTIMIZE);
 	cpu_set_flags_debug(cpu, ctx->old_debug_flags | CPU_DEBUG_SINGLESTEP);
 }
 
@@ -655,7 +655,7 @@ static void
 idbg_done(idbg_t *ctx)
 {
 	cpu_set_flags_debug(ctx->cpu, ctx->old_debug_flags);
-	cpu_set_flags_optimize(ctx->cpu, ctx->old_optimize_flags);
+	cpu_set_flags_codegen(ctx->cpu, ctx->old_codegen_flags);
 	ctx->cpu->flags = ctx->old_flags;
 	if (ctx->saved_fp_regs != NULL)
 		free(ctx->saved_fp_regs);
