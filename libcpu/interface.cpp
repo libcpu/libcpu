@@ -277,7 +277,7 @@ cpu_translate_function(cpu_t *cpu)
 	BranchInst::Create(bb_start, label_entry);
 
 	/* make sure everything is OK */
-	verifyModule(*cpu->mod, PrintMessageAction);
+	verifyFunction(*cpu->cur_func, PrintMessageAction);
 
 	if (cpu->flags_debug & CPU_DEBUG_PRINT_IR)
 		cpu->mod->dump();
