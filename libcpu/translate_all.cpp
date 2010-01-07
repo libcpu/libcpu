@@ -10,12 +10,6 @@
 #include "tag.h"
 #include "translate.h"
 
-static bool
-already_is_an_entry_in_some_function(cpu_t *cpu, addr_t pc)
-{
-	return get_tag(cpu, pc) & TAG_TRANSLATED
-		&& needs_dispatch_entry(cpu, pc);
-}
 
 BasicBlock *
 cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
@@ -25,8 +19,8 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	addr_t pc;
 	pc = cpu->code_start;
 	while (pc < cpu->code_end) {
-		//log("%04X: %d\n", pc, get_tag(cpu, pc));
-		if (is_start_of_basicblock(cpu, pc) && !already_is_an_entry_in_some_function(cpu,pc)) {
+		// Do not create the basic block if it is already present in some other function.
+		if (is_start_of_basicblock(cpu, pc) && !(get_tag(cpu, pc) & TAG_TRANSLATED)) {
 			create_basicblock(cpu, pc, cpu->cur_func, BB_TYPE_NORMAL);
 			bbs++;
 		}
@@ -37,18 +31,9 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 	// create dispatch basicblock
 	BasicBlock* bb_dispatch = BasicBlock::Create(_CTX(), "dispatch", cpu->cur_func, 0);
 	Value *v_pc = new LoadInst(cpu->ptr_PC, "", false, bb_dispatch);
-	SwitchInst* sw = SwitchInst::Create(v_pc, bb_ret, bbs /*XXX upper bound, not accurate count!*/, bb_dispatch);
+	SwitchInst* sw = SwitchInst::Create(v_pc, bb_ret, bbs, bb_dispatch);
 
-	for (pc = cpu->code_start; pc < cpu->code_end; pc++) {
-		if (needs_dispatch_entry(cpu, pc) && !(get_tag(cpu, pc) & TAG_TRANSLATED)) {
-			log("info: adding case: %llx\n", pc);
-			ConstantInt* c = ConstantInt::get(getIntegerType(cpu->info.address_size), pc);
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, pc, bb_ret, BB_TYPE_NORMAL);
-			sw->addCase(c, target);
-		}
-	}
-
-// translate basic blocks
+	// translate basic blocks
 	bbaddr_map &bb_addr = cpu->func_bb[cpu->cur_func];
 	bbaddr_map::const_iterator it;
 	for (it = bb_addr.begin(); it != bb_addr.end(); it++) {
@@ -58,15 +43,14 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 		tag_t tag;
 		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_cont = NULL;
 
-		if (already_is_an_entry_in_some_function(cpu, pc)) {
-printf("already_is_an_entry_in_some_function! %llx\n", pc);
-			continue;
-		}
-
-		if (needs_dispatch_entry(cpu, pc))
-			or_tag(cpu, pc, TAG_TRANSLATED);
+		// Tag the function as translated.
+		or_tag(cpu, pc, TAG_TRANSLATED);
 
 		log("basicblock: L%08llx\n", (unsigned long long)pc);
+
+		// Add dispatch switch case for basic block.
+		ConstantInt* c = ConstantInt::get(getIntegerType(cpu->info.address_size), pc);
+		sw->addCase(c, cur_bb);
 
 		do {
 			tag_t dummy1;
