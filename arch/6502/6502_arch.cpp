@@ -52,17 +52,11 @@ arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 
 	rf->pc = &reg->pc;
 	rf->grf = reg;
-
-	// allocate space for CC flags.
-	//XXX move to generic code; make sure archs without flags assign flags_size = 0.
-	cpu->ptr_FLAG = (Value **)calloc(info->flags_size, sizeof(Value*));
-	assert(cpu->ptr_FLAG != NULL);
 }
 
 static void
 arch_6502_done(cpu_t *cpu)
 {
-	free(cpu->ptr_FLAG);
 	free(cpu->rf.grf);
 }
 

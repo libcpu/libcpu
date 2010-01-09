@@ -161,6 +161,11 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		cpu->in_ptr_fpr = NULL;
 	}
 
+	if (cpu->info.flags_size) {
+		cpu->ptr_FLAG = (Value **)calloc(cpu->info.flags_size, sizeof(Value*));
+		assert(cpu->ptr_FLAG != NULL);
+	}
+
 	// init LLVM
 	cpu->mod = new Module(cpu->info.name, _CTX());
 	cpu->mp = new ExistingModuleProvider(cpu->mod);
@@ -205,6 +210,8 @@ cpu_free(cpu_t *cpu)
 		}
 		delete cpu->exec_engine;
 	}
+	if (cpu->ptr_FLAG != NULL)
+		free(cpu->ptr_FLAG);
 	if (cpu->in_ptr_fpr != NULL)
 		free(cpu->in_ptr_fpr);
 	if (cpu->ptr_fpr != NULL)
