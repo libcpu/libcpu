@@ -22,7 +22,6 @@
 
 #define LOPERAND arch_6502_get_operand_lvalue(cpu, pc, bb)
 #define OPERAND LOAD(LOPERAND)
-#define LET1(a,b) new StoreInst(b, a, false, bb)
 
 #define GEP(a) GetElementPtrInst::Create(cpu->ptr_RAM, a, "", bb)
 
@@ -290,16 +289,6 @@ arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 	return GEP(ea);
 }
 
-static Value *
-arch_6502_store(Value *v, Value *a, BasicBlock *bb)
-{
-	new StoreInst(v, a, bb);
-	return v;
-}
-
-#define STORE(v,a) arch_6502_store(v, a, bb)
-//#define STORE(v,a) (new StoreInst(v, a, bb),v) // why does this not work?
-
 static void
 arch_6502_trap(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
@@ -307,31 +296,6 @@ arch_6502_trap(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 	new StoreInst(v_pc, cpu->ptr_PC, bb);
 	ReturnInst::Create(_CTX(), CONST32(JIT_RETURN_TRAP), bb);
 }
-
-static Value *
-arch_6502_shiftrotate(cpu_t *cpu, Value *l, bool left, bool rotate,
-	BasicBlock *bb)
-{
-	Value *c;
-	Value *v = LOAD(l);
-
-	if (left) {
-		c = ICMP_SLT(v, CONST8(0));	/* old MSB to carry */
-		v = SHL(v, CONST8(1));
-		if (rotate)
-			v = OR(v,ZEXT8(LOAD(cpu->ptr_C)));
-	} else {
-		c = TRUNC1(v);		/* old LSB to carry */
-		v = LSHR(v, CONST8(1));
-		if (rotate)
-			v = OR(v,SHL(ZEXT8(LOAD(cpu->ptr_C)), CONST8(7)));
-	}
-	
-	LET1(cpu->ptr_C, c);
-	return STORE(v, l);
-}
-
-#define SHIFTROTATE(l,left,rotate) arch_6502_shiftrotate(cpu,l,left,rotate,bb)
 
 /*
  * XXX TODO: consider changing code to avoid 16 bit arithmetic:

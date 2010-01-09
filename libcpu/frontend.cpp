@@ -238,6 +238,15 @@ arch_store16(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb) {
 	arch_store32_aligned(cpu, val, addr, bb);
 }
 
+//
+
+Value *
+arch_store(Value *v, Value *a, BasicBlock *bb)
+{
+	new StoreInst(v, a, bb);
+	return v;
+}
+
 //////////////////////////////////////////////////////////////////////
 
 Value *
@@ -256,6 +265,31 @@ Value *
 arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
 	Type const *ty = getIntegerType(width);
 	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::cttz, &ty, 1), v, "", bb);
+}
+
+// complex operations
+
+// shifts or rotates an lvalue left or right, regardless of width
+Value *
+arch_shiftrotate(cpu_t *cpu, Value *l, bool left, bool rotate, BasicBlock *bb)
+{
+	Value *c;
+	Value *v = LOAD(l);
+
+	if (left) {
+		c = ICMP_SLT(v, CONSTs(SIZE(v), 0));	/* old MSB to carry */
+		v = SHL(v, CONSTs(SIZE(v), 1));
+		if (rotate)
+			v = OR(v,ZEXT(SIZE(v), LOAD(cpu->ptr_C)));
+	} else {
+		c = TRUNC1(v);		/* old LSB to carry */
+		v = LSHR(v, CONSTs(SIZE(v), 1));
+		if (rotate)
+			v = OR(v,SHL(ZEXT(SIZE(v), LOAD(cpu->ptr_C)), CONSTs(SIZE(v), SIZE(v)-1)));
+	}
+	
+	LET1(cpu->ptr_C, c);
+	return STORE(v, l);
 }
 
 // branches

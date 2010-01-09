@@ -9,6 +9,9 @@ Value *arch_load8(cpu_t *cpu, Value *addr, BasicBlock *bb);
 Value *arch_load16_aligned(cpu_t *cpu, Value *addr, BasicBlock *bb);
 void arch_store8(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb);
 void arch_store16(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb);
+
+Value *arch_store(Value *v, Value *a, BasicBlock *bb);
+
 void arch_branch(bool flag_state, BasicBlock *target1, BasicBlock *target2, Value *flag, BasicBlock *bb);
 void arch_jump(BasicBlock *bb, BasicBlock *bb_target);
 
@@ -21,6 +24,8 @@ void arch_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb);
 Value *arch_bswap(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
 Value *arch_ctlz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
 Value *arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
+
+Value *arch_shiftrotate(cpu_t *cpu, Value *l, bool left, bool rotate, BasicBlock *bb);
 
 /* FPU */
 Value *arch_cast_fp32(cpu_t *cpu, Value *v, BasicBlock *bb);
@@ -46,6 +51,7 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define SIZE(x) (x->getType()->getPrimitiveSizeInBits())
 
 #define LOAD(a) new LoadInst(a, "", false, bb)
+#define STORE(v,a) arch_store(v, a, bb)
 
 #define CONSTs(s,v) ConstantInt::get(getIntegerType(s), v)
 #define CONST1(v) CONSTs(1,v)
@@ -107,6 +113,9 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define INC(a) ADD(a,CONST(1))
 #define DEC(a) SUB(a,CONST(1))
 
+/* more complex operations */
+#define SHIFTROTATE(l,left,rotate) arch_shiftrotate(cpu,l,left,rotate,bb)
+
 /* floating point */
 #define FPCONSTs(s,v) ConstantFP::get(getFloatType(s), v)
 #define FPCONST32(v) FPCONSTs(32,v)
@@ -156,6 +165,8 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define LET(i,v) arch_put_reg(cpu, i, v, 0, false, bb)
 #define LET32(i,v) arch_put_reg(cpu, i, v, 32, true, bb)
 #define LET_ZEXT(i,v) arch_put_reg(cpu, i, v, 1, false, bb)
+/* this one is different: it does not deal with registers, but with flags */
+#define LET1(a,b) new StoreInst(b, a, false, bb)
 
 /* interface to the FPRs */
 #define FR(i) arch_load_fp_reg(cpu, i, 0, bb)
