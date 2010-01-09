@@ -303,8 +303,6 @@ enum {
 	FP_OP_CMP_UGT
 };
 
-#undef getType // XXX clash!
-
 /*
  * The Motorola 88K can operate on three different
  * types of floating point using the same register set,

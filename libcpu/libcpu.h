@@ -290,7 +290,7 @@ API_FUNC int cpu_debugger(cpu_t *cpu, debug_function_t debug_function);
 //////////////////////////////////////////////////////////////////////
 
 #define _CTX() getGlobalContext()
-#define getType(x) (Type::get##x(_CTX()))
+#define XgetType(x) (Type::get##x(_CTX()))
 #define getIntegerType(x) (IntegerType::get(_CTX(), x))
 #define getStructType(x, ...) (StructType::get(_CTX(), x,    \
 					       #__VA_ARGS__))

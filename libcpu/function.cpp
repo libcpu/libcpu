@@ -71,8 +71,8 @@ get_struct_fp_reg(cpu_t *cpu) {
 
 static Value *
 get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
-	ConstantInt* const_0 = ConstantInt::get(getType(Int32Ty), 0);
-	ConstantInt* const_index = ConstantInt::get(getType(Int32Ty), index);
+	ConstantInt* const_0 = ConstantInt::get(XgetType(Int32Ty), 0);
+	ConstantInt* const_index = ConstantInt::get(XgetType(Int32Ty), index);
 
 	SmallVector<Value*, 2> ptr_11_indices;
 	ptr_11_indices.push_back(const_0);
@@ -294,7 +294,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	std::vector<const Type*>type_func_callout_args;
 	type_func_callout_args.push_back(type_intptr);	/* intptr *cpu */
 	FunctionType *type_func_callout = FunctionType::get(
-		getType(VoidTy),	/* Result */
+		XgetType(VoidTy),	/* Result */
 		type_func_callout_args,	/* Params */
 		false);		      	/* isVarArg */
 	cpu->type_pfunc_callout = PointerType::get(type_func_callout, 0);
@@ -346,7 +346,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	// create exit code
 	Value *exit_code = new AllocaInst(getIntegerType(32), "exit_code", label_entry);
 	// assume JIT_RETURN_FUNCNOTFOUND or JIT_RETURN_SINGLESTEP if in in single step.
-	new StoreInst(ConstantInt::get(getType(Int32Ty),
+	new StoreInst(ConstantInt::get(XgetType(Int32Ty),
 					(cpu->flags_debug & (CPU_DEBUG_SINGLESTEP | CPU_DEBUG_SINGLESTEP_BB)) ? JIT_RETURN_SINGLESTEP :
 					JIT_RETURN_FUNCNOTFOUND), exit_code, false, 0, label_entry);
 
@@ -362,7 +362,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	ReturnInst::Create(_CTX(), new LoadInst(exit_code, "", false, 0, bb_ret), bb_ret);
 	// create trap return basicblock
 	BasicBlock *bb_trap = BasicBlock::Create(_CTX(), "trap", func, 0);  
-	new StoreInst(ConstantInt::get(getType(Int32Ty), JIT_RETURN_TRAP), exit_code, false, 0, bb_trap);
+	new StoreInst(ConstantInt::get(XgetType(Int32Ty), JIT_RETURN_TRAP), exit_code, false, 0, bb_trap);
 	// return
 	BranchInst::Create(bb_ret, bb_trap);
 

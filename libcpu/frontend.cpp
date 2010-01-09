@@ -104,7 +104,6 @@ arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext,
 	return v;
 }
 
-#undef getType // XXX clash with LLVM
 void
 arch_put_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits,
 	BasicBlock *bb)
@@ -119,7 +118,6 @@ arch_put_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits,
 		new StoreInst(v, cpu->ptr_fpr[index], bb);
 	}
 }
-#define getType(x) (Type::get##x(_CTX()))//XXX
 
 //XXX TODO
 // The guest CPU can be little endian or big endian, so we need both
@@ -164,7 +162,7 @@ RAM32BE(uint8_t *RAM, addr_t a) {
 static Value *
 arch_gep32(cpu_t *cpu, Value *a, BasicBlock *bb) {
 	a = GetElementPtrInst::Create(cpu->ptr_RAM, a, "", bb);
-	return new BitCastInst(a, PointerType::get(getType(Int32Ty), 0), "", bb);
+	return new BitCastInst(a, PointerType::get(XgetType(Int32Ty), 0), "", bb);
 }
 
 /* load 32 bit ALIGNED value from RAM */
