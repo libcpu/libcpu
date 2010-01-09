@@ -148,14 +148,16 @@ register_file_builder::analyze(register_dep_tracker *rdt)
 {
 	printf("register_file_builder starts analysis.\n");
 
-	rdt->resolve();
-	rdt->dump();
-
 	// find all registers with no dependencies.
-	
 	register_info_vector regs;
 
 	rdt->get_indep_regs(regs);
+	printf("Indeps Registers=%zu\n", regs.size());
+	for(register_info_vector::iterator i = regs.begin();
+			i != regs.end(); i++) {
+		printf("%s  ", (*i)->name.c_str());
+	}
+	printf("\n");
 
 	// sort registers naturally.
 	std::sort(regs.begin(), regs.end(), register_info_nat_sort());
@@ -173,16 +175,26 @@ register_file_builder::analyze(register_dep_tracker *rdt)
 			if (!analyze_top(i->regs[0]))
 				return false;
 		} else {
-			if (!analyze_many(i->name, i->regs))
+			if (!analyze_top(i->name, i->regs))
 				return false;
 		}
 	}
+
+	// now do the same for dependencies.
+	regs.clear();
+	rdt->get_dep_regs(regs);
+	printf("Deps Registers=%zu\n", regs.size());
+	for(register_info_vector::iterator i = regs.begin();
+			i != regs.end(); i++) {
+		printf("%s  ", (*i)->name.c_str());
+	}
+	printf("\n");
 
 	return true;
 }
 
 bool
-register_file_builder::analyze_many(std::string const &rset_name,
+register_file_builder::analyze_top(std::string const &rset_name,
 		register_info_vector const &riv)
 {
 	printf("Register set '%s'\n", rset_name.c_str());
@@ -288,7 +300,6 @@ register_file_builder::create_top(register_info const *ri)
 			return 0;
 	}
 
-	cg_dump(rdef);
 	return rdef;
 }
 
@@ -390,6 +401,7 @@ register_file_builder::create_sub(register_info const *top_ri,
 	// then subregisters total size may be different from
 	// the final size, so that's treated specially.
 	else if (sub_ri->special_eval != 0) {
+		printf("WARNING: special evaluation is not yet implemented.\n");
 	} else {
 		// a simple sub register.
 		rdef = new c::sub_register_def(top_rdef, sub_ri->name,

@@ -30,6 +30,7 @@ struct register_info {
 
 	uint32_t               flags;
 	std::string            name;
+	std::string            group;
 	ast::type const       *type;
 	register_info         *super;           // parent register.
 	ast::register_splitter const *splitter; // splitter alas bitfields.

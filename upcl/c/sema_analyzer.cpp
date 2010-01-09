@@ -114,8 +114,6 @@ sema_analyzer::process_architecture(ast::architecture const *arch)
 	return true;
 }
 
-register_dep_tracker g_dpt;
-
 bool
 sema_analyzer::process_register_file(ast::register_file const *reg_file)
 {
@@ -151,14 +149,24 @@ sema_analyzer::process_register_file(ast::register_file const *reg_file)
 	printf("%s: register dependencies analysis: %zu total registers, "
 			"%zu top registers, %zu independent registers, "
 			"%zu pseudo registers, %zu stub registers, %zu dependencies.\n",
-			__func__, g_dpt.get_all_regs_count(), g_dpt.get_top_regs_count(),
-			g_dpt.get_indep_regs_count(), g_dpt.get_pseudo_regs_count(),
-			g_dpt.get_stub_count(), g_dpt.get_deps_count());
+			__func__, m_dpt.get_all_regs_count(), m_dpt.get_top_regs_count(),
+			m_dpt.get_indep_regs_count(), m_dpt.get_pseudo_regs_count(),
+			m_dpt.get_stub_count(), m_dpt.get_deps_count());
 
-	//g_dpt.dump_top();
+	// resolve internal dependencies.
+	m_dpt.resolve();
+
+	//m_dpt.dump();
+	//m_dpt.dump_top();
 
 	register_file_builder builder;
-	builder.analyze(&g_dpt);
+	if (!builder.analyze(&m_dpt)) {
+		fprintf(stderr, "register file builder failure.\n");
+		return false;
+	}
+
+	c::register_def_vector const &regs = builder.get_physical_registers();
+	printf("Count=%zu\n", regs.size());
 
 	return true;
 }
@@ -174,7 +182,7 @@ sema_analyzer::process_register_group_dep(ast::register_group const *group)
 	for (size_t n = 0; n < count; n++) {
 		ast::register_declaration const *rd = (ast::register_declaration const *)(*regs)[n];
 
-		if (!process_register_dep(rd))
+		if (!process_register_dep(rd, group->get_name()->get_value()))
 			return false;
 	}
 
@@ -316,7 +324,8 @@ make_index_expr_relative(upcl::ast::expression *index_expr, uint64_t index)
 //   the aliased register value.
 //
 bool
-sema_analyzer::process_register_dep(ast::register_declaration const *rd)
+sema_analyzer::process_register_dep(ast::register_declaration const *rd,
+		std::string const &group_name)
 {
 	ast::identifier const *name = rd->get_def()->get_name();
 	ast::type const *type = rd->get_def()->get_type();
@@ -439,7 +448,7 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 					x.get_used_literals(alias_deps);
 				}
 
-				alias_reg = 0;
+				//alias_reg = 0;
 			}
 		}
 	}
@@ -452,7 +461,6 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 		register_info *ri;
 
 		if (hw_value != 0) {
-
 			// read-only hardwiring
 
 			// evaluate any register used.
@@ -464,14 +472,15 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 
 			// evalute, ignore if failed.
 			e.evaluate(hw_value, v);
-			
-			ri = g_dpt.add(rname, type, hw_value);
+
+			ri = m_dpt.add(rname, type, hw_value);
+			ri->group = group_name;
 
 			string_vector expr_deps;
 			e.get_used_literals(expr_deps);
 
 			// cross deps
-			g_dpt.make_deps_by(expr_deps, ri);
+			m_dpt.make_deps_by(expr_deps, ri);
 		} else if (alias_reg != 0) {
 
 			// aliasing definition
@@ -491,9 +500,10 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 						n + alias_start_index);
 			}
 
-			ri = g_dpt.add(g_dpt.ref(aname), rname, type, reg_def, 
+			ri = m_dpt.add(m_dpt.ref(aname), rname, type, reg_def, 
 					register_dep_tracker::NOT_CHILD_FLAG);
-			ri->binding = g_dpt.ref(aname);
+			ri->binding = m_dpt.ref(aname);
+			ri->group = group_name;
 
 			if (aname[0] != '%')
 				ri->flags |= register_info::REGALIAS_FLAG;
@@ -516,7 +526,7 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 		} else {
 
 			// simple definition
-			ri = g_dpt.add(rname, type, reg_def);
+			ri = m_dpt.add(rname, type, reg_def);
 
 		}
 
@@ -529,7 +539,7 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd)
 		ri->repeat_index = n + start_index;
 
 		// cross deps
-		g_dpt.make_deps_by(alias_deps, ri);
+		m_dpt.make_deps_by(alias_deps, ri);
 
 		// At this point, evaluate the bitfields if this register
 		// has a definition attached.
@@ -668,13 +678,13 @@ sema_analyzer::process_bound_value_dep(register_info *bri, size_t &offset,
 	if (name != 0) {
 		bfname = make_register_name(bri->name, name->get_value(), offset);
 
-		ri = g_dpt.add(bri, bfname, type,
+		ri = m_dpt.add(bri, bfname, type,
 				register_info::SUBREGISTER_FLAG |
 				(expl ? register_info::EXPLICIT_FLAG : 0));
 	} else {
 		bfname = make_register_name(bri->name, "_", offset);
 
-		ri = g_dpt.add(bri, bfname, type, register_info::SUBREGISTER_FLAG |
+		ri = m_dpt.add(bri, bfname, type, register_info::SUBREGISTER_FLAG |
 				register_info::RESERVED_FLAG);
 	}
 
@@ -756,7 +766,7 @@ sema_analyzer::process_bound_value_dep(register_info *bri, size_t &offset,
 						e.get_used_literals(alias_deps);
 						
 						// cross deps
-						g_dpt.make_deps_by(alias_deps, ri);
+						m_dpt.make_deps_by(alias_deps, ri);
 					} else {
 						// if the indexing identifier (_) hasn't been used,
 						// then it's relative indexing.
@@ -772,14 +782,14 @@ sema_analyzer::process_bound_value_dep(register_info *bri, size_t &offset,
 			if (bv->is_bidi())
 				ri->flags |= register_info::BIDIBIND_FLAG;
 
-			ri->binding = g_dpt.ref(rname);
+			ri->binding = m_dpt.ref(rname);
 			assert(ri->binding != ri);
 
 			if (bv->is_bidi())
-				g_dpt.make_deps_by(ri, ri->binding);
+				m_dpt.make_deps_by(ri, ri->binding);
 			else
-				g_dpt.make_deps_by(ri->binding, ri);
-			g_dpt.make_deps_by(ri->binding, bri);
+				m_dpt.make_deps_by(ri->binding, ri);
+			m_dpt.make_deps_by(ri->binding, bri);
 		} else if (binding->get_token_type() == ast::token::EXPRESSION) {
 			ri->hwexpr = (ast::expression const *)binding;
 		} else if (binding->get_token_type() == ast::token::QUALIFIED_IDENTIFIER) {
@@ -789,10 +799,10 @@ sema_analyzer::process_bound_value_dep(register_info *bri, size_t &offset,
 			ri->bind_copy = (ast::qualified_identifier const *)binding;
 
 			// add as a dependency.
-			register_info *ori = g_dpt.ref(ri->bind_copy->get_base_identifier()->get_value());
+			register_info *ori = m_dpt.ref(ri->bind_copy->get_base_identifier()->get_value());
 
 			// make ori deps by ri
-			g_dpt.make_deps_by(ori, ri);
+			m_dpt.make_deps_by(ori, ri);
 
 			//
 			// if the binding is bidirectional, if the target register
@@ -805,7 +815,7 @@ sema_analyzer::process_bound_value_dep(register_info *bri, size_t &offset,
 					(ori->type == 0 || ori->type->get_value() == 
 					 	ri->type->get_value())) {
 				ori->super = ri->super;
-				g_dpt.make_deps_by(ori->super, ori);
+				m_dpt.make_deps_by(ori->super, ori);
 			}
 		} else {
 			fprintf(stderr, "WARNING: binding token %u is not handled!\n", 
