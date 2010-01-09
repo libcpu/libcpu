@@ -23,11 +23,10 @@
 #define Z_SHIFT 1
 #define C_SHIFT 0
 
-//XXX globals! - this is generic data, per-CPU.
-Value *ptr_N;
-Value *ptr_V;
-Value *ptr_Z;
-Value *ptr_C;
+#define ptr_N cpu->ptr_N
+#define ptr_V cpu->ptr_V
+#define ptr_Z cpu->ptr_Z
+#define ptr_C cpu->ptr_C
 
 /* these are the flags that aren't handled by the generic flag code */
 #define ptr_D cpu->ptr_FLAG[D_SHIFT]
@@ -384,27 +383,7 @@ static void
 arch_6502_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	// declare flags
-	flags_layout_t *flags_layout = cpu->info.flags_layout;
-	int i;
-	for (i = 0; flags_layout[i].shift >= 0; i++) {
-		Value *f = new AllocaInst(getIntegerType(1), flags_layout[i].name, bb);
-		cpu->ptr_FLAG[flags_layout[i].shift] = f;
-		/* set pointers to standard NVZC flags */
-		switch (flags_layout[i].type) {
-			case 'N':
-				ptr_N = f;
-				break;
-			case 'V':
-				ptr_V = f;
-				break;
-			case 'Z':
-				ptr_Z = f;
-				break;
-			case 'C':
-				ptr_C = f;
-				break;
-		}
-	}
+	arch_flags_declare(cpu, bb);
 
 	// decode P
 	Value *flags = new LoadInst(ptr_P, "", false, bb);

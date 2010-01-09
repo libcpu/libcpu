@@ -196,6 +196,11 @@ typedef struct cpu {
 	Value **in_ptr_fpr;
 
 	Value **ptr_FLAG; /* exploded version of flags */
+	/* pointers to negative, overflow, zero and carry */
+	Value *ptr_N;
+	Value *ptr_V;
+	Value *ptr_Z;
+	Value *ptr_C;
 
 	uint64_t timer_total[TIMER_COUNT];
 	uint64_t timer_start[TIMER_COUNT];

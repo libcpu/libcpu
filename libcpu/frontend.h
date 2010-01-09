@@ -15,6 +15,7 @@ void arch_jump(BasicBlock *bb, BasicBlock *bb_target);
 Value *arch_encode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb);
 void arch_decode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb);
 
+void arch_flags_declare(cpu_t *cpu, BasicBlock *bb);
 Value *arch_flags_encode(cpu_t *cpu, BasicBlock *bb);
 void arch_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb);
 
