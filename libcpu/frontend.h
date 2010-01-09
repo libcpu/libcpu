@@ -43,6 +43,8 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
  * that make the LLVM interface nicer
  */
 
+#define SIZE(x) (x->getType()->getPrimitiveSizeInBits())
+
 #define LOAD(a) new LoadInst(a, "", false, bb)
 
 #define CONSTs(s,v) ConstantInt::get(getIntegerType(s), v)
@@ -204,6 +206,19 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define FFC16(v) FFC(16,v)
 #define FFC32(v) FFC(32,v)
 #define FFC64(v) FFC(64,v)
+
+/* flags */
+#define SET_N(a) { Value *t = a; LET1(cpu->ptr_N, ICMP_SLT(t, CONSTs(SIZE(t), 0))); }
+#define SET_Z(a) { Value *t = a; LET1(cpu->ptr_Z, ICMP_EQ(t, CONSTs(SIZE(t), 0))); }
+#define SET_NZ(a) { Value *t2 = a; SET_N(t2); SET_Z(t2); }
+#define CC_EQ LOAD(cpu->ptr_Z)
+#define CC_NE NOT(LOAD(cpu->ptr_Z))
+#define CC_CS LOAD(cpu->ptr_C)
+#define CC_CC NOT(LOAD(cpu->ptr_C))
+#define CC_MI LOAD(cpu->ptr_N)
+#define CC_PL NOT(LOAD(cpu->ptr_N))
+#define CC_VS LOAD(cpu->ptr_V)
+#define CC_VC NOT(LOAD(cpu->ptr_V))
 
 /* host */
 #define RAM32(RAM,a) RAM32BE(RAM,a)

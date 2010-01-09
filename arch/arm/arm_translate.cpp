@@ -167,6 +167,7 @@ setsub(cpu_t *cpu, Value *op1, Value *op2, BasicBlock *bb)
 
 #define LET1(a,b) new StoreInst(b, a, false, bb)
 
+#undef SET_NZ
 #define SET_NZ(a) { Value *t = a; LET1(ptr_Z, ICMP_EQ(t, CONST(0))); LET1(ptr_N, ICMP_SLT(t, CONST(0))); }
 
 #define COMPUTE_CARRY(src1, src2, result) \

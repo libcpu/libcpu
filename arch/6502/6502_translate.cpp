@@ -12,11 +12,6 @@
 #define ptr_S cpu->ptr_gpr[S]
 //#define P 0
 
-#define ptr_N cpu->ptr_N
-#define ptr_V cpu->ptr_V
-#define ptr_Z cpu->ptr_Z
-#define ptr_C cpu->ptr_C
-
 /* these are the flags that aren't handled by the generic flag code */
 #define ptr_D cpu->ptr_FLAG[D_SHIFT]
 #define ptr_I cpu->ptr_FLAG[I_SHIFT]
@@ -25,14 +20,11 @@
 #define OPERAND_8 cpu->RAM[(pc+1)&0xFFFF]
 #define OPERAND_16 ((cpu->RAM[(pc+1)&0xFFFF] | (cpu->RAM[(pc+2)&0xFFFF]<<8))&0xFFFF)
 
-#define SET_NZ(a) { Value *t = a; LET1(ptr_Z, ICMP_EQ(t, CONST8(0))); LET1(ptr_N, ICMP_SLT(t, CONST8(0))); }
-
 #define LOPERAND arch_6502_get_operand_lvalue(cpu, pc, bb)
 #define OPERAND LOAD(LOPERAND)
 #define LET1(a,b) new StoreInst(b, a, false, bb)
 
 #define GEP(a) GetElementPtrInst::Create(cpu->ptr_RAM, a, "", bb)
-#define LOAD(a) new LoadInst(a, "", false, bb)
 
 #define TOS GEP(OR(ZEXT32(R(S)), CONST32(0x0100)))
 #define PUSH(v) { STORE(v, TOS); LET(S,DEC(R(S))); }
@@ -327,15 +319,15 @@ arch_6502_shiftrotate(cpu_t *cpu, Value *l, bool left, bool rotate,
 		c = ICMP_SLT(v, CONST8(0));	/* old MSB to carry */
 		v = SHL(v, CONST8(1));
 		if (rotate)
-			v = OR(v,ZEXT8(LOAD(ptr_C)));
+			v = OR(v,ZEXT8(LOAD(cpu->ptr_C)));
 	} else {
 		c = TRUNC1(v);		/* old LSB to carry */
 		v = LSHR(v, CONST8(1));
 		if (rotate)
-			v = OR(v,SHL(ZEXT8(LOAD(ptr_C)), CONST8(7)));
+			v = OR(v,SHL(ZEXT8(LOAD(cpu->ptr_C)), CONST8(7)));
 	}
 	
-	LET1(ptr_C, c);
+	LET1(cpu->ptr_C, c);
 	return STORE(v, l);
 }
 
@@ -355,7 +347,7 @@ arch_6502_adc(cpu_t *cpu, Value *dreg, Value *sreg, Value *v, Value *c,
 	Value *v1 = ADD(ADD(ZEXT16(LOAD(sreg)), ZEXT16(v)), ZEXT16(c));
 
 	/* get C */
-	STORE(TRUNC1(LSHR(v1, CONST16(8))), ptr_C);
+	STORE(TRUNC1(LSHR(v1, CONST16(8))), cpu->ptr_C);
 
 	/* get result */
 	v1 = TRUNC8(v1);
@@ -373,14 +365,14 @@ arch_6502_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 log("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
 
 	switch (get_instr(opcode)) {
-		case INSTR_BEQ: /* Z */		return LOAD(ptr_Z);
-		case INSTR_BNE: /* !Z */	return NOT(LOAD(ptr_Z));
-		case INSTR_BCS: /* C */		return LOAD(ptr_C);
-		case INSTR_BCC: /* !C */	return NOT(LOAD(ptr_C));
-		case INSTR_BMI: /* N */		return LOAD(ptr_N);
-		case INSTR_BPL: /* !N */	return NOT(LOAD(ptr_N));
-		case INSTR_BVS: /* V */		return LOAD(ptr_V);
-		case INSTR_BVC: /* !V */	return NOT(LOAD(ptr_V));
+		case INSTR_BEQ: /* Z */		return CC_EQ;
+		case INSTR_BNE: /* !Z */	return CC_NE;
+		case INSTR_BCS: /* C */		return CC_CS;
+		case INSTR_BCC: /* !C */	return CC_CC;
+		case INSTR_BMI: /* N */		return CC_MI;
+		case INSTR_BPL: /* !N */	return CC_PL;
+		case INSTR_BVS: /* V */		return CC_VS;
+		case INSTR_BVC: /* !V */	return CC_VC;
 		default:					return NULL; /* no condition; should not be reached */
 	}
 }
@@ -393,11 +385,11 @@ arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 
 	switch (get_instr(opcode)) {
 		/* flags */
-		case INSTR_CLC:	LET1(ptr_C, FALSE);				break;
+		case INSTR_CLC:	LET1(cpu->ptr_C, FALSE);				break;
 		case INSTR_CLD:	LET1(ptr_D, FALSE);				break;
 		case INSTR_CLI:	LET1(ptr_I, FALSE);				break;
-		case INSTR_CLV:	LET1(ptr_V, FALSE);				break;
-		case INSTR_SEC:	LET1(ptr_C, TRUE);				break;
+		case INSTR_CLV:	LET1(cpu->ptr_V, FALSE);				break;
+		case INSTR_SEC:	LET1(cpu->ptr_C, TRUE);				break;
 		case INSTR_SED:	LET1(ptr_D, TRUE);				break;
 		case INSTR_SEI:	LET1(ptr_I, TRUE);				break;
 
@@ -438,8 +430,8 @@ arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		case INSTR_BIT:	SET_NZ(OPERAND);							break;
 
 		/* arithmetic */
-		case INSTR_ADC:	SET_NZ(ADC(ptr_A, ptr_A, OPERAND, LOAD(ptr_C)));		break;
-		case INSTR_SBC:	SET_NZ(ADC(ptr_A, ptr_A, COM(OPERAND), LOAD(ptr_C)));	break;
+		case INSTR_ADC:	SET_NZ(ADC(ptr_A, ptr_A, OPERAND, LOAD(cpu->ptr_C)));		break;
+		case INSTR_SBC:	SET_NZ(ADC(ptr_A, ptr_A, COM(OPERAND), LOAD(cpu->ptr_C)));	break;
 		case INSTR_CMP:	SET_NZ(ADC(NULL, ptr_A, COM(OPERAND), CONST1(1)));		break;
 		case INSTR_CPX:	SET_NZ(ADC(NULL, ptr_X, COM(OPERAND), CONST1(1)));		break;
 		case INSTR_CPY:	SET_NZ(ADC(NULL, ptr_Y, COM(OPERAND), CONST1(1)));		break;
