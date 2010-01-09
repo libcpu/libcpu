@@ -15,12 +15,46 @@
 //#define P 0
 #define ptr_P cpu->ptr_xr[0]
 
-#define ptr_C ((cc6502_t*)cpu->feptr)->ptr_C
-#define ptr_Z ((cc6502_t*)cpu->feptr)->ptr_Z
-#define ptr_I ((cc6502_t*)cpu->feptr)->ptr_I
-#define ptr_D ((cc6502_t*)cpu->feptr)->ptr_D
-#define ptr_V ((cc6502_t*)cpu->feptr)->ptr_V
-#define ptr_N ((cc6502_t*)cpu->feptr)->ptr_N
+#define ptr_FLAG ((cc6502_t*)cpu->feptr)->ptr_FLAG
+
+//XXX this will move into generic code
+struct flags_layout_t {
+	int shift;	/* bit position */
+	char type;	/* 'N', 'V', 'Z', 'C' or 0 (some other flag unknown to the generic code) */
+	const char *name; /* symbolic name */
+};
+
+#define N_SHIFT 7
+#define V_SHIFT 6
+#define X_SHIFT 5
+#define B_SHIFT 4
+#define D_SHIFT 3
+#define I_SHIFT 2
+#define Z_SHIFT 1
+#define C_SHIFT 0
+
+flags_layout_t flags_layout[] = {
+	{ N_SHIFT, 'N', "N" },
+	{ V_SHIFT, 'V', "V" },
+	{ X_SHIFT, 0,   "X" },
+	{ B_SHIFT, 0,   "B" },
+	{ D_SHIFT, 0,   "D" },
+	{ I_SHIFT, 0,   "I" },
+	{ Z_SHIFT, 'Z', "Z" },
+	{ C_SHIFT, 'C', "C" },
+	{ -1, 0, NULL }
+};
+
+//XXX globals! - this is generic data, per-CPU.
+Value *ptr_N;
+Value *ptr_V;
+Value *ptr_Z;
+Value *ptr_C;
+
+/* these are the flags that aren't handled by the generic flag code */
+#define ptr_D ptr_FLAG[D_SHIFT]
+#define ptr_I ptr_FLAG[I_SHIFT]
+
 
 #define OPCODE cpu->RAM[pc]
 #define OPERAND_8 cpu->RAM[(pc+1)&0xFFFF]
@@ -368,24 +402,14 @@ arch_6502_adc(cpu_t *cpu, Value *dreg, Value *sreg, Value *v, Value *c,
 }
 #define ADC(dreg,sreg,v,c) arch_6502_adc(cpu,dreg,sreg,v,c,bb)
 
-#define N_SHIFT 7
-#define V_SHIFT 6
-#define D_SHIFT 3
-#define I_SHIFT 2
-#define Z_SHIFT 1
-#define C_SHIFT 0
-
 static Value *
 arch_6502_flags_encode(cpu_t *cpu, BasicBlock *bb)
 {
 	Value *flags = CONST8(0);
 
-	flags = arch_encode_bit(flags, ptr_N, N_SHIFT, 8, bb);
-	flags = arch_encode_bit(flags, ptr_V, V_SHIFT, 8, bb);
-	flags = arch_encode_bit(flags, ptr_D, D_SHIFT, 8, bb);
-	flags = arch_encode_bit(flags, ptr_I, I_SHIFT, 8, bb);
-	flags = arch_encode_bit(flags, ptr_Z, Z_SHIFT, 8, bb);
-	flags = arch_encode_bit(flags, ptr_C, C_SHIFT, 8, bb);
+	int i;
+	for (i = 0; flags_layout[i].shift >= 0; i++)
+		flags = arch_encode_bit(flags, ptr_FLAG[flags_layout[i].shift], flags_layout[i].shift, 8, bb);
 
 	return flags;
 }
@@ -393,12 +417,46 @@ arch_6502_flags_encode(cpu_t *cpu, BasicBlock *bb)
 static void
 arch_6502_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
 {
-	arch_decode_bit(flags, ptr_N, N_SHIFT, 8, bb);
-	arch_decode_bit(flags, ptr_V, V_SHIFT, 8, bb);
-	arch_decode_bit(flags, ptr_D, D_SHIFT, 8, bb);
-	arch_decode_bit(flags, ptr_I, I_SHIFT, 8, bb);
-	arch_decode_bit(flags, ptr_Z, Z_SHIFT, 8, bb);
-	arch_decode_bit(flags, ptr_C, C_SHIFT, 8, bb);
+	int i;
+	for (i = 0; flags_layout[i].shift >= 0; i++)
+		arch_decode_bit(flags, ptr_FLAG[flags_layout[i].shift], flags_layout[i].shift, 8, bb);
+}
+
+static void
+arch_6502_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
+{
+	// declare flags
+	int i;
+	for (i = 0; flags_layout[i].shift >= 0; i++) {
+		Value *f = new AllocaInst(getIntegerType(1), flags_layout[i].name, bb);
+		ptr_FLAG[flags_layout[i].shift] = f;
+		/* set pointers to standard NVZC flags */
+		switch (flags_layout[i].type) {
+			case 'N':
+				ptr_N = f;
+				break;
+			case 'V':
+				ptr_V = f;
+				break;
+			case 'Z':
+				ptr_Z = f;
+				break;
+			case 'C':
+				ptr_C = f;
+				break;
+		}
+	}
+
+	// decode P
+	Value *flags = new LoadInst(ptr_P, "", false, bb);
+	arch_6502_flags_decode(cpu, flags, bb);
+}
+
+static void
+arch_6502_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
+{
+	Value *flags = arch_6502_flags_encode(cpu, bb);
+	new StoreInst(flags, ptr_P, false, bb);
 }
 
 Value *
@@ -563,29 +621,6 @@ arch_6502_done(cpu_t *cpu)
 {
 	free(cpu->feptr);
 	free(cpu->rf.grf);
-}
-
-static void
-arch_6502_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
-{
-	// declare flags
-	ptr_N = new AllocaInst(getIntegerType(1), "N", bb);
-	ptr_V = new AllocaInst(getIntegerType(1), "V", bb);
-	ptr_D = new AllocaInst(getIntegerType(1), "D", bb);
-	ptr_I = new AllocaInst(getIntegerType(1), "I", bb);
-	ptr_Z = new AllocaInst(getIntegerType(1), "Z", bb);
-	ptr_C = new AllocaInst(getIntegerType(1), "C", bb);
-
-	// decode P
-	Value *flags = new LoadInst(ptr_P, "", false, bb);
-	arch_6502_flags_decode(cpu, flags, bb);
-}
-
-static void
-arch_6502_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
-{
-	Value *flags = arch_6502_flags_encode(cpu, bb);
-	new StoreInst(flags, ptr_P, false, bb);
 }
 
 static addr_t

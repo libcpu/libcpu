@@ -1,8 +1,3 @@
 typedef struct {
-	Value* ptr_C;
-	Value* ptr_Z;
-	Value* ptr_I;
-	Value* ptr_D;
-	Value* ptr_V;
-	Value* ptr_N;
+	Value* ptr_FLAG[8];
 } cc6502_t;
