@@ -271,10 +271,10 @@ arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
 
 // shifts or rotates an lvalue left or right, regardless of width
 Value *
-arch_shiftrotate(cpu_t *cpu, Value *l, bool left, bool rotate, BasicBlock *bb)
+arch_shiftrotate(cpu_t *cpu, Value *dst, Value *src, bool left, bool rotate, BasicBlock *bb)
 {
 	Value *c;
-	Value *v = LOAD(l);
+	Value *v = LOAD(src);
 
 	if (left) {
 		c = ICMP_SLT(v, CONSTs(SIZE(v), 0));	/* old MSB to carry */
@@ -289,7 +289,33 @@ arch_shiftrotate(cpu_t *cpu, Value *l, bool left, bool rotate, BasicBlock *bb)
 	}
 	
 	LET1(cpu->ptr_C, c);
-	return STORE(v, l);
+	return STORE(v, dst);
+}
+
+// adds src + v + c and stores it in dst
+Value *
+arch_adc(cpu_t *cpu, Value *dst, Value *src, Value *v, Value *c, BasicBlock *bb)
+{
+	if (SIZE(v) == 8) {
+		/* calculate intermediate result */
+		Value *v1 = ADD(ADD(ZEXT16(LOAD(src)), ZEXT16(v)), ZEXT16(c));
+
+		/* get C */
+		STORE(TRUNC1(LSHR(v1, CONST16(8))), cpu->ptr_C);
+
+		/* get result */
+		v1 = TRUNC8(v1);
+
+		if (dst)
+			STORE(v1, dst);
+
+		return v1;
+	} else {
+		//XXX TODO use llvm.uadd.with.overflow.*
+		//XXX consider using it for 8 bit also, if possible
+		printf("TODO: %s() can't do anything but 8 bits yet!\n", __func__);
+		exit(1);
+	}
 }
 
 // branches

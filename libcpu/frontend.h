@@ -25,7 +25,8 @@ Value *arch_bswap(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
 Value *arch_ctlz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
 Value *arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
 
-Value *arch_shiftrotate(cpu_t *cpu, Value *l, bool left, bool rotate, BasicBlock *bb);
+Value *arch_shiftrotate(cpu_t *cpu, Value *dst, Value *src, bool left, bool rotate, BasicBlock *bb);
+Value *arch_adc(cpu_t *cpu, Value *dst, Value *src, Value *v, Value *c, BasicBlock *bb);
 
 /* FPU */
 Value *arch_cast_fp32(cpu_t *cpu, Value *v, BasicBlock *bb);
@@ -114,7 +115,8 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define DEC(a) SUB(a,CONST(1))
 
 /* more complex operations */
-#define SHIFTROTATE(l,left,rotate) arch_shiftrotate(cpu,l,left,rotate,bb)
+#define SHIFTROTATE(dst,src,left,rotate) arch_shiftrotate(cpu,dst,src,left,rotate,bb)
+#define ADC(dst,src,v,c) arch_adc(cpu,dst,src,v,c,bb)
 
 /* floating point */
 #define FPCONSTs(s,v) ConstantFP::get(getFloatType(s), v)

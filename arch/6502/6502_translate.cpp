@@ -297,32 +297,6 @@ arch_6502_trap(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 	ReturnInst::Create(_CTX(), CONST32(JIT_RETURN_TRAP), bb);
 }
 
-/*
- * XXX TODO: consider changing code to avoid 16 bit arithmetic:
- *     while this works ok for 8 bit, it doesn't scale. M88K and ARM
- *     do it differently already.
- *     we should use llvm.uadd.with.overflow.*
- */
-static Value *
-arch_6502_adc(cpu_t *cpu, Value *dreg, Value *sreg, Value *v, Value *c,
-	BasicBlock *bb)
-{
-	/* calculate intermediate result */
-	Value *v1 = ADD(ADD(ZEXT16(LOAD(sreg)), ZEXT16(v)), ZEXT16(c));
-
-	/* get C */
-	STORE(TRUNC1(LSHR(v1, CONST16(8))), cpu->ptr_C);
-
-	/* get result */
-	v1 = TRUNC8(v1);
-
-	if (dreg)
-		STORE(v1, dreg);
-
-	return v1;
-}
-#define ADC(dreg,sreg,v,c) arch_6502_adc(cpu,dreg,sreg,v,c,bb)
-
 Value *
 arch_6502_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	uint8_t opcode = cpu->RAM[pc];
@@ -382,10 +356,10 @@ arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		case INSTR_PLP:	arch_flags_decode(cpu, PULL, bb);	break;
 
 		/* shift */
-		case INSTR_ASL:	SET_NZ(SHIFTROTATE(LOPERAND, true, false));			break;
-		case INSTR_LSR:	SET_NZ(SHIFTROTATE(LOPERAND, false, false));		break;
-		case INSTR_ROL:	SET_NZ(SHIFTROTATE(LOPERAND, true, true));			break;
-		case INSTR_ROR:	SET_NZ(SHIFTROTATE(LOPERAND, false, true));			break;
+		case INSTR_ASL:	SET_NZ(SHIFTROTATE(LOPERAND, LOPERAND, true, false));	break;
+		case INSTR_LSR:	SET_NZ(SHIFTROTATE(LOPERAND, LOPERAND, false, false));	break;
+		case INSTR_ROL:	SET_NZ(SHIFTROTATE(LOPERAND, LOPERAND, true, true));	break;
+		case INSTR_ROR:	SET_NZ(SHIFTROTATE(LOPERAND, LOPERAND, false, true));	break;
 
 		/* bit logic */
 		case INSTR_AND:	SET_NZ(LET(A,AND(R(A),OPERAND)));			break;
