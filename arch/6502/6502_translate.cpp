@@ -368,11 +368,11 @@ arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		case INSTR_BIT:	SET_NZ(OPERAND);							break;
 
 		/* arithmetic */
-		case INSTR_ADC:	SET_NZ(ADC(ptr_A, ptr_A, OPERAND, LOAD(cpu->ptr_C)));		break;
-		case INSTR_SBC:	SET_NZ(ADC(ptr_A, ptr_A, COM(OPERAND), LOAD(cpu->ptr_C)));	break;
-		case INSTR_CMP:	SET_NZ(ADC(NULL, ptr_A, COM(OPERAND), CONST1(1)));		break;
-		case INSTR_CPX:	SET_NZ(ADC(NULL, ptr_X, COM(OPERAND), CONST1(1)));		break;
-		case INSTR_CPY:	SET_NZ(ADC(NULL, ptr_Y, COM(OPERAND), CONST1(1)));		break;
+		case INSTR_ADC:	SET_NZ(ADC(ptr_A, ptr_A, OPERAND, true, false));		break;
+		case INSTR_SBC:	SET_NZ(ADC(ptr_A, ptr_A, COM(OPERAND), true, false));	break;
+		case INSTR_CMP:	SET_NZ(ADC(NULL, ptr_A, COM(OPERAND), false, true));		break;
+		case INSTR_CPX:	SET_NZ(ADC(NULL, ptr_X, COM(OPERAND), false, true));		break;
+		case INSTR_CPY:	SET_NZ(ADC(NULL, ptr_Y, COM(OPERAND), false, true));		break;
 
 		/* increment/decrement */
 		case INSTR_INX:	SET_NZ(LET(X,INC(R(X))));			break;

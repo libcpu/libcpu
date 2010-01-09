@@ -294,8 +294,16 @@ arch_shiftrotate(cpu_t *cpu, Value *dst, Value *src, bool left, bool rotate, Bas
 
 // adds src + v + c and stores it in dst
 Value *
-arch_adc(cpu_t *cpu, Value *dst, Value *src, Value *v, Value *c, BasicBlock *bb)
+arch_adc(cpu_t *cpu, Value *dst, Value *src, Value *v, bool plus_carry, bool plus_one, BasicBlock *bb)
 {
+	Value *c;
+	if (plus_carry)
+		c = LOAD(cpu->ptr_C);
+	else if (plus_one)
+		c = CONST1(1);
+	else
+		c = CONST1(0);
+
 	if (SIZE(v) == 8) {
 		/* calculate intermediate result */
 		Value *v1 = ADD(ADD(ZEXT16(LOAD(src)), ZEXT16(v)), ZEXT16(c));
