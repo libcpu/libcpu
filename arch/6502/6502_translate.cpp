@@ -1,6 +1,5 @@
 #include "libcpu.h"
 #include "6502_isa.h"
-#include "6502_cc.h"
 #include "frontend.h"
 #include "libcpu_6502.h"
 
@@ -15,15 +14,6 @@
 //#define P 0
 #define ptr_P cpu->ptr_xr[0]
 
-#define ptr_FLAG ((cc6502_t*)cpu->feptr)->ptr_FLAG
-
-//XXX this will move into generic code
-struct flags_layout_t {
-	int shift;	/* bit position */
-	char type;	/* 'N', 'V', 'Z', 'C' or 0 (some other flag unknown to the generic code) */
-	const char *name; /* symbolic name */
-};
-
 #define N_SHIFT 7
 #define V_SHIFT 6
 #define X_SHIFT 5
@@ -33,18 +23,6 @@ struct flags_layout_t {
 #define Z_SHIFT 1
 #define C_SHIFT 0
 
-flags_layout_t flags_layout[] = {
-	{ N_SHIFT, 'N', "N" },
-	{ V_SHIFT, 'V', "V" },
-	{ X_SHIFT, 0,   "X" },
-	{ B_SHIFT, 0,   "B" },
-	{ D_SHIFT, 0,   "D" },
-	{ I_SHIFT, 0,   "I" },
-	{ Z_SHIFT, 'Z', "Z" },
-	{ C_SHIFT, 'C', "C" },
-	{ -1, 0, NULL }
-};
-
 //XXX globals! - this is generic data, per-CPU.
 Value *ptr_N;
 Value *ptr_V;
@@ -52,8 +30,8 @@ Value *ptr_Z;
 Value *ptr_C;
 
 /* these are the flags that aren't handled by the generic flag code */
-#define ptr_D ptr_FLAG[D_SHIFT]
-#define ptr_I ptr_FLAG[I_SHIFT]
+#define ptr_D cpu->ptr_FLAG[D_SHIFT]
+#define ptr_I cpu->ptr_FLAG[I_SHIFT]
 
 
 #define OPCODE cpu->RAM[pc]
@@ -402,34 +380,15 @@ arch_6502_adc(cpu_t *cpu, Value *dreg, Value *sreg, Value *v, Value *c,
 }
 #define ADC(dreg,sreg,v,c) arch_6502_adc(cpu,dreg,sreg,v,c,bb)
 
-static Value *
-arch_6502_flags_encode(cpu_t *cpu, BasicBlock *bb)
-{
-	Value *flags = CONST8(0);
-
-	int i;
-	for (i = 0; flags_layout[i].shift >= 0; i++)
-		flags = arch_encode_bit(flags, ptr_FLAG[flags_layout[i].shift], flags_layout[i].shift, 8, bb);
-
-	return flags;
-}
-
-static void
-arch_6502_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
-{
-	int i;
-	for (i = 0; flags_layout[i].shift >= 0; i++)
-		arch_decode_bit(flags, ptr_FLAG[flags_layout[i].shift], flags_layout[i].shift, 8, bb);
-}
-
 static void
 arch_6502_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	// declare flags
+	flags_layout_t *flags_layout = cpu->info.flags_layout;
 	int i;
 	for (i = 0; flags_layout[i].shift >= 0; i++) {
 		Value *f = new AllocaInst(getIntegerType(1), flags_layout[i].name, bb);
-		ptr_FLAG[flags_layout[i].shift] = f;
+		cpu->ptr_FLAG[flags_layout[i].shift] = f;
 		/* set pointers to standard NVZC flags */
 		switch (flags_layout[i].type) {
 			case 'N':
@@ -449,13 +408,13 @@ arch_6502_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 
 	// decode P
 	Value *flags = new LoadInst(ptr_P, "", false, bb);
-	arch_6502_flags_decode(cpu, flags, bb);
+	arch_flags_decode(cpu, flags, bb);
 }
 
 static void
 arch_6502_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
-	Value *flags = arch_6502_flags_encode(cpu, bb);
+	Value *flags = arch_flags_encode(cpu, bb);
 	new StoreInst(flags, ptr_P, false, bb);
 }
 
@@ -513,9 +472,9 @@ arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 
 		/* stack */
 		case INSTR_PHA:	PUSH(R(A));						break;
-		case INSTR_PHP:	PUSH(arch_6502_flags_encode(cpu, bb));	break;
+		case INSTR_PHP:	PUSH(arch_flags_encode(cpu, bb));	break;
 		case INSTR_PLA:	SET_NZ(LET(A,PULL));			break;
-		case INSTR_PLP:	arch_6502_flags_decode(cpu, PULL, bb);	break;
+		case INSTR_PLP:	arch_flags_decode(cpu, PULL, bb);	break;
 
 		/* shift */
 		case INSTR_ASL:	SET_NZ(SHIFTROTATE(LOPERAND, true, false));			break;
@@ -576,6 +535,18 @@ arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	return length[get_addmode(opcode)]+1;
 }
 
+flags_layout_t arch_6502_flags_layout[] = {
+	{ N_SHIFT, 'N', "N" },	/* negative */
+	{ V_SHIFT, 'V', "V" },	/* overflow */
+	{ X_SHIFT, 0,   "X" },	/* unassigned */
+	{ B_SHIFT, 0,   "B" },	/* break */
+	{ D_SHIFT, 0,   "D" },	/* decimal mode */
+	{ I_SHIFT, 0,   "I" },	/* interrupt disable */
+	{ Z_SHIFT, 'Z', "Z" },	/* zero */
+	{ C_SHIFT, 'C', "C" },	/* carry */
+	{ -1, 0, NULL }
+};
+
 static void
 arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
@@ -599,6 +570,9 @@ arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->register_count[CPU_REG_XR] = 1;
 	info->register_size[CPU_REG_XR] = 8;
 
+	info->flags_size = 8;
+	info->flags_layout = arch_6502_flags_layout;
+
 	reg_6502_t *reg;
 	reg = (reg_6502_t*)malloc(sizeof(reg_6502_t));
 	reg->pc = 0;
@@ -612,14 +586,15 @@ arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	rf->grf = reg;
 
 	// allocate space for CC flags.
-	cpu->feptr = malloc(sizeof(cc6502_t));
-	assert(cpu->feptr != NULL);
+	//XXX move to generic code; make sure archs without flags assign flags_size = 0.
+	cpu->ptr_FLAG = (Value **)malloc(info->flags_size * sizeof(Value*));
+	assert(cpu->ptr_FLAG != NULL);
 }
 
 static void
 arch_6502_done(cpu_t *cpu)
 {
-	free(cpu->feptr);
+	free(cpu->ptr_FLAG);
 	free(cpu->rf.grf);
 }
 

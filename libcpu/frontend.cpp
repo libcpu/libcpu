@@ -306,6 +306,32 @@ arch_decode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
 	new StoreInst(n, bit, bb);
 }
 
+// flags encoding and decoding
+
+Value *
+arch_flags_encode(cpu_t *cpu, BasicBlock *bb)
+{
+	uint32_t flags_size = cpu->info.flags_size;
+	flags_layout_t *flags_layout = cpu->info.flags_layout;
+	Value *flags = CONSTs(flags_size, 0);
+
+	int i;
+	for (i = 0; flags_layout[i].shift >= 0; i++)
+		flags = arch_encode_bit(flags, cpu->ptr_FLAG[flags_layout[i].shift], flags_layout[i].shift, flags_size, bb);
+
+	return flags;
+}
+
+void
+arch_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
+{
+	uint32_t flags_size = cpu->info.flags_size;
+	flags_layout_t *flags_layout = cpu->info.flags_layout;
+	int i;
+	for (i = 0; flags_layout[i].shift >= 0; i++)
+		arch_decode_bit(flags, cpu->ptr_FLAG[flags_layout[i].shift], flags_layout[i].shift, flags_size, bb);
+}
+
 // FP
 
 Value *

@@ -109,6 +109,12 @@ enum {
 #define TIMER_BE	2
 #define TIMER_RUN	3
 
+typedef struct flags_layout {
+	int shift;	/* bit position */
+	char type;	/* 'N', 'V', 'Z', 'C' or 0 (some other flag unknown to the generic code) */
+	const char *name; /* symbolic name */
+} flags_layout_t;
+
 typedef struct cpu_archinfo {
 	cpu_arch_t type;
 	
@@ -132,6 +138,9 @@ typedef struct cpu_archinfo {
 
 	uint32_t register_count[4];
 	uint32_t register_size[4];
+
+	uint32_t flags_size;
+	flags_layout_t *flags_layout;
 } cpu_archinfo_t;
 
 typedef struct cpu_archrf {
@@ -185,6 +194,8 @@ typedef struct cpu {
 	Value *ptr_frf; // fp register file
 	Value **ptr_fpr; // FPRs
 	Value **in_ptr_fpr;
+
+	Value **ptr_FLAG; /* exploded version of flags */
 
 	uint64_t timer_total[TIMER_COUNT];
 	uint64_t timer_start[TIMER_COUNT];
