@@ -1,7 +1,6 @@
 #include "libcpu.h"
 #include "6502_isa.h"
 #include "frontend.h"
-#include "libcpu_6502.h"
 
 #define A 0
 #define X 1
@@ -12,16 +11,6 @@
 #define ptr_Y cpu->ptr_gpr[Y]
 #define ptr_S cpu->ptr_gpr[S]
 //#define P 0
-#define ptr_P cpu->ptr_xr[0]
-
-#define N_SHIFT 7
-#define V_SHIFT 6
-#define X_SHIFT 5
-#define B_SHIFT 4
-#define D_SHIFT 3
-#define I_SHIFT 2
-#define Z_SHIFT 1
-#define C_SHIFT 0
 
 #define ptr_N cpu->ptr_N
 #define ptr_V cpu->ptr_V
@@ -31,7 +20,6 @@
 /* these are the flags that aren't handled by the generic flag code */
 #define ptr_D cpu->ptr_FLAG[D_SHIFT]
 #define ptr_I cpu->ptr_FLAG[I_SHIFT]
-
 
 #define OPCODE cpu->RAM[pc]
 #define OPERAND_8 cpu->RAM[(pc+1)&0xFFFF]
@@ -379,24 +367,6 @@ arch_6502_adc(cpu_t *cpu, Value *dreg, Value *sreg, Value *v, Value *c,
 }
 #define ADC(dreg,sreg,v,c) arch_6502_adc(cpu,dreg,sreg,v,c,bb)
 
-static void
-arch_6502_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
-{
-	// declare flags
-	arch_flags_declare(cpu, bb);
-
-	// decode P
-	Value *flags = new LoadInst(ptr_P, "", false, bb);
-	arch_flags_decode(cpu, flags, bb);
-}
-
-static void
-arch_6502_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
-{
-	Value *flags = arch_flags_encode(cpu, bb);
-	new StoreInst(flags, ptr_P, false, bb);
-}
-
 Value *
 arch_6502_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	uint8_t opcode = cpu->RAM[pc];
@@ -415,7 +385,7 @@ log("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
 	}
 }
 
-static int
+int
 arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	uint8_t opcode = cpu->RAM[pc];
 
@@ -514,106 +484,3 @@ arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	return length[get_addmode(opcode)]+1;
 }
 
-flags_layout_t arch_6502_flags_layout[] = {
-	{ N_SHIFT, 'N', "N" },	/* negative */
-	{ V_SHIFT, 'V', "V" },	/* overflow */
-	{ X_SHIFT, 0,   "X" },	/* unassigned */
-	{ B_SHIFT, 0,   "B" },	/* break */
-	{ D_SHIFT, 0,   "D" },	/* decimal mode */
-	{ I_SHIFT, 0,   "I" },	/* interrupt disable */
-	{ Z_SHIFT, 'Z', "Z" },	/* zero */
-	{ C_SHIFT, 'C', "C" },	/* carry */
-	{ -1, 0, NULL }
-};
-
-static void
-arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
-{
-	assert(offsetof(reg_6502_t, pc) == 5);
-
-	// Basic Information
-	info->name = "6502";
-	info->full_name = "MOS 6502";
-
-	// This architecture is little endian, override any user flag.
-	info->common_flags = CPU_FLAG_ENDIAN_LITTLE;
-	// The byte and word size are both 8bits.
-	// The address size is 16bits.
-	info->byte_size = 8;
-	info->word_size = 8;
-	info->address_size = 16;
-	// There are 4 8-bit GPRs
-	info->register_count[CPU_REG_GPR] = 4;
-	info->register_size[CPU_REG_GPR] = info->word_size;
-	// There is also 1 extra register to handle PSR.
-	info->register_count[CPU_REG_XR] = 1;
-	info->register_size[CPU_REG_XR] = 8;
-
-	info->flags_size = 8;
-	info->flags_layout = arch_6502_flags_layout;
-
-	reg_6502_t *reg;
-	reg = (reg_6502_t*)malloc(sizeof(reg_6502_t));
-	reg->pc = 0;
-	reg->a = 0;
-	reg->x = 0;
-	reg->y = 0;
-	reg->s = 0xFF;
-	reg->p = 0;
-
-	rf->pc = &reg->pc;
-	rf->grf = reg;
-
-	// allocate space for CC flags.
-	//XXX move to generic code; make sure archs without flags assign flags_size = 0.
-	cpu->ptr_FLAG = (Value **)malloc(info->flags_size * sizeof(Value*));
-	assert(cpu->ptr_FLAG != NULL);
-}
-
-static void
-arch_6502_done(cpu_t *cpu)
-{
-	free(cpu->ptr_FLAG);
-	free(cpu->rf.grf);
-}
-
-static addr_t
-arch_6502_get_pc(cpu_t *, void *reg)
-{
-	return ((reg_6502_t*)reg)->pc;
-}
-
-static uint64_t
-arch_6502_get_psr(cpu_t *, void *reg)
-{
-	return ((reg_6502_t*)reg)->p;
-}
-
-static int
-arch_6502_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
-{
-	switch (reg_no) {
-		case 0: *value = ((reg_6502_t *)reg)->a; break;
-		case 1: *value = ((reg_6502_t *)reg)->x; break;
-		case 2: *value = ((reg_6502_t *)reg)->y; break;
-		case 3: *value = ((reg_6502_t *)reg)->s; break;
-		default: return (-1);
-	}
-	return (0);
-}
-
-arch_func_t arch_func_6502 = {
-	arch_6502_init,
-	arch_6502_done,
-	arch_6502_get_pc,
-	arch_6502_emit_decode_reg,
-	arch_6502_spill_reg_state,
-	arch_6502_tag_instr,
-	arch_6502_disasm_instr,
-	arch_6502_translate_cond,
-	arch_6502_translate_instr,
-	// idbg support
-	arch_6502_get_psr,
-	arch_6502_get_reg,
-	NULL
-};

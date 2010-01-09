@@ -1,3 +1,12 @@
+#define N_SHIFT 7
+#define V_SHIFT 6
+#define X_SHIFT 5
+#define B_SHIFT 4
+#define D_SHIFT 3
+#define I_SHIFT 2
+#define Z_SHIFT 1
+#define C_SHIFT 0
+
 enum {
 	INSTR_ADC,
 	INSTR_AND,

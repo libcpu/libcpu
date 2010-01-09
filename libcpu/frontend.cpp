@@ -308,32 +308,6 @@ arch_decode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
 
 // flags encoding and decoding
 
-void
-arch_flags_declare(cpu_t *cpu, BasicBlock *bb)
-{
-	flags_layout_t *flags_layout = cpu->info.flags_layout;
-	int i;
-	for (i = 0; flags_layout[i].shift >= 0; i++) {
-		Value *f = new AllocaInst(getIntegerType(1), flags_layout[i].name, bb);
-		cpu->ptr_FLAG[flags_layout[i].shift] = f;
-		/* set pointers to standard NVZC flags */
-		switch (flags_layout[i].type) {
-			case 'N':
-				cpu->ptr_N = f;
-				break;
-			case 'V':
-				cpu->ptr_V = f;
-				break;
-			case 'Z':
-				cpu->ptr_Z = f;
-				break;
-			case 'C':
-				cpu->ptr_C = f;
-				break;
-		}
-	}
-}
-
 Value *
 arch_flags_encode(cpu_t *cpu, BasicBlock *bb)
 {

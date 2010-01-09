@@ -6,6 +6,7 @@
  */
 
 #include "libcpu.h"
+#include "frontend.h" // XXX for arch_flags_encode() / arch_flags_decode()
 
 //////////////////////////////////////////////////////////////////////
 // function
@@ -169,6 +170,36 @@ emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 	Constant *v_pc = ConstantInt::get(intptr_type, (uintptr_t)cpu->rf.pc);
 	cpu->ptr_PC = ConstantExpr::getIntToPtr(v_pc, PointerType::getUnqual(getIntegerType(cpu->info.address_size)));
 	cpu->ptr_PC->setName("pc");
+
+	// flags
+	if (cpu->info.flags_size) {
+		// declare flags
+		flags_layout_t *flags_layout = cpu->info.flags_layout;
+		int i;
+		for (i = 0; flags_layout[i].shift >= 0; i++) {
+			Value *f = new AllocaInst(getIntegerType(1), flags_layout[i].name, bb);
+			cpu->ptr_FLAG[flags_layout[i].shift] = f;
+			/* set pointers to standard NVZC flags */
+			switch (flags_layout[i].type) {
+				case 'N':
+					cpu->ptr_N = f;
+					break;
+				case 'V':
+					cpu->ptr_V = f;
+					break;
+				case 'Z':
+					cpu->ptr_Z = f;
+					break;
+				case 'C':
+					cpu->ptr_C = f;
+					break;
+			}
+		}
+
+		// decode P
+		Value *flags = new LoadInst(cpu->ptr_xr[0], "", false, bb);
+		arch_flags_decode(cpu, flags, bb);
+	}
 	
 	// frontend specific part
 	if (cpu->f.emit_decode_reg != NULL)
@@ -215,6 +246,12 @@ spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 	// frontend specific part.
 	if (cpu->f.spill_reg_state != NULL)
 		cpu->f.spill_reg_state(cpu, bb);
+
+	// flags
+	if (cpu->info.flags_size) {
+		Value *flags = arch_flags_encode(cpu, bb);
+		new StoreInst(flags, cpu->ptr_xr[0], false, bb);
+	}
 
 	// GPRs
 	spill_reg_state_helper(cpu->info.register_count[CPU_REG_GPR],
