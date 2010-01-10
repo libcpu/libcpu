@@ -75,6 +75,7 @@ enum x86_addmode {
 	ADDMODE_RM_REG		= DST_REG|MOD_RM,		/* register/memory -> register */
 	ADDMODE_IMM_ACC		= SRC_IMM|DST_ACC,		/* immediate -> AL/AX */
 	ADDMODE_ACC_REG		= SRC_ACC|DST_REG,		/* AL/AX -> reg */
+	ADDMODE_IMM		= SRC_IMM|DST_NONE,		/* immediate operand */
 };
 
 struct x86_instr {

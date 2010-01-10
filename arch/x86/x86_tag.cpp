@@ -20,7 +20,12 @@ arch_8086_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *n
 
 	len = arch_8086_instr_length(&instr);
 
-	*tag = TAG_CONTINUE;
+	if (cpu->RAM[pc] == 0xCD && cpu->RAM[pc+1] == 0x20) {
+		//XXX DOS-specific hack to end tagging when an "int $0x20" is encountered
+		*tag = TAG_RET;
+	} else {
+		*tag = TAG_CONTINUE;
+	}	
 
 	*next_pc = pc + len;
 
