@@ -5,7 +5,7 @@
 #include "m88k_internal.h"
 #include "libcpu_m88k.h"
 #include "frontend.h"
-#include "arch_types.h"
+#include "m88k_types.h"
 
 #define ptr_PSR		ptr_xr[0]
 #define ptr_TRAPNO	ptr_xr[1]

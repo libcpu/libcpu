@@ -20,9 +20,9 @@ typedef uint64_t addr_t;
 
 typedef uint16_t tag_t;
 
-#include <arch/6502/arch_types.h>
-#include <arch/m68k/arch_types.h>
-#include <arch/mips/arch_types.h>
-#include <arch/x86/arch_types.h>
+#include <arch/6502/6502_types.h>
+#include <arch/m68k/m68k_types.h>
+#include <arch/mips/mips_types.h>
+#include <arch/x86/x86_types.h>
 
 #endif
