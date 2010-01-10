@@ -1,4 +1,7 @@
+#include "llvm/Instructions.h"
+
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "6502_isa.h"
 #include "frontend.h"
 
@@ -56,11 +59,11 @@ arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 	index_register_after = (am == ADDMODE_INDY)? ptr_Y : NULL;
 
 #if 0
-	log("pc = %x\n", pc);
-	log("index_register_before = %x\n", index_register_before);
-	log("index_register_after = %x\n", index_register_after);
-	log("is_indirect = %x\n", is_indirect);
-	log("is_8bit_base = %x\n", is_8bit_base);
+	LOG("pc = %x\n", pc);
+	LOG("index_register_before = %x\n", index_register_before);
+	LOG("index_register_after = %x\n", index_register_after);
+	LOG("is_indirect = %x\n", is_indirect);
+	LOG("is_8bit_base = %x\n", is_8bit_base);
 #endif
 
 	/* create base constant */
@@ -96,7 +99,7 @@ arch_6502_trap(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 Value *
 arch_6502_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	uint8_t opcode = cpu->RAM[pc];
-log("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
+LOG("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
 
 	switch (get_instr(opcode)) {
 		case INSTR_BEQ: /* Z */		return CC_EQ;
@@ -134,7 +137,7 @@ int
 arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	uint8_t opcode = cpu->RAM[pc];
 
-//log("%s:%d PC=$%04X\n", __func__, __LINE__, pc);
+//LOG("%s:%d PC=$%04X\n", __func__, __LINE__, pc);
 
 	switch (get_instr(opcode)) {
 		/* flags */

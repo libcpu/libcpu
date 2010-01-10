@@ -5,7 +5,11 @@
  * basic blocks (branch target, taken, non-taken, ...)
  * so that execution will always exit after the instruction.
  */
+
+#include "llvm/BasicBlock.h"
+
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "disasm.h"
 #include "tag.h"
 #include "basicblock.h"

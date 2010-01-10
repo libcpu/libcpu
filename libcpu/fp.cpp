@@ -3,7 +3,13 @@
  *
  * IEEE754 Floating Point Handling
  */
+
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/Instructions.h"
+#include "llvm/Target/TargetData.h"
+
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "frontend.h"
 
 #define HAS_SPECIAL_FPR0(cpu) ((cpu)->info.common_flags & CPU_FLAG_HARDWIRE_FPR0)

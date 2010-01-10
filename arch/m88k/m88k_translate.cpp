@@ -1,6 +1,9 @@
+#include "llvm/Instructions.h"
+
 #define OPT_LOCAL_REGISTERS //XXX
 
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "frontend.h"
 #include "arch/m88k/libcpu_m88k.h"
 #include "m88k_internal.h"
@@ -738,7 +741,7 @@ int
 arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 #define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0)
-#define LOG log("%s:%d\n", __func__, __LINE__);
+#define LOGX LOG("%s:%d\n", __func__, __LINE__);
 	m88k_insn instr = INSTR(pc);
 	m88k_opcode_t opc = instr.opcode();
 	m88k_insnfmt_t fmt = instr.format();
@@ -1188,7 +1191,7 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 			break;
 
 		default:
-			log("INVALID %s:%d\n", __func__, __LINE__); exit(1);
+			LOG("INVALID %s:%d\n", __func__, __LINE__); exit(1);
 			break;
 	}
 

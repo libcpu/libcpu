@@ -1,4 +1,7 @@
+#include "llvm/Instructions.h"
+
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "frontend.h"
 #include "arm_internal.h"
 #include "tag.h"
@@ -13,7 +16,7 @@ using namespace llvm;
 #define ptr_CPSR	cpu->ptr_xr[0]
 
 #define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0)
-#define LOG do { log("%s:%d\n", __func__, __LINE__); } while(0)
+#define LOGX do { LOG("%s:%d\n", __func__, __LINE__); } while(0)
 
 #define ARM_BRANCH_TARGET ((((int)BITS(0,23) << 8) >> 6) + pc + 8)
 
@@ -135,8 +138,8 @@ Value *operand(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 		if (!BIT(4)) { /* Immediate shifts */
 			int shift = BITS(5,6);
 			int shift_imm = BITS(7,11);
-			log("shift=%x\n", shift);
-			log("shift_imm=%x\n", shift_imm);
+			LOG("shift=%x\n", shift);
+			LOG("shift_imm=%x\n", shift_imm);
 			if (!shift && !shift_imm) { /* Register */
 				return R(RM);
 			} else {
@@ -176,17 +179,17 @@ setsub(cpu_t *cpu, Value *op1, Value *op2, BasicBlock *bb)
 #define LINK LET32(14, CONST((uint64_t)(sint64_t)(sint32_t)pc+8))
 
 int arch_arm_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
-log("%s:%d pc=%llx\n", __func__, __LINE__, pc);
+LOG("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
 
 //	int cond = instr >> 28;
 //	int op1 = (instr>>20)&0xFF;
 //	int op2 = (instr>>4)&0xF;
 //	int shift_bits = (instr>>4)&0xFF;
-//	log("cond=%x, op1=%x, op2=%x, shift_bits=%x\n", cond, op1, op2, shift_bits);
+//	LOG("cond=%x, op1=%x, op2=%x, shift_bits=%x\n", cond, op1, op2, shift_bits);
 
 	int opcode = ((instr >> 21) & 0x0F);
-	log("opcode=%d\n", opcode);
+	LOG("opcode=%d\n", opcode);
 
 	switch ((instr >> 26) & 3) { /* bits 26 and 27 */
 		case 0:
@@ -280,7 +283,7 @@ log("%s:%d pc=%llx\n", __func__, __LINE__, pc);
 		
 	}
 
-	LOG;
+	LOGX;
 	return 4;
 }
 

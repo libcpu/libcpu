@@ -47,6 +47,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <ctype.h>
 
 #ifdef USE_READLINE
 #define Function FunctionX // XXX clash in readline.
@@ -226,7 +227,7 @@ idbg_print_char(char c)
 	}
 }
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_print_string(char const *string)
 {
 	char const *p = string;
@@ -372,14 +373,14 @@ idbg_read_tword(idbg_t *ctx, addr_t address, uint64_t *tword)
 // EXAMINE HELPERS
 //////////////////////////////////////////////////////////////////////////////
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_examine_byte(idbg_t *ctx, addr_t address, unsigned mode)
 {
 	idbg_print_byte(ctx->cpu->RAM[address], mode, -1);
 	return (1);
 }
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_examine_char(idbg_t *ctx, addr_t address)
 {
 	fputc('\'', stdout);
@@ -388,7 +389,7 @@ idbg_examine_char(idbg_t *ctx, addr_t address)
 	return (1);
 }
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_examine_hword(idbg_t *ctx, addr_t address, unsigned mode)
 {
 	uint16_t w;
@@ -398,7 +399,7 @@ idbg_examine_hword(idbg_t *ctx, addr_t address, unsigned mode)
 	return (2);
 }
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_examine_word(idbg_t *ctx, addr_t address, unsigned mode)
 {
 	uint32_t w;
@@ -408,7 +409,7 @@ idbg_examine_word(idbg_t *ctx, addr_t address, unsigned mode)
 	return (4);
 }
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_examine_dword(idbg_t *ctx, addr_t address, unsigned mode)
 {
 	uint64_t w;
@@ -418,7 +419,7 @@ idbg_examine_dword(idbg_t *ctx, addr_t address, unsigned mode)
 	return (8);
 }
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_examine_qword(idbg_t *ctx, addr_t address, unsigned mode)
 {
 	uint64_t w[2];
@@ -428,7 +429,7 @@ idbg_examine_qword(idbg_t *ctx, addr_t address, unsigned mode)
 	return (16);
 }
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_examine_float32(idbg_t *ctx, addr_t address)
 {
 	uint32_t w;
@@ -438,7 +439,7 @@ idbg_examine_float32(idbg_t *ctx, addr_t address)
 	return (4);
 }
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_examine_float64(idbg_t *ctx, addr_t address)
 {
 	uint64_t w;
@@ -448,7 +449,7 @@ idbg_examine_float64(idbg_t *ctx, addr_t address)
 	return (8);
 }
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_examine_float80(idbg_t *ctx, addr_t address)
 {
 	uint64_t w[2];
@@ -458,7 +459,7 @@ idbg_examine_float80(idbg_t *ctx, addr_t address)
 	return (10);
 }
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_examine_float128(idbg_t *ctx, addr_t address)
 {
 	uint64_t w[2];
@@ -468,10 +469,10 @@ idbg_examine_float128(idbg_t *ctx, addr_t address)
 	return (16);
 }
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_examine_string(idbg_t *ctx, addr_t address)
 {
-	ssize_t length;
+	ptrdiff_t length;
 
 	fputc('"', stdout);
 	length = idbg_print_string((char const *)ctx->cpu->RAM + address);
@@ -479,7 +480,7 @@ idbg_examine_string(idbg_t *ctx, addr_t address)
 	return length;
 }
 
-static inline ssize_t
+static inline ptrdiff_t
 idbg_examine_instruction(idbg_t *ctx, addr_t address)
 {
 	char buf[256];
@@ -488,7 +489,7 @@ idbg_examine_instruction(idbg_t *ctx, addr_t address)
 	return nb;
 }
 
-static ssize_t
+static ptrdiff_t
 idbg_examine_one(idbg_t *ctx, addr_t address, unsigned format,
 	unsigned mode)
 {
@@ -814,7 +815,7 @@ elements_per_line(unsigned format, unsigned mode)
 	return nelem;
 }
 
-static ssize_t
+static ptrdiff_t
 idbg_examine(idbg_t *ctx, addr_t address, size_t count,
 	unsigned format, unsigned mode)
 {
@@ -829,7 +830,7 @@ idbg_examine(idbg_t *ctx, addr_t address, size_t count,
 		}
 		fprintf(stdout, "\t");
 
-		ssize_t bytes = idbg_examine_one(ctx, address, format, mode);
+		ptrdiff_t bytes = idbg_examine_one(ctx, address, format, mode);
 		if (bytes < 0) {
 			fprintf(stderr, "\nIDBG ERROR: Cannot access address %llx.\n",
 				address);
@@ -1044,7 +1045,7 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 	unsigned mode;
 	int      last_command = 0;
 	addr_t   last_address = 0;
-	ssize_t  last_count = 0;
+	ptrdiff_t  last_count = 0;
 	int      rc = 0;
 	bool     interactive = true;
 
@@ -1263,7 +1264,7 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 			}
 
 			if (count > 0) {
-				ssize_t bytes = idbg_examine(&ctx, address, count, format, mode);
+				ptrdiff_t bytes = idbg_examine(&ctx, address, count, format, mode);
 				if (bytes > 0) {
 					last_count = count;
 					last_address = address + bytes;

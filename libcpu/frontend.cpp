@@ -5,6 +5,17 @@
  * don't use this directly, but go through the macros in
  * frontend.h
  */
+
+#include <assert.h>
+
+#include "llvm/Constants.h"
+#include "llvm/Intrinsics.h"
+#include "llvm/Support/IRBuilder.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/Target/TargetData.h"
+
+#include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "frontend.h"
 
 //////////////////////////////////////////////////////////////////////

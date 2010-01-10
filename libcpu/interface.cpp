@@ -7,8 +7,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "llvm/Analysis/Verifier.h"
+#include "llvm/ExecutionEngine/JIT.h"
+#include "llvm/LinkAllPasses.h"
+#include "llvm/Module.h"
+#include "llvm/ModuleProvider.h"
+#include "llvm/Target/TargetData.h"
+#include "llvm/Target/TargetSelect.h"
+
 /* project global headers */
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "tag.h"
 #include "translate_all.h"
 #include "translate_singlestep.h"
@@ -177,11 +186,11 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	// XXX there is a better way to do this?
 	std::string data_layout = cpu->exec_engine->getTargetData()->getStringRepresentation();
 	if (data_layout.find("f80") != std::string::npos) {
-		log("INFO: FP80 supported.\n");
+		LOG("INFO: FP80 supported.\n");
 		cpu->flags |= CPU_FLAG_FP80;
 	}
 	if (data_layout.find("f128") != std::string::npos) {
-		log("INFO: FP128 supported.\n");
+		LOG("INFO: FP128 supported.\n");
 		cpu->flags |= CPU_FLAG_FP128;
 	}
 
@@ -290,18 +299,18 @@ cpu_translate_function(cpu_t *cpu)
 		cpu->mod->dump();
 
 	if (cpu->flags_codegen & CPU_CODEGEN_OPTIMIZE) {
-		log("*** Optimizing...");
+		LOG("*** Optimizing...");
 		optimize(cpu);
-		log("done.\n");
+		LOG("done.\n");
 		if (cpu->flags_debug & CPU_DEBUG_PRINT_IR_OPTIMIZED)
 			cpu->mod->dump();
 	}
 
-	log("*** Translating...");
+	LOG("*** Translating...");
 	update_timing(cpu, TIMER_BE, true);
 	cpu->fp[cpu->functions] = cpu->exec_engine->getPointerToFunction(cpu->cur_func);
 	update_timing(cpu, TIMER_BE, false);
-	log("done.\n");
+	LOG("done.\n");
 
 	cpu->functions++;
 }
@@ -363,7 +372,7 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 			}
 		}
 		if (!success) {
-			log("{%llx}", pc);
+			LOG("{%llx}", pc);
 			cpu_tag(cpu, pc);
 			do_translate = true;
 		}

@@ -1,3 +1,5 @@
+#include <string>
+
 #include "libcpu.h"
 #include "frontend.h"
 #include "mips_internal.h"

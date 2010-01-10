@@ -61,7 +61,7 @@ arch_mips_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 		cpu->rf.grf = reg;
 	}
 
-	log("%d bit MIPS initialized.\n", info->word_size);
+	LOG("%d bit MIPS initialized.\n", info->word_size);
 }
 
 static void

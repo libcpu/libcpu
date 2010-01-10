@@ -3,6 +3,13 @@
  *
  * Tell LLVM to run optimizers over the IR.
  */
+
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ModuleProvider.h"
+#include "llvm/PassManager.h"
+#include "llvm/Support/StandardPasses.h"
+#include "llvm/Target/TargetData.h"
+
 #include "libcpu.h"
 
 void

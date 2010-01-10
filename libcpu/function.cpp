@@ -5,7 +5,17 @@
  * basic blocks
  */
 
+#include <vector>
+
+#include "llvm/CallingConv.h"
+#include "llvm/Constants.h"
+#include "llvm/Instructions.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/Module.h"
+#include "llvm/Target/TargetData.h"
+
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "frontend.h" // XXX for arch_flags_encode() / arch_flags_decode()
 
 //////////////////////////////////////////////////////////////////////

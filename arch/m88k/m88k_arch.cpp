@@ -1,4 +1,7 @@
+#include "llvm/Instructions.h"
+
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "m88k_internal.h"
 #include "libcpu_m88k.h"
 #include "frontend.h"
@@ -69,7 +72,7 @@ arch_m88k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	rf->frf = fp_reg;
 	rf->vrf = NULL;
 
-	log("Motorola 88110 initialized.\n");
+	LOG("Motorola 88110 initialized.\n");
 }
 
 static void

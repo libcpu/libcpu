@@ -3,7 +3,12 @@
  *
  * Basic block handling (create, lookup)
  */
+
+#include "llvm/Constants.h"
+#include "llvm/Instructions.h"
+
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "basicblock.h"
 #include "tag.h"
 
@@ -39,7 +44,7 @@ BasicBlock *
 create_basicblock(cpu_t *cpu, addr_t addr, Function *f, uint8_t bb_type) {
 	char label[17];
 	snprintf(label, sizeof(label), "%c%08llx", bb_type, (unsigned long long)addr);
-	log("creating basic block %s\n", label);
+	LOG("creating basic block %s\n", label);
 	BasicBlock *bb = BasicBlock::Create(_CTX(), label, f, 0);
 
 	// if it's a label, cache the new basic block.
@@ -57,7 +62,7 @@ lookup_basicblock(cpu_t *cpu, Function* f, addr_t pc, BasicBlock *bb_ret, uint8_
 	if (i != bb_addr.end())
 		return i->second;
 
-	log("basic block %c%08llx not found in function %p - creating return basic block!\n", bb_type, pc, f);
+	LOG("basic block %c%08llx not found in function %p - creating return basic block!\n", bb_type, pc, f);
 	BasicBlock *new_bb = create_basicblock(cpu, pc, cpu->cur_func, BB_TYPE_EXTERNAL);
 	emit_store_pc_return(cpu, new_bb, pc, bb_ret);
 

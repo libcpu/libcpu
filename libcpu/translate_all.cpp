@@ -4,7 +4,12 @@
  * This translates all known code by creating basic blocks and
  * filling them with instructions.
  */
+
+#include "llvm/BasicBlock.h"
+#include "llvm/Instructions.h"
+
 #include "libcpu.h"
+#include "libcpu_llvm.h"
 #include "basicblock.h"
 #include "disasm.h"
 #include "tag.h"
@@ -26,7 +31,7 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 		}
 		pc++;
 	}
-	log("bbs: %d\n", bbs);
+	LOG("bbs: %d\n", bbs);
 
 	// create dispatch basicblock
 	BasicBlock* bb_dispatch = BasicBlock::Create(_CTX(), "dispatch", cpu->cur_func, 0);
@@ -46,7 +51,7 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 		// Tag the function as translated.
 		or_tag(cpu, pc, TAG_TRANSLATED);
 
-		log("basicblock: L%08llx\n", (unsigned long long)pc);
+		LOG("basicblock: L%08llx\n", (unsigned long long)pc);
 
 		// Add dispatch switch case for basic block.
 		ConstantInt* c = ConstantInt::get(getIntegerType(cpu->info.address_size), pc);
@@ -93,7 +98,7 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 		/* link with next basic block if there isn't a control flow instr. already */
 		if (bb_cont) {
 			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, pc, bb_ret, BB_TYPE_NORMAL);
-			log("info: linking continue $%04llx!\n", (unsigned long long)pc);
+			LOG("info: linking continue $%04llx!\n", (unsigned long long)pc);
 			BranchInst::Create(target, bb_cont);
 		}
     }

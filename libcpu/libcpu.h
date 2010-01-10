@@ -6,28 +6,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <map>
 
-#include "llvm/LLVMContext.h"
-#include "llvm/Module.h"
-#include "llvm/Function.h"
-#include "llvm/PassManager.h"
-#include "llvm/CallingConv.h"
-#include "llvm/Intrinsics.h"
-#include "llvm/Analysis/Verifier.h"
-#include "llvm/Assembly/PrintModulePass.h"
-#include "llvm/Support/IRBuilder.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/ModuleProvider.h"
-#include "llvm/Target/TargetData.h"
-#ifdef LIBCPU_BUILD_CORE
-#include "llvm/ExecutionEngine/JIT.h"
-#include "llvm/LinkAllPasses.h"
-#else
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#endif
-#include "llvm/Config/config.h"
-#include "llvm/Target/TargetSelect.h"
-
+namespace llvm {
+class BasicBlock;
+class ExecutionEngine;
+struct ExistingModuleProvider;
+class Function;
+class Module;
+class PointerType;
+class StructType;
+class Value;
+}
 
 #include "types.h"
 #include "fp_types.h"
@@ -257,7 +248,7 @@ enum {
 //////////////////////////////////////////////////////////////////////
 
 #define LOGGING (cpu->flags_debug & CPU_DEBUG_LOG)
-#define log(...) do { if (LOGGING) printf(__VA_ARGS__); } while(0)
+#define LOG(...) do { if (LOGGING) printf(__VA_ARGS__); } while(0)
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
@@ -284,37 +275,5 @@ API_FUNC void cpu_print_statistics(cpu_t *cpu);
 
 /* runs the interactive debugger */
 API_FUNC int cpu_debugger(cpu_t *cpu, debug_function_t debug_function);
-
-//////////////////////////////////////////////////////////////////////
-// LLVM Helpers
-//////////////////////////////////////////////////////////////////////
-
-#define _CTX() getGlobalContext()
-#define XgetType(x) (Type::get##x(_CTX()))
-#define getIntegerType(x) (IntegerType::get(_CTX(), x))
-#define getStructType(x, ...) (StructType::get(_CTX(), x,    \
-					       #__VA_ARGS__))
-
-static inline fltSemantics const *getFltSemantics(unsigned bits)
-{
-	switch(bits) {
-		case 32: return &APFloat::IEEEsingle;
-		case 64: return &APFloat::IEEEdouble;
-		case 80: return &APFloat::x87DoubleExtended;
-		case 128: return &APFloat::IEEEquad;
-		default: return 0;
-	}
-}
-
-static inline Type const *getFloatType(unsigned bits)
-{
-	switch(bits) {
-		case 32: return Type::getFloatTy(_CTX());
-		case 64: return Type::getDoubleTy(_CTX());
-		case 80: return Type::getX86_FP80Ty(_CTX());
-		case 128: return Type::getFP128Ty(_CTX());
-		default: return 0;
-	}
-}
 
 #endif

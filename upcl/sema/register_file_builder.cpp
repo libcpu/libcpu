@@ -9,6 +9,7 @@
 #include "c/hardwired_register_def.h"
 #include "c/hardwired_sub_register_def.h"
 
+#include <algorithm>
 #include <sstream>
 extern "C" {
 #include "strnatcmp.h"

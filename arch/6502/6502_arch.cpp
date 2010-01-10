@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "libcpu.h"
 #include "6502_isa.h"
 #include "frontend.h"

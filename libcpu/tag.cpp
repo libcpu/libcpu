@@ -55,14 +55,14 @@ init_tagging(cpu_t *cpu)
 		int j; 
 		for (j=0; j<20; j++)
 			sprintf(ascii_digest+strlen(ascii_digest), "%02x", cpu->code_digest[j]);
-		log("Code Digest: %s\n", ascii_digest);
+		LOG("Code Digest: %s\n", ascii_digest);
 		sprintf(cache_fn, "%slibcpu-%s.entries", get_temp_dir(), ascii_digest);
 		
 		cpu->file_entries = NULL;
 		
 		FILE *f;
 		if ((f = fopen(cache_fn, "r"))) {
-			log("info: entry cache found.\n");
+			LOG("info: entry cache found.\n");
 			while(!feof(f)) {
 				addr_t entry = 0;
 				for (i = 0; i < 4; i++) {
@@ -72,7 +72,7 @@ init_tagging(cpu_t *cpu)
 			}
 			fclose(f);
 		} else {
-			log("info: entry cache NOT found.\n");
+			LOG("info: entry cache NOT found.\n");
 		}
 		
 		if (!(cpu->file_entries = fopen(cache_fn, "a"))) {
@@ -131,7 +131,7 @@ tag_recursive(cpu_t *cpu, addr_t pc, int level)
 			return;
 
 		if (LOGGING) {
-			log("%*s", level, "");
+			LOG("%*s", level, "");
 			disasm_instr(cpu, pc);
 		}
 
@@ -201,7 +201,7 @@ tag_start(cpu_t *cpu, addr_t pc)
 	if (!cpu->tag)
 		init_tagging(cpu);
 
-	log("starting tagging at $%02llx\n", (unsigned long long)pc);
+	LOG("starting tagging at $%02llx\n", (unsigned long long)pc);
 
 	if (!(cpu->flags_codegen & CPU_CODEGEN_TAG_LIMIT)) {
 		int i;
