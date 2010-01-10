@@ -3,7 +3,6 @@
 #include "libcpu.h"
 #include "libcpu_llvm.h"
 #include "m88k_internal.h"
-#include "libcpu_m88k.h"
 #include "frontend.h"
 #include "m88k_types.h"
 

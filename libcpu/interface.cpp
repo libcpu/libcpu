@@ -26,13 +26,13 @@
 #include "optimize.h"
 #include "stat.h"
 
-/* architecture headers */
-#include "arch/6502/libcpu_6502.h"
-#include "arch/m68k/libcpu_m68k.h"
-#include "arch/mips/libcpu_mips.h"
-#include "arch/m88k/libcpu_m88k.h"
-#include "arch/arm/libcpu_arm.h"
-#include "arch/x86/libcpu_x86.h"
+/* architecture descriptors */
+extern arch_func_t arch_func_6502;
+extern arch_func_t arch_func_m68k;
+extern arch_func_t arch_func_mips;
+extern arch_func_t arch_func_m88k;
+extern arch_func_t arch_func_arm;
+extern arch_func_t arch_func_8086;
 
 #define IS_LITTLE_ENDIAN(cpu) (((cpu)->info.common_flags & CPU_FLAG_ENDIAN_MASK) == CPU_FLAG_ENDIAN_LITTLE)
 

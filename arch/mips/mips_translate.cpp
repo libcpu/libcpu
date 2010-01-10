@@ -5,7 +5,6 @@
 #include "libcpu.h"
 #include "libcpu_llvm.h"
 #include "frontend.h"
-#include "arch/mips/libcpu_mips.h"
 #include "mips_internal.h"
 
 using namespace llvm;

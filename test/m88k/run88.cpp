@@ -1,7 +1,6 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <libcpu.h>
-#include "arch/m88k/libcpu_m88k.h"
 #include "arch/m88k/m88k_isa.h"
 
 #include "obsd41/openbsd41.h"

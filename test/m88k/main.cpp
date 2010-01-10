@@ -15,7 +15,6 @@
 #define TIMES 100
 
 #include <libcpu.h>
-#include "arch/m88k/libcpu_m88k.h"
 #include "arch/m88k/m88k_isa.h"
 
 //////////////////////////////////////////////////////////////////////

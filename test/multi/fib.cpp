@@ -6,9 +6,7 @@
 #define START_NO 1000000000
 
 #include <libcpu.h>
-#include "arch/mips/libcpu_mips.h"
 #include "arch/arm/arm_types.h"
-#include "arch/m88k/libcpu_m88k.h"
 #include "arch/m88k/m88k_isa.h"
 
 #define RET_MAGIC 0x4D495354
