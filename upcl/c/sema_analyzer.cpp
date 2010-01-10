@@ -730,7 +730,7 @@ bound_value_name_from_expression(ast::token const *binding,
 // is unnamed.
 static std::string
 make_register_name(std::string const &base_name,
-		std::string const &name, ssize_t offset)
+		std::string const &name, ptrdiff_t offset)
 {
 	if (name == "_") {
 		std::stringstream ss;
