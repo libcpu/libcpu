@@ -211,6 +211,25 @@ sema_analyzer::process_register_file(ast::register_file const *reg_file)
 		m_arch_tags[ast::architecture::PSR_SIZE] = 0;
 	}
 
+	if (psr->get_type()->get_bits() != m_arch_tags[ast::architecture::PSR_SIZE]) {
+		if (m_arch_tags[ast::architecture::PSR_SIZE] == 0) {
+			fprintf(stderr,
+					"warning: register '%s' is bound to pseudo register %%PSR, "
+					"but psr_size hasn't been defined, setting it to %zu bits.",
+					psr->get_name().c_str(),
+					psr->get_type()->get_bits());
+			m_arch_tags[ast::architecture::PSR_SIZE] = psr->get_type()->get_bits();
+		} else {
+			fprintf(stderr,
+					"error: register '%s', bound to pseudo register %%PSR, "
+					"is %zu bits long while psr_size specifies %llu bits.\n",
+					psr->get_name().c_str(),
+					psr->get_type()->get_bits(),
+					m_arch_tags[ast::architecture::PSR_SIZE]);
+			return false;
+		}
+	}
+
 	std::ofstream of;
 	std::string fname;
 

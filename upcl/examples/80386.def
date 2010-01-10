@@ -1,13 +1,13 @@
-arch "8086" {
+arch "80386" {
 
-	name "Intel 8086";
+	name "Intel 80386";
 
 	endian little;
 
 	byte_size 8;
 	word_size 16;
 	address_size 24;
-	psr_size 16;
+	psr_size 32;
 
 	register_file {
 

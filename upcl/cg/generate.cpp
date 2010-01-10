@@ -211,16 +211,6 @@ cg_write_reg_def(std::ostream &o, size_t indent, c::register_def *def,
 		cg_print_typed_var(o, indent, nbits, def->get_type(),
 				def->get_name(), comment);
 
-		size_t unused_bits = 0;
-		if (nbits > def->get_type()->get_bits())
-			unused_bits = nbits - def->get_type()->get_bits();
-
-		if (unused_bits != 0) {
-			std::stringstream ss;
-			ss << "__unused_" << def->get_name() << '_' << def->get_type()->get_bits();
-			cg_print_typed_var(o, indent, nbits > 64 ? 64 : nbits, unused_bits, ss.str());
-		}
-
 		o << std::string(indent, '\t');
 		o << "struct {" << std::endl;
 
@@ -232,7 +222,7 @@ cg_write_reg_def(std::ostream &o, size_t indent, c::register_def *def,
 			cg_write_reg_def(o, indent, *i, false);
 		}
 
-		unused_bits =
+		size_t unused_bits =
 		 	(((def->get_type()->get_bits()+nbits-1)/nbits)*nbits) - total;
 
 		if (maybe_unused && unused_bits != 0) {
@@ -480,9 +470,9 @@ cg_generate_arch_init(std::ostream &o, std::string const &arch_name,
 	}
 	o << ';' << std::endl;
 
-	// minimum allocation unit
+	// minimum addressable unit
 	o << '\t' << "info->byte_size = " << tags[ast::architecture::BYTE_SIZE] << ';' << std::endl;
-	// maximum allocation unit
+	// maximum addressable unit
 	o << '\t' << "info->word_size = " << tags[ast::architecture::WORD_SIZE] << ';' << std::endl;
 	// address size
 	o << '\t' << "info->address_size = " << tags[ast::architecture::ADDRESS_SIZE] << ';' << std::endl;
