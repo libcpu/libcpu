@@ -1,3 +1,9 @@
+/*
+ * libcpu: x86_types.h
+ *
+ * the register file
+ */
+
 /* XXX: high and low byte endianess! */
 #define DEFINE_SPLIT_REG(_reg, _high, _low) \
 	union {					\

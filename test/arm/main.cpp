@@ -1,6 +1,7 @@
 #include <libcpu.h>
 
-#include "arch/arm/libcpu_arm.h"
+#include "arch/arm/arm_interface.h"
+#include "arch/arm/arm_types.h"
 
 #define START_NO 1000000000
 //#define START_NO 10

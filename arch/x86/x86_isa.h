@@ -1,3 +1,9 @@
+/*
+ * libcpu: x86_isa.h
+ *
+ * instruction decoding (shared by diassembler and translator)
+ */
+
 #ifndef X86_ISA_H
 #define X86_ISA_H
 

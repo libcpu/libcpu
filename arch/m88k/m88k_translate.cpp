@@ -5,7 +5,6 @@
 #include "libcpu.h"
 #include "libcpu_llvm.h"
 #include "frontend.h"
-#include "arch/m88k/libcpu_m88k.h"
 #include "m88k_internal.h"
 #include "m88k_insn.h"
 

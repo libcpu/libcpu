@@ -1,5 +1,6 @@
 #include "libcpu.h"
 #include "mips_internal.h"
+#include "mips_interface.h"
 #include "frontend.h"
 
 static void

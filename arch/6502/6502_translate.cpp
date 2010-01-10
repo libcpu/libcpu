@@ -1,3 +1,9 @@
+/*
+ * libcpu: 6502_translate.cpp
+ *
+ * main translation code
+ */
+
 #include "llvm/Instructions.h"
 
 #include "libcpu.h"

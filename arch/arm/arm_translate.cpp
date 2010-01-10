@@ -1,9 +1,16 @@
+/*
+ * libcpu: arm_translate.cpp
+ *
+ * main translation code
+ */
+
 #include "llvm/Instructions.h"
 
 #include "libcpu.h"
 #include "libcpu_llvm.h"
 #include "frontend.h"
 #include "arm_internal.h"
+#include "arm_types.h"
 #include "tag.h"
 
 using namespace llvm;

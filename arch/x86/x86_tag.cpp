@@ -1,3 +1,9 @@
+/*
+ * libcpu: x86_tag.cpp
+ *
+ * tagging code
+ */
+
 #include "libcpu.h"
 #include "x86_decode.h"
 #include "x86_isa.h"

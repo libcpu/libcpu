@@ -7,7 +7,7 @@
 
 #include <libcpu.h>
 #include "arch/mips/libcpu_mips.h"
-#include "arch/arm/libcpu_arm.h"
+#include "arch/arm/arm_types.h"
 #include "arch/m88k/libcpu_m88k.h"
 #include "arch/m88k/m88k_isa.h"
 

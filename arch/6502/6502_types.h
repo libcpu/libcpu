@@ -1,3 +1,9 @@
+/*
+ * libcpu: 6502_types.h
+ *
+ * the register file
+ */
+
 PACKED(struct reg_6502_s {
 	uint8_t a;
 	uint8_t x;

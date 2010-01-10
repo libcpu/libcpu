@@ -1,8 +1,14 @@
+/*
+ * libcpu: x86_translate.cpp
+ *
+ * main translation code
+ */
+
 #include "libcpu.h"
 #include "x86_isa.h"
 #include "x86_cc.h"
 #include "frontend.h"
-#include "libcpu_x86.h"
+#include "x86_internal.h"
 
 Value *
 arch_8086_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)

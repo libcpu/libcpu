@@ -1,6 +1,6 @@
 #include <libcpu.h>
 
-#include "arch/6502/libcpu_6502.h"
+#include "arch/6502/6502_interface.h"
 
 //////////////////////////////////////////////////////////////////////
 // command line parsing helpers

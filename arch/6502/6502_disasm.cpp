@@ -1,3 +1,9 @@
+/*
+ * libcpu: 6502_disasm.cpp
+ *
+ * disassembler
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 

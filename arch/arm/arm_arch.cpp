@@ -1,14 +1,19 @@
+/*
+ * libcpu: arm_arch.cpp
+ *
+ * init code
+ */
+
 #include <assert.h>
 
 #include "libcpu.h"
+#include "arm_types.h"
 #include "arm_internal.h"
 #include "frontend.h"
 
 static void
 arch_arm_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
-	assert(offsetof(reg_6502_t, pc) == 5);
-
 	// Basic Information
 	info->name = "arm";
 	info->full_name = "ARM v6";

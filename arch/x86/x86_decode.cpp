@@ -1,3 +1,9 @@
+/*
+ * libcpu: x86_decode.cpp
+ *
+ * instruction decoding
+ */
+
 #include "libcpu.h"
 #include "x86_isa.h"
 #include "x86_decode.h"

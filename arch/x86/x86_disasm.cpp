@@ -1,3 +1,9 @@
+/*
+ * libcpu: x86_disasm.cpp
+ *
+ * disassembler
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 

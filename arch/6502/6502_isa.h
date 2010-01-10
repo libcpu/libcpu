@@ -1,3 +1,9 @@
+/*
+ * libcpu: 6502_isa.h
+ *
+ * instruction decoding
+ */
+
 #include "libcpu.h"
 
 #define N_SHIFT 7

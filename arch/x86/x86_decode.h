@@ -1,3 +1,9 @@
+/*
+ * libcpu: x86_decode.h
+ *
+ * instruction decoding
+ */
+
 #ifndef X86_DECODE_H
 #define X86_DECODE_H
 

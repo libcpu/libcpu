@@ -1,9 +1,15 @@
+/*
+ * libcpu: 6502_arch.cpp
+ *
+ * init code
+ */
+
 #include <assert.h>
 
 #include "libcpu.h"
 #include "6502_isa.h"
 #include "frontend.h"
-#include "libcpu_6502.h"
+#include "6502_internal.h"
 
 static flags_layout_t arch_6502_flags_layout[] = {
 	{ N_SHIFT, 'N', "N" },	/* negative */

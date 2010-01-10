@@ -1,3 +1,9 @@
+/*
+ * libcpu: arm_types.h
+ *
+ * the register file
+ */
+
 typedef struct {
 	union {
 		struct {
@@ -23,3 +29,11 @@ typedef struct {
 	};
 	uint32_t pc;
 } reg_arm_t;
+
+typedef struct {
+	Value* ptr_N;
+	Value* ptr_Z;
+	Value* ptr_C;
+	Value* ptr_V;
+	Value* ptr_I;
+} ccarm_t;

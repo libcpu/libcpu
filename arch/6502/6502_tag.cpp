@@ -1,3 +1,9 @@
+/*
+ * libcpu: 6502_tag.cpp
+ *
+ * tagging code
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "libcpu.h"
