@@ -16,7 +16,7 @@ using upcl::sema::register_file_builder;
 using upcl::sema::register_info;
 using upcl::sema::register_info_vector;
 
-#include "cg/c_register_set.cpp"
+#include "cg/generate.h"
 
 namespace {
 
@@ -195,15 +195,31 @@ sema_analyzer::process_register_file(ast::register_file const *reg_file)
 			pcr = (*i);
 	}
 
+	if (pcr == 0) {
+		fprintf(stderr,
+				"error: this architecture does not define any register "
+				"bound to the %%PC pseudo register.\n");
+		return false;
+	}
+
+	if (psr == 0 && m_arch_tags[ast::architecture::PSR_SIZE] != 0) {
+		fprintf(stderr,
+				"warning: this architecture does not define any register "
+				"bound to the %%PSR pseudo register, but specifies a psr_size "
+				"of %llu bits, ignoring.\n",
+				m_arch_tags[ast::architecture::PSR_SIZE]);
+		m_arch_tags[ast::architecture::PSR_SIZE] = 0;
+	}
+
 	std::ofstream of;
 	std::string fname;
 
-	fname = "arch_types.h";
+	fname = m_arch_name + "_types.h";
 	std::cerr << "generating " << fname << "...";
 
 	of.open(fname.c_str());
 	if (of) {
-		cg_dump_reg_file(of, m_arch_name, regs);
+		cg::generate_types_h(of, fname, m_arch_name, regs);
 		of.close();
 
 		std::cerr << "ok." << std::endl;
@@ -217,24 +233,8 @@ sema_analyzer::process_register_file(ast::register_file const *reg_file)
 		
 	of.open(fname.c_str());
 	if (of) {
-		cg_dump_includes(of, m_arch_name);
-		of << std::endl;
-		cg_dump_reg_file_layout(of, m_arch_name, regs);
-		of << std::endl;
-		if (psr != 0) {
-			cg_dump_psr_flags(of, m_arch_name, psr->get_name(),
-					psr->get_sub_register_vector());
-			of << std::endl;
-		}
-		cg_generate_arch_init(of, m_arch_name, m_arch_full_name, m_arch_tags);
-		of << std::endl;
-		cg_generate_arch_done(of, m_arch_name);
-		of << std::endl;
-		cg_generate_arch_get_pc(of, m_arch_name, pcr);
-		of << std::endl;
-		cg_generate_arch_get_psr(of, m_arch_name, psr);
-		of << std::endl;
-
+		cg::generate_arch_cpp(of, fname, m_arch_name, m_arch_full_name,
+				m_arch_tags, pcr, psr, regs);
 		of.close();
 
 		std::cerr << "ok." << std::endl;
