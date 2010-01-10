@@ -23,7 +23,7 @@ class sema_analyzer {
 public:
 	sema_analyzer();
 
-	void parse(ast::token_list const *root);
+	bool parse(ast::token_list const *root);
 
 public:
 

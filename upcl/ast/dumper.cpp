@@ -212,10 +212,10 @@ dumper::dump_binary_expression(binary_expression const *e)
 		case binary_expression::MOD:    printf(" %% ");  break;
 
 		case binary_expression::SHL:    printf(" << ");  break;
-		case binary_expression::SHLC:   printf(" ^<< "); break;
+		case binary_expression::ROL:    printf(" <<> ");  break;
 
 		case binary_expression::SHR:    printf(" >> ");  break;
-		case binary_expression::SHRC:   printf(" ^>> "); break;
+		case binary_expression::ROR:    printf(" >>< ");  break;
 
 		case binary_expression::OR:     printf(" | ");   break;
 		case binary_expression::ORCOM:  printf(" |~ ");  break;

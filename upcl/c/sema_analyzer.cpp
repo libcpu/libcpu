@@ -6,6 +6,8 @@
 
 #include <cassert>
 #include <sstream>
+#include <iostream>
+#include <fstream>
 
 using namespace upcl;
 using upcl::c::sema_analyzer;
@@ -13,6 +15,8 @@ using upcl::sema::register_dep_tracker;
 using upcl::sema::register_file_builder;
 using upcl::sema::register_info;
 using upcl::sema::register_info_vector;
+
+#include "cg/c_register_set.cpp"
 
 namespace {
 
@@ -26,7 +30,7 @@ sema_analyzer::sema_analyzer()
 {
 }
 
-void
+bool
 sema_analyzer::parse(ast::token_list const *root)
 {
 	// root shall be a token list
@@ -39,7 +43,7 @@ sema_analyzer::parse(ast::token_list const *root)
 		switch (t->get_token_type()) {
 			case ast::token::ARCHITECTURE:
 				if (!process_architecture((ast::architecture const *)t))
-					return;
+					return false;
 
 				break;
 
@@ -47,6 +51,8 @@ sema_analyzer::parse(ast::token_list const *root)
 				break;
 		}
 	}
+
+	return true;
 }
 
 bool
@@ -70,6 +76,13 @@ sema_analyzer::process_architecture(ast::architecture const *arch)
 						if (!m_arch_full_name.empty()) {
 							fprintf(stderr, "warning: redefining architecture full name.\n");
 						}
+
+						// the token is a literal_expression
+						m_arch_full_name = static_cast<ast::string const *>(
+								static_cast<ast::literal_expression const *>(tv->get_token())->get_literal())->
+								get_value();
+						// strip the quotes
+						m_arch_full_name = m_arch_full_name.substr(1, m_arch_full_name.length()-2);
 
 						break;
 					}
@@ -165,8 +178,69 @@ sema_analyzer::process_register_file(ast::register_file const *reg_file)
 		return false;
 	}
 
-	c::register_def_vector const &regs = builder.get_physical_registers();
-	printf("Count=%zu\n", regs.size());
+
+	// XXX temporary
+
+	register_def_vector const &regs = builder.get_physical_registers();
+
+	// find the registers bound to psr and pc.
+	register_def *psr = 0;
+	register_def *pcr = 0;
+
+	for (register_def_vector::const_iterator i = regs.begin();
+			i != regs.end(); i++) {
+		if (psr == 0 && (*i)->get_bound_special_register() == SPECIAL_REGISTER_PSR)
+			psr = (*i);
+		else if (pcr == 0 && (*i)->get_bound_special_register() == SPECIAL_REGISTER_PC)
+			pcr = (*i);
+	}
+
+	std::ofstream of;
+	std::string fname;
+
+	fname = "arch_types.h";
+	std::cerr << "generating " << fname << "...";
+
+	of.open(fname.c_str());
+	if (of) {
+		cg_dump_reg_file(of, m_arch_name, regs);
+		of.close();
+
+		std::cerr << "ok." << std::endl;
+	} else {
+		std::cerr << "ERROR." << std::endl;
+	}
+
+	fname = m_arch_name + "_arch.cpp";
+
+	std::cerr << "generating " << fname << "...";
+		
+	of.open(fname.c_str());
+	if (of) {
+		cg_dump_includes(of, m_arch_name);
+		of << std::endl;
+		cg_dump_reg_file_layout(of, m_arch_name, regs);
+		of << std::endl;
+		if (psr != 0) {
+			cg_dump_psr_flags(of, m_arch_name, psr->get_name(),
+					psr->get_sub_register_vector());
+			of << std::endl;
+		}
+		cg_generate_arch_init(of, m_arch_name, m_arch_full_name, m_arch_tags);
+		of << std::endl;
+		cg_generate_arch_done(of, m_arch_name);
+		of << std::endl;
+		cg_generate_arch_get_pc(of, m_arch_name, pcr);
+		of << std::endl;
+		cg_generate_arch_get_psr(of, m_arch_name, psr);
+		of << std::endl;
+
+		of.close();
+
+		std::cerr << "ok." << std::endl;
+	} else {
+		std::cerr << "ERROR." << std::endl;
+	}
 
 	return true;
 }
@@ -253,7 +327,7 @@ make_index_expr_relative(upcl::ast::expression *index_expr, uint64_t index)
 //   8086. 
 //   Most common use is PSR handling.
 //
-// - Aliasing registers (left binding operator <-)
+// - Aliasing registers (right binding operator ->)
 //
 //   
 // - Hardwiring values (left binding operator <-)
@@ -637,7 +711,7 @@ bound_value_name_from_expression(ast::token const *binding,
 // is unnamed.
 static std::string
 make_register_name(std::string const &base_name,
-		std::string const &name, ptrdiff_t offset)
+		std::string const &name, ssize_t offset)
 {
 	if (name == "_") {
 		std::stringstream ss;
@@ -783,6 +857,9 @@ sema_analyzer::process_bound_value_dep(register_info *bri, size_t &offset,
 				ri->flags |= register_info::BIDIBIND_FLAG;
 
 			ri->binding = m_dpt.ref(rname);
+			if (ri->special_eval != 0)
+				ri->binding->flags |= register_info::FULLALIAS_FLAG;
+
 			assert(ri->binding != ri);
 
 			if (bv->is_bidi())
@@ -817,6 +894,7 @@ sema_analyzer::process_bound_value_dep(register_info *bri, size_t &offset,
 				ori->super = ri->super;
 				m_dpt.make_deps_by(ori->super, ori);
 			}
+
 		} else {
 			fprintf(stderr, "WARNING: binding token %u is not handled!\n", 
 					binding->get_token_type());

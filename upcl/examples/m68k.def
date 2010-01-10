@@ -34,11 +34,11 @@ arch "m68k" {
 						     #i1 Z -> %Z,
 						     #i1 V -> %V,
 						     #i1 C -> %C ] ],
-			[ #i8 ccr <- sr ],
+			[ #i8 ccr -> sr ],
 
 			[ 2 ** #i32 sp? ], // user and super
-			[ #i32 ssp <- sp0 ],
-			[ #i32 usp <- sp1 ]
+			[ #i32 ssp -> sp0 ],
+			[ #i32 usp -> sp1 ]
 		}
 	}
 }

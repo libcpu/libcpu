@@ -25,7 +25,8 @@ struct register_info {
 		SUBREGISTER_FLAG = 16,
 		BIDIBIND_FLAG = 32,
 		FULLALIAS_FLAG = 64,
-		REGALIAS_FLAG = 128
+		REGALIAS_FLAG = 128,
+		ALIASED_FLAG = 256
 	};
 
 	uint32_t               flags;

@@ -10,8 +10,16 @@
 
 using namespace upcl;
 
+#ifdef YYDEBUG
+extern int yydebug;
+#endif
+
 int main(int ac, char **av)
 {
+#ifdef YYDEBUG
+	yydebug = 1;
+#endif
+
 	if (ac < 2) {
 		fprintf(stderr, "usage: %s filename\n", *av);
 		return -1;
@@ -31,11 +39,15 @@ int main(int ac, char **av)
 	if (root != 0) {
 		//ast::dumper().dump(root);
 
-		c::sema_analyzer().parse(root);
+		if (c::sema_analyzer().parse(root)) {
+			printf("Semantic analysis succeded.\n");
+		} else {
+			printf("Error performing semantic analysis.\n");
+		}
 
 		delete root;
 	} else {
-		fprintf(stderr, "error parsing.\n");
+		fprintf(stderr, "Error parsing.\n");
 	}
 
 	return 0;

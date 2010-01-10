@@ -5,6 +5,7 @@ include(FindBISON)
 
 # Don't use -Werror
 REMOVE_DEFINITIONS(-Werror)
+ADD_DEFINITIONS(-DYYDEBUG=1)
 
 include_directories(BEFORE
   ${PROJECT_SOURCE_DIR}

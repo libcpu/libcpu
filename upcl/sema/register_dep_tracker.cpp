@@ -179,14 +179,91 @@ register_dep_tracker::get(std::string const &name) const
 		return 0;
 }
 
-static inline bool has_deps(register_info const *ri)
+//
+// check that a register has no dependencies, this includes
+// registers depending only on pseudo registers.
+//
+static inline bool is_independent(register_info const *ri)
 {
-	return (((ri->flags & (register_info::UNRESOLVED_FLAG |
-					register_info::FULLALIAS_FLAG |
-					register_info::BIDIBIND_FLAG)) != 0) ||
-				(ri->super != 0 && ri->super->name[0] != '%') ||
-				ri->name[0] == '$' || ri->name[0] == '%' ||
-				ri->name[ri->name.length()-1] == '?');
+	// ignore unresolved registers.
+	if (ri->flags & register_info::UNRESOLVED_FLAG)
+		return false;
+
+	// ignore pseudo registers.
+	if (ri->name[0] == '$' || ri->name[0] == '%' ||
+			ri->name[ri->name.length()-1] == '?')
+		return false;
+
+	// registers depending on pseudo-registers are meant
+	// to be independent.
+	if (ri->super != 0 && ri->super->name[0] == '%')
+		return true;
+
+	// check also dependencies.
+	size_t ndeps = ri->deps_on.size();
+	if (ndeps != 0) {
+		for (register_info_set::const_iterator j = ri->deps_on.begin();
+				j != ri->deps_on.end(); j++) {
+			if ((*j)->name[0] != '%')
+				return false;
+		}
+
+		return true;
+	}
+
+	// If this register is fully aliased by something else
+	// OR has a bidirectional binding to something else,
+	// it's dependent!
+	if ((ri->flags & (register_info::FULLALIAS_FLAG |
+					register_info::REGALIAS_FLAG |
+					register_info::BIDIBIND_FLAG)) != 0)
+		return false;
+
+	// otherwise assume it is an indepentant register.
+	return true;
+}
+
+//
+// check that a register is dependent on something.
+//
+static inline bool is_dependent(register_info const *ri)
+{
+	// ignore unresolved registers.
+	if (ri->flags & register_info::UNRESOLVED_FLAG)
+			return false;
+
+	// explicit registers are ignored.
+	if (ri->flags & register_info::EXPLICIT_FLAG)
+		return false;
+
+	// ignore pseudo registers.
+	if (ri->name[0] == '$' || ri->name[0] == '%' ||
+			ri->name[ri->name.length()-1] == '?')
+		return false;
+
+	// if it is fully aliased or has a bidirectional binding
+	// it's dependent!
+	if ((ri->flags & (register_info::FULLALIAS_FLAG |
+					register_info::REGALIAS_FLAG |
+					register_info::BIDIBIND_FLAG)) != 0)
+		return true;
+
+	// if its super isn't a pseudo register, it's dependent.
+	if (ri->super != 0)
+		return (ri->super->name[0] != '%');
+
+	// check also dependencies.
+	size_t ndeps = ri->deps_on.size();
+	if (ndeps != 0) {
+		for (register_info_set::const_iterator j = ri->deps_on.begin();
+				j != ri->deps_on.end(); j++) {
+			if ((*j)->name[0] != '%')
+				return true;
+		}
+	}
+
+	// otherwise assume it is independent.
+	return false;
 }
 
 void
@@ -196,25 +273,10 @@ register_dep_tracker::get_indep_regs(register_info_vector &regs) const
 	for (register_info_vector::const_iterator i = m_vregs.begin();
 			i != m_vregs.end(); i++) {
 
-		if (has_deps(*i))
+		if (!is_independent(*i))
 			continue;
 
-		// registers that depends only on pseudo
-		// registers are considered independant.
-		
-		size_t ndeps = (*i)->deps_on.size();
-		if (ndeps != 0) {
-			for (register_info_set::const_iterator j = (*i)->deps_on.begin();
-					j != (*i)->deps_on.end(); j++) {
-				if ((*j)->name[0] != '%')
-					goto next_reg;
-			}
-		}
-
 		regs.push_back(*i);
-
-next_reg:
-		;
 	}
 }
 
@@ -225,16 +287,8 @@ register_dep_tracker::get_dep_regs(register_info_vector &regs) const
 	for (register_info_vector::const_iterator i = m_vregs.begin();
 			i != m_vregs.end(); i++) {
 
-		if (((*i)->super == 0 
-					&& (((*i)->flags & (register_info::REGALIAS_FLAG
-								| register_info::FULLALIAS_FLAG
-								| register_info::BIDIBIND_FLAG)) == 0))
-				|| ((*i)->super != 0 && (*i)->super->name[0] == '%')
-				|| ((*i)->flags & register_info::EXPLICIT_FLAG) != 0
-				|| (*i)->name[0] == '%' || (*i)->name[0] == '$') {
-			if ((*i)->special_eval == 0)
-				continue;
-		}
+		if (!is_dependent(*i))
+			continue;
 
 		regs.push_back(*i);
 	}
@@ -307,8 +361,10 @@ register_dep_tracker::get_top_regs_count() const
 	size_t count = 0;
 	for(name_info_map::const_iterator i = m_regs.begin();
 			i != m_regs.end(); i++) {
-		if (i->first[0] == '%' || i->first[0] == '$')
+
+		if (!is_dependent(i->second) && !is_independent(i->second))
 			continue;
+
 		count++;
 	}
 	return count;
@@ -341,7 +397,7 @@ register_dep_tracker::get_indep_regs_count() const
 			continue;
 
 		// registers that depends only on pseudo
-		// registers are considered independant.
+		// registers are considered independent.
 		
 		size_t ndeps = (*i)->deps_on.size();
 		if (ndeps != 0) {

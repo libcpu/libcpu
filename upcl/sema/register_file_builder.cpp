@@ -21,9 +21,6 @@ using upcl::sema::register_dep_tracker;
 using upcl::sema::register_info;
 using upcl::sema::register_info_vector;
 
-
-#include "cg/c_register_set.cpp"
-
 namespace {
 
 // represent a group of registers with same
@@ -173,8 +170,10 @@ register_file_builder::analyze(register_dep_tracker *rdt)
 			i != regsets.end(); i++) {
 
 		if (i->regs.size() == 1) {
-			if (!analyze_top(i->regs[0]))
+			if (!analyze_top(i->regs[0])) {
+				printf("Failed analyzing: %s\n", i->regs[0]->name.c_str());
 				return false;
+			}
 		} else {
 			if (!analyze_top(i->name, i->regs))
 				return false;
@@ -478,12 +477,13 @@ register_file_builder::create_pseudo_aliased_sub(register_info const *top_ri,
 		return 0;
 	}
 
-#if 0
+#if 0 // XXX we may not know yet if parent is bound to PSR, so we just assume it is.
+
 	// CC flags shall always part of a register bound to the
 	// pseudo register PSR.
-	if (!top_rdef->is_psr()) {
+	if (top_rdef->get_bound_special_register() != c::SPECIAL_REGISTER_PSR) {
 		fprintf(stderr, "error: conditional flags may be aliased only when "
-				"parent register is bound to the pseudo register %PSR.\n");
+				"parent register is bound to the pseudo register %%PSR.\n");
 		return 0;
 	}
 #endif

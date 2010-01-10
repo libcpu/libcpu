@@ -68,13 +68,13 @@ extern ast::token_list *g_root;
 %token T_UPTO
 %token T_EQ T_NE T_LE T_GE
 %token T_LOR T_LAND
-%token T_SHL T_SHR T_SHLC T_SHRC
-%token T_ROL T_ROR T_ROLC T_RORC
+%token T_SHL T_SHR
+%token T_ROL T_ROR
 %token T_ANDCOM T_ORCOM T_XORCOM
 %token T_ADDE T_SUBE T_MULE T_DIVE T_REME
 %token T_ORE T_ANDE T_XORE
-%token T_SHLE T_SHRE T_SHLCE T_SHRCE
-%token T_ROLE T_RORE T_ROLCE T_RORCE
+%token T_SHLE T_SHRE
+%token T_ROLE T_RORE
 %token T_ANDCOME T_ORCOME T_XORCOME
 
 %start root
@@ -357,6 +357,8 @@ value_bind_ext: value_bind
 // XXX: Note: reg_binding_alias
 binding_alias: T_BIND_LEFT expression
 			 { $$ = new ast::alias_value($2); }
+			 | T_BIND_RIGHT identifier
+			 { $$ = new ast::alias_value($2, false); }
 			 | T_BIND_RIGHT repeatible_identifier
 			 { $$ = new ast::alias_value($2, false); }
 			 ;
@@ -516,20 +518,12 @@ binary_expr: unary_expr
 		   { $$ = new ast::binary_expression(ast::binary_expression::MOD, $1, $3); }
 		   | binary_expr T_SHL expression
 		   { $$ = new ast::binary_expression(ast::binary_expression::SHL, $1, $3); }
-		   | binary_expr T_SHLC expression
-		   { $$ = new ast::binary_expression(ast::binary_expression::SHLC, $1, $3); }
 		   | binary_expr T_SHR expression
 		   { $$ = new ast::binary_expression(ast::binary_expression::SHR, $1, $3); }
-		   | binary_expr T_SHRC expression
-		   { $$ = new ast::binary_expression(ast::binary_expression::SHRC, $1, $3); }
 		   | binary_expr T_ROL expression
 		   { $$ = new ast::binary_expression(ast::binary_expression::ROL, $1, $3); }
-		   | binary_expr T_ROLC expression
-		   { $$ = new ast::binary_expression(ast::binary_expression::ROLC, $1, $3); }
 		   | binary_expr T_ROR expression
 		   { $$ = new ast::binary_expression(ast::binary_expression::ROR, $1, $3); }
-		   | binary_expr T_RORC expression
-		   { $$ = new ast::binary_expression(ast::binary_expression::RORC, $1, $3); }
 		   | binary_expr '&' expression
 		   { $$ = new ast::binary_expression(ast::binary_expression::AND, $1, $3); }
 		   | binary_expr T_ANDCOM expression
@@ -588,13 +582,9 @@ assign_decl: operand '=' expression
            | operand T_DIVE expression
            | operand T_REME expression
            | operand T_SHLE expression
-           | operand T_SHLCE expression
            | operand T_SHRE expression
-           | operand T_SHRCE expression
            | operand T_ROLE expression
-           | operand T_ROLCE expression
            | operand T_RORE expression
-           | operand T_RORCE expression
            | operand T_ANDE expression
            | operand T_ANDCOME expression
            | operand T_ORE expression

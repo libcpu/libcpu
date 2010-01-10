@@ -222,6 +222,7 @@ public:
 	};
 
 	enum {
+    ENDIAN_UNDEF,
 		ENDIAN_LITTLE,
 		ENDIAN_BIG,
 		ENDIAN_BOTH
@@ -289,13 +290,9 @@ public:
 		MOD,
 
 		SHL,
-		SHLC,
 		SHR,
-		SHRC,
 		ROL,
-		ROLC,
 		ROR,
-		RORC,
 
 		OR,
 		ORCOM,

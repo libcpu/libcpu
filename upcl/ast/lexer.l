@@ -83,12 +83,8 @@ ID  [a-zA-Z_][a-zA-Z0-9_]*
 
 "<<"  return T_SHL;
 ">>"  return T_SHR;
-"^<<" return T_SHLC;
-"^>>" return T_SHRC;
 "<<>" return T_ROL;
 ">><" return T_ROR;
-"^<<>" return T_ROLC;
-"^>><" return T_RORC;
 
 "&~" return T_ANDCOM;
 "|~" return T_ORCOM;
@@ -104,12 +100,8 @@ ID  [a-zA-Z_][a-zA-Z0-9_]*
 "^=" return T_XORE;
 "<<=" return T_SHLE;
 ">>=" return T_SHRE;
-"^<<=" return T_SHLCE;
-"^>>=" return T_SHRCE;
 "<<>=" return T_ROLE;
 ">><=" return T_RORE;
-"^<<>=" return T_ROLCE;
-"^>><=" return T_RORCE;
 "&~=" return T_ANDCOME;
 "|~=" return T_ORCOME;
 "^~=" return T_XORCOME;

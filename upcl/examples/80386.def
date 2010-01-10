@@ -247,8 +247,6 @@ insn shr  : dst = %CC ( %U ( dst >> src ) );
 insn sar  : dst = %CC ( %S ( dst >> src ) );
 insn rol  : dst = %CC ( dst <<> src );
 insn ror  : dst = %CC ( dst >>< src );
-insn rcl  : dst = %CC ( dst ^<<> src );
-insn rcr  : dst = %CC ( dst ^>>< src );
 
 jump insn jmp : type branch action @i8086_jump( src );
 jump insn fjmp : type branch action @i8086_jump( src );

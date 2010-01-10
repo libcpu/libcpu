@@ -142,6 +142,12 @@ expr_convert::convert_binary(ast::binary_expression const *expr)
 		case ast::binary_expression::SHR:
 			return CSHR(a, b);
 
+		case ast::binary_expression::ROL:
+			return CROL(a, b);
+
+		case ast::binary_expression::ROR:
+			return CROR(a, b);
+
 		case ast::binary_expression::OR:
 			return COR(a, b);
 
