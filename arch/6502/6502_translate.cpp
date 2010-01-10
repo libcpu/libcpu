@@ -2,49 +2,6 @@
 #include "6502_isa.h"
 #include "frontend.h"
 
-#define A 0
-#define X 1
-#define Y 2
-#define S 3
-#define ptr_A cpu->ptr_gpr[A]
-#define ptr_X cpu->ptr_gpr[X]
-#define ptr_Y cpu->ptr_gpr[Y]
-#define ptr_S cpu->ptr_gpr[S]
-//#define P 0
-
-/* these are the flags that aren't handled by the generic flag code */
-#define ptr_D cpu->ptr_FLAG[D_SHIFT]
-#define ptr_I cpu->ptr_FLAG[I_SHIFT]
-
-#define OPCODE cpu->RAM[pc]
-#define OPERAND_8 cpu->RAM[(pc+1)&0xFFFF]
-#define OPERAND_16 ((cpu->RAM[(pc+1)&0xFFFF] | (cpu->RAM[(pc+2)&0xFFFF]<<8))&0xFFFF)
-
-#define LOPERAND arch_6502_get_operand_lvalue(cpu, pc, bb)
-#define OPERAND LOAD(LOPERAND)
-
-#define GEP(a) GetElementPtrInst::Create(cpu->ptr_RAM, a, "", bb)
-
-#define TOS GEP(OR(ZEXT32(R(S)), CONST32(0x0100)))
-#define PUSH(v) { STORE(v, TOS); LET(S,DEC(R(S))); }
-#define PULL (LET(S,INC(R(S))), LOAD(TOS))
-#define PUSH16(v) { PUSH(CONST8((v) >> 8)); PUSH(CONST8((v) & 0xFF)); }
-// Because of a GCC evaluation order problem, the PULL16
-// macro needs to be expanded.
-#define PULL16 arch_6502_pull16(cpu, bb)
-
-static inline Value *
-arch_6502_pull16(cpu_t *cpu, BasicBlock *bb)
-{
-	Value *lo = PULL;
-	Value *hi = PULL;
-	return (OR(ZEXT16(lo), SHL(ZEXT16(hi), CONST16(8))));
-}
-
-#define LOAD_RAM8(a) LOAD(GEP(a))
-/* explicit little endian load of 16 bits */
-#define LOAD_RAM16(a) OR(ZEXT16(LOAD_RAM8(a)), SHL(ZEXT16(LOAD_RAM8(ADD(a, CONST32(1)))), CONST16(8)))
-
 static int
 get_addmode(uint8_t opcode) {
 	switch (opcode) {
@@ -228,9 +185,31 @@ get_instr(uint8_t opcode) {
 	return INSTR_XXX;
 }
 
+#define A 0
+#define X 1
+#define Y 2
+#define S 3
+#define ptr_A cpu->ptr_gpr[A]
+#define ptr_X cpu->ptr_gpr[X]
+#define ptr_Y cpu->ptr_gpr[Y]
+#define ptr_S cpu->ptr_gpr[S]
+
+/* these are the flags that aren't handled by the generic flag code */
+#define ptr_D cpu->ptr_FLAG[D_SHIFT]
+#define ptr_I cpu->ptr_FLAG[I_SHIFT]
+
+#define GEP(a) GetElementPtrInst::Create(cpu->ptr_RAM, a, "", bb)
+
+#define LOAD_RAM8(a) LOAD(GEP(a))
+/* explicit little endian load of 16 bits */
+#define LOAD_RAM16(a) OR(ZEXT16(LOAD_RAM8(a)), SHL(ZEXT16(LOAD_RAM8(ADD(a, CONST32(1)))), CONST16(8)))
+
+#define OPERAND_8 cpu->RAM[(pc+1)&0xFFFF]
+#define OPERAND_16 ((cpu->RAM[(pc+1)&0xFFFF] | (cpu->RAM[(pc+2)&0xFFFF]<<8))&0xFFFF)
+
 static Value *
 arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
-	int am = get_addmode(OPCODE);
+	int am = get_addmode(cpu->RAM[pc]);
 	Value *index_register_before;
 	Value *index_register_after;
 	bool is_indirect;
@@ -313,6 +292,25 @@ log("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
 		case INSTR_BVC: /* !V */	return CC_VC;
 		default:					return NULL; /* no condition; should not be reached */
 	}
+}
+
+#define LOPERAND arch_6502_get_operand_lvalue(cpu, pc, bb)
+#define OPERAND LOAD(LOPERAND)
+
+/* stack operations */
+#define TOS GEP(OR(ZEXT32(R(S)), CONST32(0x0100)))
+#define PUSH(v) { STORE(v, TOS); LET(S,DEC(R(S))); }
+#define PULL (LET(S,INC(R(S))), LOAD(TOS))
+#define PUSH16(v) { PUSH(CONST8((v) >> 8)); PUSH(CONST8((v) & 0xFF)); }
+// Because of a GCC evaluation order problem, the PULL16
+// macro needs to be expanded.
+#define PULL16 arch_6502_pull16(cpu, bb)
+static inline Value *
+arch_6502_pull16(cpu_t *cpu, BasicBlock *bb)
+{
+	Value *lo = PULL;
+	Value *hi = PULL;
+	return (OR(ZEXT16(lo), SHL(ZEXT16(hi), CONST16(8))));
 }
 
 int
