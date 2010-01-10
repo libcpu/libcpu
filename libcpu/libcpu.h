@@ -12,6 +12,7 @@
 namespace llvm {
 class BasicBlock;
 class ExecutionEngine;
+struct ExistingModuleProvider;
 class Function;
 class Module;
 class PointerType;
@@ -99,6 +100,12 @@ enum {
 #define TIMER_BE	2
 #define TIMER_RUN	3
 
+typedef struct flags_layout {
+	int shift;	/* bit position */
+	char type;	/* 'N', 'V', 'Z', 'C' or 0 (some other flag unknown to the generic code) */
+	const char *name; /* symbolic name */
+} flags_layout_t;
+
 typedef struct cpu_archinfo {
 	cpu_arch_t type;
 	
@@ -122,6 +129,9 @@ typedef struct cpu_archinfo {
 
 	uint32_t register_count[4];
 	uint32_t register_size[4];
+
+	uint32_t flags_size;
+	flags_layout_t *flags_layout;
 } cpu_archinfo_t;
 
 typedef struct cpu_archrf {
@@ -145,7 +155,7 @@ typedef struct cpu {
 	addr_t code_start;
 	addr_t code_end;
 	addr_t code_entry;
-	uint64_t flags_optimize;
+	uint32_t flags_codegen;
 	uint32_t flags_debug;
 	uint32_t flags_hint;
 	uint32_t flags;
@@ -154,6 +164,7 @@ typedef struct cpu {
 	tag_t *tag;
 	bool tags_dirty;
 	Module *mod;
+	ExistingModuleProvider *mp;
 	void *fp[1024];
 	Function *func[1024];
 	Function *cur_func;
@@ -175,6 +186,13 @@ typedef struct cpu {
 	Value **ptr_fpr; // FPRs
 	Value **in_ptr_fpr;
 
+	Value **ptr_FLAG; /* exploded version of flags */
+	/* pointers to negative, overflow, zero and carry */
+	Value *ptr_N;
+	Value *ptr_V;
+	Value *ptr_Z;
+	Value *ptr_C;
+
 	uint64_t timer_total[TIMER_COUNT];
 	uint64_t timer_start[TIMER_COUNT];
 
@@ -189,10 +207,23 @@ enum {
 };
 
 //////////////////////////////////////////////////////////////////////
-// optimization flags
+// codegen flags
 //////////////////////////////////////////////////////////////////////
-#define CPU_OPTIMIZE_NONE 0x0000000000000000LL
-#define CPU_OPTIMIZE_ALL  0xFFFFFFFFFFFFFFFFLL
+#define CPU_CODEGEN_NONE 0
+
+// Run optimization passes on generated IR (disable for debugging)
+#define CPU_CODEGEN_OPTIMIZE  (1<<1)
+
+// Limits the DFS when tagging code, so that we don't
+// translate all reachable code at a time, but only a
+// certain amount of code in advance, and translate more
+// on demand.
+// If this is turned off, we do "entry caching", i.e. we
+// create a file in /tmp that holds all entries to the code
+// (i.e. all start addresses that can't be found automatically),
+// and we start tagging at these addresses on load if the
+// cache exists.
+#define CPU_CODEGEN_TAG_LIMIT (1<<2)
 
 //////////////////////////////////////////////////////////////////////
 // debug flags
@@ -232,7 +263,7 @@ typedef void (*debug_function_t)(cpu_t*);
 
 API_FUNC cpu_t *cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags);
 API_FUNC void cpu_free(cpu_t *cpu);
-API_FUNC void cpu_set_flags_optimize(cpu_t *cpu, uint64_t f);
+API_FUNC void cpu_set_flags_codegen(cpu_t *cpu, uint32_t f);
 API_FUNC void cpu_set_flags_hint(cpu_t *cpu, uint32_t f);
 API_FUNC void cpu_set_flags_debug(cpu_t *cpu, uint32_t f);
 API_FUNC void cpu_tag(cpu_t *cpu, addr_t pc);

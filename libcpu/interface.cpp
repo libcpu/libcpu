@@ -11,6 +11,7 @@
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/LinkAllPasses.h"
 #include "llvm/Module.h"
+#include "llvm/ModuleProvider.h"
 #include "llvm/Target/TargetData.h"
 #include "llvm/Target/TargetSelect.h"
 
@@ -125,7 +126,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		cpu->fp[i] = NULL;
 	cpu->functions = 0;
 
-	cpu->flags_optimize = CPU_OPTIMIZE_NONE;
+	cpu->flags_codegen = CPU_CODEGEN_OPTIMIZE;
 	cpu->flags_debug = CPU_DEBUG_NONE;
 	cpu->flags_hint = CPU_HINT_NONE;
 	cpu->flags = 0;
@@ -169,8 +170,14 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		cpu->in_ptr_fpr = NULL;
 	}
 
+	if (cpu->info.flags_size) {
+		cpu->ptr_FLAG = (Value **)calloc(cpu->info.flags_size, sizeof(Value*));
+		assert(cpu->ptr_FLAG != NULL);
+	}
+
 	// init LLVM
 	cpu->mod = new Module(cpu->info.name, _CTX());
+	cpu->mp = new ExistingModuleProvider(cpu->mod);
 	assert(cpu->mod != NULL);
 	cpu->exec_engine = ExecutionEngine::create(cpu->mod);
 	assert(cpu->exec_engine != NULL);
@@ -212,6 +219,8 @@ cpu_free(cpu_t *cpu)
 		}
 		delete cpu->exec_engine;
 	}
+	if (cpu->ptr_FLAG != NULL)
+		free(cpu->ptr_FLAG);
 	if (cpu->in_ptr_fpr != NULL)
 		free(cpu->in_ptr_fpr);
 	if (cpu->ptr_fpr != NULL)
@@ -235,9 +244,9 @@ cpu_set_ram(cpu_t*cpu, uint8_t *r)
 }
 
 void
-cpu_set_flags_optimize(cpu_t *cpu, uint64_t f)
+cpu_set_flags_codegen(cpu_t *cpu, uint32_t f)
 {
-	cpu->flags_optimize = f;
+	cpu->flags_codegen = f;
 }
 
 void
@@ -284,12 +293,12 @@ cpu_translate_function(cpu_t *cpu)
 	BranchInst::Create(bb_start, label_entry);
 
 	/* make sure everything is OK */
-	verifyModule(*cpu->mod, PrintMessageAction);
+	verifyFunction(*cpu->cur_func, PrintMessageAction);
 
 	if (cpu->flags_debug & CPU_DEBUG_PRINT_IR)
 		cpu->mod->dump();
 
-	if (cpu->flags_optimize != CPU_OPTIMIZE_NONE) {
+	if (cpu->flags_codegen & CPU_CODEGEN_OPTIMIZE) {
 		LOG("*** Optimizing...");
 		optimize(cpu);
 		LOG("done.\n");
@@ -363,7 +372,7 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 			}
 		}
 		if (!success) {
-			fprintf(stderr, "{%llx}", pc);
+			LOG("{%llx}", pc);
 			cpu_tag(cpu, pc);
 			do_translate = true;
 		}

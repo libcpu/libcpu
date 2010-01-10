@@ -179,6 +179,16 @@ register_dep_tracker::get(std::string const &name) const
 		return 0;
 }
 
+static inline bool has_deps(register_info const *ri)
+{
+	return (((ri->flags & (register_info::UNRESOLVED_FLAG |
+					register_info::FULLALIAS_FLAG |
+					register_info::BIDIBIND_FLAG)) != 0) ||
+				(ri->super != 0 && ri->super->name[0] != '%') ||
+				ri->name[0] == '$' || ri->name[0] == '%' ||
+				ri->name[ri->name.length()-1] == '?');
+}
+
 void
 register_dep_tracker::get_indep_regs(register_info_vector &regs) const
 {
@@ -186,11 +196,7 @@ register_dep_tracker::get_indep_regs(register_info_vector &regs) const
 	for (register_info_vector::const_iterator i = m_vregs.begin();
 			i != m_vregs.end(); i++) {
 
-		if (((*i)->flags & (register_info::UNRESOLVED_FLAG |
-						register_info::FULLALIAS_FLAG)) != 0 ||
-				((*i)->super != 0 && (*i)->super->name[0] != '%') ||
-				(*i)->name[0] == '$' || (*i)->name[0] == '%' ||
-				(*i)->name[(*i)->name.length()-1] == '?')
+		if (has_deps(*i))
 			continue;
 
 		// registers that depends only on pseudo
@@ -209,6 +215,28 @@ register_dep_tracker::get_indep_regs(register_info_vector &regs) const
 
 next_reg:
 		;
+	}
+}
+
+void
+register_dep_tracker::get_dep_regs(register_info_vector &regs) const
+{
+	regs.clear();
+	for (register_info_vector::const_iterator i = m_vregs.begin();
+			i != m_vregs.end(); i++) {
+
+		if (((*i)->super == 0 
+					&& (((*i)->flags & (register_info::REGALIAS_FLAG
+								| register_info::FULLALIAS_FLAG
+								| register_info::BIDIBIND_FLAG)) == 0))
+				|| ((*i)->super != 0 && (*i)->super->name[0] == '%')
+				|| ((*i)->flags & register_info::EXPLICIT_FLAG) != 0
+				|| (*i)->name[0] == '%' || (*i)->name[0] == '$') {
+			if ((*i)->special_eval == 0)
+				continue;
+		}
+
+		regs.push_back(*i);
 	}
 }
 

@@ -15,15 +15,17 @@ class register_file_builder {
 	c::register_set_vector  m_rsets;
 	named_register_def_map  m_named_rdefs;
 
-
 public:
 	register_file_builder();
 
 	bool analyze(register_dep_tracker *rdt);
 
+	inline c::register_def_vector const &get_physical_registers() const
+	{ return m_rdefs; }
+
 private:
 	bool analyze_top(register_info const *);
-	bool analyze_many(std::string const &, register_info_vector const &);
+	bool analyze_top(std::string const &, register_info_vector const &);
 
 private:
 	c::register_def *create_top(register_info const *ri);

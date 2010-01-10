@@ -80,7 +80,7 @@ main(int argc, char **argv) {
 	RAM = (uint8_t*)malloc(ramsize);
 
 	cpu = cpu_new(CPU_ARCH_ARM, CPU_FLAG_ENDIAN_LITTLE, 0);
-	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
+	cpu_set_flags_codegen(cpu, CPU_CODEGEN_OPTIMIZE);
 //	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
 //	cpu_set_flags_debug(cpu, CPU_DEBUG_PRINT_IR);
 //	cpu_set_flags_debug(cpu, CPU_DEBUG_SINGLESTEP);

@@ -9,15 +9,24 @@ Value *arch_load8(cpu_t *cpu, Value *addr, BasicBlock *bb);
 Value *arch_load16_aligned(cpu_t *cpu, Value *addr, BasicBlock *bb);
 void arch_store8(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb);
 void arch_store16(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb);
+
+Value *arch_store(Value *v, Value *a, BasicBlock *bb);
+
 void arch_branch(bool flag_state, BasicBlock *target1, BasicBlock *target2, Value *flag, BasicBlock *bb);
 void arch_jump(BasicBlock *bb, BasicBlock *bb_target);
 
 Value *arch_encode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb);
 void arch_decode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb);
 
+Value *arch_flags_encode(cpu_t *cpu, BasicBlock *bb);
+void arch_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb);
+
 Value *arch_bswap(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
 Value *arch_ctlz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
 Value *arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb);
+
+Value *arch_shiftrotate(cpu_t *cpu, Value *dst, Value *src, bool left, bool rotate, BasicBlock *bb);
+Value *arch_adc(cpu_t *cpu, Value *dst, Value *src, Value *v, bool plus_carry, bool plus_one, BasicBlock *bb);
 
 /* FPU */
 Value *arch_cast_fp32(cpu_t *cpu, Value *v, BasicBlock *bb);
@@ -40,7 +49,10 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
  * that make the LLVM interface nicer
  */
 
+#define SIZE(x) (x->getType()->getPrimitiveSizeInBits())
+
 #define LOAD(a) new LoadInst(a, "", false, bb)
+#define STORE(v,a) arch_store(v, a, bb)
 
 #define CONSTs(s,v) ConstantInt::get(getIntegerType(s), v)
 #define CONST1(v) CONSTs(1,v)
@@ -102,6 +114,10 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define INC(a) ADD(a,CONST(1))
 #define DEC(a) SUB(a,CONST(1))
 
+/* more complex operations */
+#define SHIFTROTATE(dst,src,left,rotate) arch_shiftrotate(cpu,dst,src,left,rotate,bb)
+#define ADC(dst,src,v,plus_carry,plus_one) arch_adc(cpu,dst,src,v,plus_carry,plus_one,bb)
+
 /* floating point */
 #define FPCONSTs(s,v) ConstantFP::get(getFloatType(s), v)
 #define FPCONST32(v) FPCONSTs(32,v)
@@ -151,6 +167,8 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define LET(i,v) arch_put_reg(cpu, i, v, 0, false, bb)
 #define LET32(i,v) arch_put_reg(cpu, i, v, 32, true, bb)
 #define LET_ZEXT(i,v) arch_put_reg(cpu, i, v, 1, false, bb)
+/* this one is different: it does not deal with registers, but with flags */
+#define LET1(a,b) new StoreInst(b, a, false, bb)
 
 /* interface to the FPRs */
 #define FR(i) arch_load_fp_reg(cpu, i, 0, bb)
@@ -201,6 +219,19 @@ uint32_t RAM32BE(uint8_t *RAM, addr_t a);
 #define FFC16(v) FFC(16,v)
 #define FFC32(v) FFC(32,v)
 #define FFC64(v) FFC(64,v)
+
+/* flags */
+#define SET_N(a) { Value *t = a; LET1(cpu->ptr_N, ICMP_SLT(t, CONSTs(SIZE(t), 0))); }
+#define SET_Z(a) { Value *t = a; LET1(cpu->ptr_Z, ICMP_EQ(t, CONSTs(SIZE(t), 0))); }
+#define SET_NZ(a) { Value *t2 = a; SET_N(t2); SET_Z(t2); }
+#define CC_EQ LOAD(cpu->ptr_Z)
+#define CC_NE NOT(LOAD(cpu->ptr_Z))
+#define CC_CS LOAD(cpu->ptr_C)
+#define CC_CC NOT(LOAD(cpu->ptr_C))
+#define CC_MI LOAD(cpu->ptr_N)
+#define CC_PL NOT(LOAD(cpu->ptr_N))
+#define CC_VS LOAD(cpu->ptr_V)
+#define CC_VC NOT(LOAD(cpu->ptr_V))
 
 /* host */
 #define RAM32(RAM,a) RAM32BE(RAM,a)

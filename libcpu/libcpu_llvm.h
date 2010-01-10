@@ -10,7 +10,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #define _CTX() getGlobalContext()
-#define getType(x) (Type::get##x(_CTX()))
+#define XgetType(x) (Type::get##x(_CTX()))
 #define getIntegerType(x) (IntegerType::get(_CTX(), x))
 #define getStructType(x, ...) (StructType::get(_CTX(), x,    \
 					       #__VA_ARGS__))

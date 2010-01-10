@@ -4,6 +4,7 @@
 #include "ast/ast.h"
 #include "c/type.h"
 #include "c/expression.h"
+#include "sema/register_dep_tracker.h"
 #include "sema/register_info.h"
 
 namespace upcl { namespace c {
@@ -16,6 +17,8 @@ class sema_analyzer {
 
 	std::string m_arch_full_name;
 	uint64_t m_arch_tags[10];
+
+	sema::register_dep_tracker m_dpt;
 
 public:
 	sema_analyzer();
@@ -31,7 +34,8 @@ private:
 	bool process_register_file(ast::register_file const *reg_file);
 	bool process_register_group_dep(ast::register_group const *group);
 	bool process_register_group(ast::register_group const *group);
-	bool process_register_dep(ast::register_declaration const *rd);
+	bool process_register_dep(ast::register_declaration const *rd,
+			std::string const &group_name);
 
 private:
 

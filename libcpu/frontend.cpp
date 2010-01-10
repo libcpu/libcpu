@@ -115,7 +115,6 @@ arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext,
 	return v;
 }
 
-#undef getType // XXX clash with LLVM
 void
 arch_put_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits,
 	BasicBlock *bb)
@@ -130,7 +129,6 @@ arch_put_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits,
 		new StoreInst(v, cpu->ptr_fpr[index], bb);
 	}
 }
-#define getType(x) (Type::get##x(_CTX()))//XXX
 
 //XXX TODO
 // The guest CPU can be little endian or big endian, so we need both
@@ -175,7 +173,7 @@ RAM32BE(uint8_t *RAM, addr_t a) {
 static Value *
 arch_gep32(cpu_t *cpu, Value *a, BasicBlock *bb) {
 	a = GetElementPtrInst::Create(cpu->ptr_RAM, a, "", bb);
-	return new BitCastInst(a, PointerType::get(getType(Int32Ty), 0), "", bb);
+	return new BitCastInst(a, PointerType::get(XgetType(Int32Ty), 0), "", bb);
 }
 
 /* load 32 bit ALIGNED value from RAM */
@@ -251,6 +249,15 @@ arch_store16(cpu_t *cpu, Value *val, Value *addr, BasicBlock *bb) {
 	arch_store32_aligned(cpu, val, addr, bb);
 }
 
+//
+
+Value *
+arch_store(Value *v, Value *a, BasicBlock *bb)
+{
+	new StoreInst(v, a, bb);
+	return v;
+}
+
 //////////////////////////////////////////////////////////////////////
 
 Value *
@@ -269,6 +276,65 @@ Value *
 arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
 	Type const *ty = getIntegerType(width);
 	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::cttz, &ty, 1), v, "", bb);
+}
+
+// complex operations
+
+// shifts or rotates an lvalue left or right, regardless of width
+Value *
+arch_shiftrotate(cpu_t *cpu, Value *dst, Value *src, bool left, bool rotate, BasicBlock *bb)
+{
+	Value *c;
+	Value *v = LOAD(src);
+
+	if (left) {
+		c = ICMP_SLT(v, CONSTs(SIZE(v), 0));	/* old MSB to carry */
+		v = SHL(v, CONSTs(SIZE(v), 1));
+		if (rotate)
+			v = OR(v,ZEXT(SIZE(v), LOAD(cpu->ptr_C)));
+	} else {
+		c = TRUNC1(v);		/* old LSB to carry */
+		v = LSHR(v, CONSTs(SIZE(v), 1));
+		if (rotate)
+			v = OR(v,SHL(ZEXT(SIZE(v), LOAD(cpu->ptr_C)), CONSTs(SIZE(v), SIZE(v)-1)));
+	}
+	
+	LET1(cpu->ptr_C, c);
+	return STORE(v, dst);
+}
+
+// adds src + v + c and stores it in dst
+Value *
+arch_adc(cpu_t *cpu, Value *dst, Value *src, Value *v, bool plus_carry, bool plus_one, BasicBlock *bb)
+{
+	Value *c;
+	if (plus_carry)
+		c = LOAD(cpu->ptr_C);
+	else if (plus_one)
+		c = CONST1(1);
+	else
+		c = CONST1(0);
+
+	if (SIZE(v) == 8) {
+		/* calculate intermediate result */
+		Value *v1 = ADD(ADD(ZEXT16(LOAD(src)), ZEXT16(v)), ZEXT16(c));
+
+		/* get C */
+		STORE(TRUNC1(LSHR(v1, CONST16(8))), cpu->ptr_C);
+
+		/* get result */
+		v1 = TRUNC8(v1);
+
+		if (dst)
+			STORE(v1, dst);
+
+		return v1;
+	} else {
+		//XXX TODO use llvm.uadd.with.overflow.*
+		//XXX consider using it for 8 bit also, if possible
+		printf("TODO: %s() can't do anything but 8 bits yet!\n", __func__);
+		exit(1);
+	}
 }
 
 // branches
@@ -315,6 +381,32 @@ arch_decode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
 	Value *n = BinaryOperator::Create(Instruction::LShr, flags, ConstantInt::get(getIntegerType(width), shift), "", bb);
 	n = new TruncInst(n, getIntegerType(1), "", bb);
 	new StoreInst(n, bit, bb);
+}
+
+// flags encoding and decoding
+
+Value *
+arch_flags_encode(cpu_t *cpu, BasicBlock *bb)
+{
+	uint32_t flags_size = cpu->info.flags_size;
+	flags_layout_t *flags_layout = cpu->info.flags_layout;
+	Value *flags = CONSTs(flags_size, 0);
+
+	int i;
+	for (i = 0; flags_layout[i].shift >= 0; i++)
+		flags = arch_encode_bit(flags, cpu->ptr_FLAG[flags_layout[i].shift], flags_layout[i].shift, flags_size, bb);
+
+	return flags;
+}
+
+void
+arch_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
+{
+	uint32_t flags_size = cpu->info.flags_size;
+	flags_layout_t *flags_layout = cpu->info.flags_layout;
+	int i;
+	for (i = 0; flags_layout[i].shift >= 0; i++)
+		arch_decode_bit(flags, cpu->ptr_FLAG[flags_layout[i].shift], flags_layout[i].shift, flags_size, bb);
 }
 
 // FP

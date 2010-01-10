@@ -80,11 +80,6 @@ static const char* mnemo[] = {
 	/*[INSTR_XXX]*/ "???"	
 };
 
-static int
-arch_6502_instr_length(uint8_t* RAM, addr_t pc) {
-	return length[instraddmode[RAM[pc]].addmode]+1;
-}
-
 /*
  * Write an ASCII disassembly of one instruction at "pc"
  * in "RAM" into "line" (max length "max_line"), return
@@ -94,19 +89,20 @@ int
 arch_6502_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line) {
 	uint8_t opcode = cpu->RAM[pc];
 	char line2[8];
+	int addmode = get_addmode(opcode);
 
-	if (instraddmode[opcode].addmode == ADDMODE_BRA) {
+	if (addmode == ADDMODE_BRA) {
 			snprintf(line2, sizeof(line2), "$%02llX", pc+2 + (int8_t)cpu->RAM[pc+1]);
 	} else {
-		switch (length[instraddmode[opcode].addmode]) {
-			case 0:
-				snprintf(line2, sizeof(line2), addmode_template[instraddmode[opcode].addmode], 0);
-				break;
+		switch (get_length(addmode)) {
 			case 1:
-				snprintf(line2, sizeof(line2), addmode_template[instraddmode[opcode].addmode], cpu->RAM[pc+1]);
+				snprintf(line2, sizeof(line2), addmode_template[addmode], 0);
 				break;
 			case 2:
-				snprintf(line2, sizeof(line2), addmode_template[instraddmode[opcode].addmode], cpu->RAM[pc+1] | cpu->RAM[pc+2]<<8);
+				snprintf(line2, sizeof(line2), addmode_template[addmode], cpu->RAM[pc+1]);
+				break;
+			case 3:
+				snprintf(line2, sizeof(line2), addmode_template[addmode], cpu->RAM[pc+1] | cpu->RAM[pc+2]<<8);
 				break;
 			default:
 				printf("Table error at %s:%d\n", __FILE__, __LINE__);
@@ -114,7 +110,7 @@ arch_6502_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 		}
 	}
 	
-	snprintf(line, max_line, "%s %s", mnemo[instraddmode[opcode].instr], line2);
-	return arch_6502_instr_length(cpu->RAM, pc);
+	snprintf(line, max_line, "%s %s", mnemo[get_instr(opcode)], line2);
+	return get_length(get_addmode(cpu->RAM[pc]));
 }
 

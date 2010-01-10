@@ -36,12 +36,16 @@ main(int argc, char **argv)
 
 	int singlestep = SINGLESTEP_NONE;
 	int log = 1;
-	int print_ir = 1;
+	int print_ir = 0;
 
 	/* parameter parsing */
 	if (argc < 2) {
-		printf("Usage: %s [binary]\n", argv[0]);
+		printf("Usage: %s [--print-ir] <binary>\n", argv[0]);
 		return 0;
+	}
+	if (!strcmp(argv[1], "--print-ir")) {
+		print_ir = 1;
+		argv++;
 	}
 	executable = argv[1];
 	arch = CPU_ARCH_8086;
@@ -51,7 +55,7 @@ main(int argc, char **argv)
 
 	cpu = cpu_new(arch, 0, 0);
 
-	cpu_set_flags_optimize(cpu, CPU_OPTIMIZE_ALL);
+	cpu_set_flags_codegen(cpu, CPU_CODEGEN_OPTIMIZE);
 	cpu_set_flags_debug(cpu, 0
 		| (print_ir? CPU_DEBUG_PRINT_IR : 0)
 		| (print_ir? CPU_DEBUG_PRINT_IR_OPTIMIZED : 0)

@@ -26,17 +26,6 @@ is_start_of_basicblock(cpu_t *cpu, addr_t a)
 		&& (tag & TAG_CODE);	/* only if we actually tagged it */
 }
 
-bool
-needs_dispatch_entry(cpu_t *cpu, addr_t a)
-{
-	tag_t tag = get_tag(cpu, a);
-	return !!(tag &
-		(TAG_ENTRY |			/* client wants to enter guest code here */
-		 TAG_AFTER_CALL |		/* instruction after a call */
-		 TAG_AFTER_TRAP))		/* instruction after a call */
-		&& (tag & TAG_CODE);	/* only if we actually tagged it */
-}
-
 void
 emit_store_pc(cpu_t *cpu, BasicBlock *bb_branch, addr_t new_pc)
 {
@@ -55,7 +44,7 @@ BasicBlock *
 create_basicblock(cpu_t *cpu, addr_t addr, Function *f, uint8_t bb_type) {
 	char label[17];
 	snprintf(label, sizeof(label), "%c%08llx", bb_type, (unsigned long long)addr);
-LOG("creating basic block %s\n", label);
+	LOG("creating basic block %s\n", label);
 	BasicBlock *bb = BasicBlock::Create(_CTX(), label, f, 0);
 
 	// if it's a label, cache the new basic block.

@@ -28,28 +28,47 @@ struct x86_operand {
 };
 
 enum x86_instr_flags {
-	ModRM			= (1U << 8),
+	MOD_RM			= (1U << 8),
+	DIR_REVERSED		= (1U << 9),
 
 	/* Operand sizes */
-	WidthByte		= (1U << 9),	/* 8 bits */
-	WidthWide		= (1U << 10),	/* 16 bits or 32 bits */
-	WidthMask		= WidthByte|WidthWide,
+	WIDTH_BYTE		= (1U << 10),	/* 8 bits */
+	WIDTH_FULL		= (1U << 11),	/* 16 bits or 32 bits */
+	WIDTH_MASK		= WIDTH_BYTE|WIDTH_FULL,
 
 	/* Source operand */
-	SrcNone			= (1U << 11),
-	SrcImm			= (1U << 12),
-	SrcReg			= (1U << 13),
-	SrcMask			= SrcNone|SrcImm|SrcReg,
+	SRC_NONE		= (1U << 12),
+	SRC_IMM			= (1U << 13),
+	SRC_REG			= (1U << 14),
+	SRC_ACC			= (1U << 15),
+	SRC_MEM			= (1U << 16),
+	SRC_MEM_DISP_BYTE	= (1U << 17),
+	SRC_MEM_DISP_FULL	= (1U << 18),
+	SRC_MASK		= SRC_NONE|SRC_IMM|SRC_REG|SRC_ACC|SRC_MEM|SRC_MEM_DISP_BYTE|SRC_MEM_DISP_FULL,
 
 	/* Destination operand */
-	DstNone			= (1U << 14),
-	DstReg			= (1U << 15),
-	DstMem			= (1U << 16),
-	DstMemDispByte		= (1U << 17),	/* 8 bits */
-	DstMemDispWide		= (1U << 18),	/* 16 bits or 32 bits */
-	DstMask			= DstNone|DstReg|DstMem|DstMemDispByte|DstMemDispWide,
+	DST_NONE		= (1U << 19),
+	DST_REG			= (1U << 20),
+	DST_ACC			= (1U << 21),	/* AL/AX */
+	DST_MEM			= (1U << 22),
+	DST_MEM_DISP_BYTE	= (1U << 23),	/* 8 bits */
+	DST_MEM_DISP_FULL	= (1U << 24),	/* 16 bits or 32 bits */
+	DST_MASK		= DST_NONE|DST_REG|DST_ACC|DST_MEM|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
 
-	MemDispMask		= DstMemDispByte|DstMemDispWide,
+	MEM_DISP_MASK		= SRC_MEM_DISP_BYTE|SRC_MEM_DISP_FULL|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
+};
+
+/*
+ *	Addressing modes.
+ */
+enum x86_addmode {
+	ADDMODE_REG		= SRC_REG|DST_NONE,		/* register */
+	ADDMODE_IMM_REG		= SRC_IMM|DST_REG,		/* immediate -> register */
+	ADDMODE_IMPLIED		= SRC_NONE|DST_NONE,		/* no operands */
+	ADDMODE_REG_RM		= SRC_REG|MOD_RM|DIR_REVERSED,	/* register -> register/memory */
+	ADDMODE_RM_REG		= DST_REG|MOD_RM,		/* register/memory -> register */
+	ADDMODE_IMM_ACC		= SRC_IMM|DST_ACC,		/* immediate -> AL/AX */
+	ADDMODE_ACC_REG		= SRC_ACC|DST_REG,		/* AL/AX -> reg */
 };
 
 struct x86_instr {

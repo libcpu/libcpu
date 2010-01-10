@@ -12,8 +12,6 @@
 #include "libcpu_llvm.h"
 #include "frontend.h"
 
-#undef getType // XXX clash with llvm
-
 #define HAS_SPECIAL_FPR0(cpu) ((cpu)->info.common_flags & CPU_FLAG_HARDWIRE_FPR0)
 
 /* 

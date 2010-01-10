@@ -61,6 +61,8 @@ public:
 public:
 	// get regs with no deps.
 	void get_indep_regs(register_info_vector &regs) const;
+	// get regs with deps.
+	void get_dep_regs(register_info_vector &regs) const;
 
 public:
 	void make_deps_by(register_info *master, register_info *dep);

@@ -16,6 +16,7 @@
 
 #include "libcpu.h"
 #include "libcpu_llvm.h"
+#include "frontend.h" // XXX for arch_flags_encode() / arch_flags_decode()
 
 //////////////////////////////////////////////////////////////////////
 // function
@@ -80,8 +81,8 @@ get_struct_fp_reg(cpu_t *cpu) {
 
 static Value *
 get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
-	ConstantInt* const_0 = ConstantInt::get(getType(Int32Ty), 0);
-	ConstantInt* const_index = ConstantInt::get(getType(Int32Ty), index);
+	ConstantInt* const_0 = ConstantInt::get(XgetType(Int32Ty), 0);
+	ConstantInt* const_index = ConstantInt::get(XgetType(Int32Ty), index);
 
 	SmallVector<Value*, 2> ptr_11_indices;
 	ptr_11_indices.push_back(const_0);
@@ -179,6 +180,36 @@ emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 	Constant *v_pc = ConstantInt::get(intptr_type, (uintptr_t)cpu->rf.pc);
 	cpu->ptr_PC = ConstantExpr::getIntToPtr(v_pc, PointerType::getUnqual(getIntegerType(cpu->info.address_size)));
 	cpu->ptr_PC->setName("pc");
+
+	// flags
+	if (cpu->info.flags_size) {
+		// declare flags
+		flags_layout_t *flags_layout = cpu->info.flags_layout;
+		int i;
+		for (i = 0; flags_layout[i].shift >= 0; i++) {
+			Value *f = new AllocaInst(getIntegerType(1), flags_layout[i].name, bb);
+			cpu->ptr_FLAG[flags_layout[i].shift] = f;
+			/* set pointers to standard NVZC flags */
+			switch (flags_layout[i].type) {
+				case 'N':
+					cpu->ptr_N = f;
+					break;
+				case 'V':
+					cpu->ptr_V = f;
+					break;
+				case 'Z':
+					cpu->ptr_Z = f;
+					break;
+				case 'C':
+					cpu->ptr_C = f;
+					break;
+			}
+		}
+
+		// decode P
+		Value *flags = new LoadInst(cpu->ptr_xr[0], "", false, bb);
+		arch_flags_decode(cpu, flags, bb);
+	}
 	
 	// frontend specific part
 	if (cpu->f.emit_decode_reg != NULL)
@@ -226,6 +257,12 @@ spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 	if (cpu->f.spill_reg_state != NULL)
 		cpu->f.spill_reg_state(cpu, bb);
 
+	// flags
+	if (cpu->info.flags_size) {
+		Value *flags = arch_flags_encode(cpu, bb);
+		new StoreInst(flags, cpu->ptr_xr[0], false, bb);
+	}
+
 	// GPRs
 	spill_reg_state_helper(cpu->info.register_count[CPU_REG_GPR],
 		cpu->in_ptr_gpr, cpu->ptr_gpr, bb);
@@ -267,7 +304,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	std::vector<const Type*>type_func_callout_args;
 	type_func_callout_args.push_back(type_intptr);	/* intptr *cpu */
 	FunctionType *type_func_callout = FunctionType::get(
-		getType(VoidTy),	/* Result */
+		XgetType(VoidTy),	/* Result */
 		type_func_callout_args,	/* Params */
 		false);		      	/* isVarArg */
 	cpu->type_pfunc_callout = PointerType::get(type_func_callout, 0);
@@ -319,7 +356,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	// create exit code
 	Value *exit_code = new AllocaInst(getIntegerType(32), "exit_code", label_entry);
 	// assume JIT_RETURN_FUNCNOTFOUND or JIT_RETURN_SINGLESTEP if in in single step.
-	new StoreInst(ConstantInt::get(getType(Int32Ty),
+	new StoreInst(ConstantInt::get(XgetType(Int32Ty),
 					(cpu->flags_debug & (CPU_DEBUG_SINGLESTEP | CPU_DEBUG_SINGLESTEP_BB)) ? JIT_RETURN_SINGLESTEP :
 					JIT_RETURN_FUNCNOTFOUND), exit_code, false, 0, label_entry);
 
@@ -335,7 +372,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	ReturnInst::Create(_CTX(), new LoadInst(exit_code, "", false, 0, bb_ret), bb_ret);
 	// create trap return basicblock
 	BasicBlock *bb_trap = BasicBlock::Create(_CTX(), "trap", func, 0);  
-	new StoreInst(ConstantInt::get(getType(Int32Ty), JIT_RETURN_TRAP), exit_code, false, 0, bb_trap);
+	new StoreInst(ConstantInt::get(XgetType(Int32Ty), JIT_RETURN_TRAP), exit_code, false, 0, bb_trap);
 	// return
 	BranchInst::Create(bb_ret, bb_trap);
 

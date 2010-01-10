@@ -8,7 +8,7 @@ int
 arch_6502_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc) {
 	uint8_t opcode = cpu->RAM[pc];
 
-	switch (instraddmode[opcode].instr) {
+	switch (get_instr(opcode)) {
 		case INSTR_BRK:
 			*tag = TAG_TRAP;
 			break;
@@ -16,7 +16,7 @@ arch_6502_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *n
 			*tag = TAG_RET;
 			break;
 		case INSTR_JMP:
-			if (instraddmode[opcode].addmode == ADDMODE_ABS)
+			if (get_addmode(opcode) == ADDMODE_ABS)
 				*new_pc = cpu->RAM[pc+1] | cpu->RAM[pc+2]<<8;
 			else 
 				*new_pc = NEW_PC_NONE;	/* jmp indirect */
@@ -43,7 +43,8 @@ arch_6502_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *n
 			*tag = TAG_CONTINUE;
 			break;
 	}
-	*next_pc = pc + length[instraddmode[opcode].addmode] + 1;
-	return length[instraddmode[opcode].addmode] + 1;
+	int length = get_length(get_addmode(opcode));
+	*next_pc = pc + length;
+	return length;
 }
 
