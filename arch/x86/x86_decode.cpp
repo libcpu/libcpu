@@ -169,22 +169,22 @@ static unsigned long decode_table[256] = {
 	/*[0x9D]*/	INSTR_POPF | ADDMODE_IMPLIED,
 	/*[0x9E]*/	INSTR_SAHF | ADDMODE_IMPLIED,
 	/*[0x9F]*/	INSTR_LAHF | ADDMODE_IMPLIED,
-	/*[0xA0]*/	0,
-	/*[0xA1]*/	0,
-	/*[0xA2]*/	0,
-	/*[0xA3]*/	0,
-	/*[0xA4]*/	0,
-	/*[0xA5]*/	0,
-	/*[0xA6]*/	0,
-	/*[0xA7]*/	0,
+	/*[0xA0]*/	INSTR_MOV | ADDMODE_MEM_ACC | WIDTH_BYTE, /* load */
+	/*[0xA1]*/	INSTR_MOV | ADDMODE_MEM_ACC | WIDTH_FULL, /* load */
+	/*[0xA2]*/	INSTR_MOV | ADDMODE_ACC_MEM | WIDTH_BYTE, /* store */
+	/*[0xA3]*/	INSTR_MOV | ADDMODE_ACC_MEM | WIDTH_FULL, /* store */
+	/*[0xA4]*/	INSTR_MOVSB | ADDMODE_IMPLIED | WIDTH_BYTE,
+	/*[0xA5]*/	INSTR_MOVSW | ADDMODE_IMPLIED | WIDTH_FULL,
+	/*[0xA6]*/	INSTR_CMPSB | ADDMODE_IMPLIED | WIDTH_BYTE,
+	/*[0xA7]*/	INSTR_CMPSW | ADDMODE_IMPLIED | WIDTH_FULL,
 	/*[0xA8]*/	0,
 	/*[0xA9]*/	0,
-	/*[0xAA]*/	0,
-	/*[0xAB]*/	0,
-	/*[0xAC]*/	0,
-	/*[0xAD]*/	0,
-	/*[0xAE]*/	0,
-	/*[0xAF]*/	0,
+	/*[0xAA]*/	INSTR_STOSB | ADDMODE_IMPLIED | WIDTH_BYTE,
+	/*[0xAB]*/	INSTR_STOSW | ADDMODE_IMPLIED | WIDTH_FULL,
+	/*[0xAC]*/	INSTR_LODSB | ADDMODE_IMPLIED | WIDTH_BYTE,
+	/*[0xAD]*/	INSTR_LODSW | ADDMODE_IMPLIED | WIDTH_FULL,
+	/*[0xAE]*/	INSTR_SCASB | ADDMODE_IMPLIED | WIDTH_BYTE,
+	/*[0xAF]*/	INSTR_SCASW | ADDMODE_IMPLIED | WIDTH_FULL,
 	/*[0xB0]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_BYTE,
 	/*[0xB1]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_BYTE,
 	/*[0xB2]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_BYTE,
@@ -438,6 +438,7 @@ arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 
 	/* Prefixes */
 	instr->seg_override	= NO_OVERRIDE;
+	instr->rep_prefix	= NO_PREFIX;
 	for (;;) {
 		switch (opcode = RAM[pc++]) {
 		case 0x26:
@@ -453,7 +454,10 @@ arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 			instr->seg_override	= DS_OVERRIDE;
 			break;
 		case 0xf2:	/* REPNE/REPNZ */
+			instr->rep_prefix	= REPNZ_PREFIX;
+			break;
 		case 0xf3:	/* REP/REPE/REPZ */
+			instr->rep_prefix	= REPZ_PREFIX;
 			break;
 		default:
 			goto done_prefixes;

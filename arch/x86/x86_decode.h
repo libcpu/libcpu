@@ -26,6 +26,12 @@ enum x86_seg_override {
 	DS_OVERRIDE,
 };
 
+enum x86_rep_prefix {
+	NO_PREFIX,
+	REPNZ_PREFIX,
+	REPZ_PREFIX,
+};
+
 struct x86_operand {
 	enum x86_operand_type	type;
 	uint8_t			reg;
@@ -75,6 +81,8 @@ enum x86_addmode {
 	ADDMODE_RM_REG		= DST_REG|MOD_RM,		/* register/memory -> register */
 	ADDMODE_IMM_ACC		= SRC_IMM|DST_ACC,		/* immediate -> AL/AX */
 	ADDMODE_ACC_REG		= SRC_ACC|DST_REG,		/* AL/AX -> reg */
+	ADDMODE_ACC_MEM		= SRC_ACC|DST_MEM|DIR_REVERSED,	/* AL/AX -> memory */
+	ADDMODE_MEM_ACC		= SRC_ACC|DST_MEM,		/* memory -> AL/AX */
 	ADDMODE_IMM		= SRC_IMM|DST_NONE,		/* immediate operand */
 };
 
@@ -91,6 +99,7 @@ struct x86_instr {
 
 	unsigned long		flags;		/* See enum x86_instr_flags */
 	enum x86_seg_override	seg_override;
+	enum x86_rep_prefix	rep_prefix;
 	struct x86_operand	src;
 	struct x86_operand	dst;
 };

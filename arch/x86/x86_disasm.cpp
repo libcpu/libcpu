@@ -176,6 +176,12 @@ static const char *seg_override_names[] = {
 	"%ds:",
 };
 
+static const char *prefix_names[] = {
+	"",
+	"repnz ",
+	"rep ",
+};
+
 static const char *sign_to_str(int n)
 {
 	if (n >= 0)
@@ -222,7 +228,7 @@ arch_8086_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 	int len = 0;
 
 	if (arch_8086_decode_instr(&instr, cpu->RAM, pc) != 0) {
-		fprintf(stderr, "error: unable to decode opcode %x\n", cpu->RAM[pc]);
+		fprintf(stderr, "error: unable to decode opcode %x\n", instr.opcode);
 		exit(1);
 	}
 
@@ -238,7 +244,7 @@ arch_8086_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 	if (!(instr.flags & DST_NONE))
 		len += print_operand(operands+len, sizeof(operands)-len, &instr, &instr.dst);
 
-        snprintf(line, max_line, "%s\t%s", to_mnemonic(&instr), operands);
+        snprintf(line, max_line, "%s%s\t%s", prefix_names[instr.rep_prefix], to_mnemonic(&instr), operands);
 
         return arch_8086_instr_length(&instr);
 }
