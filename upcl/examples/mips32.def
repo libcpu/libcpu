@@ -33,6 +33,3 @@ arch "mips32" {
 };
 
 //include "mips.def";
-
-insn a : ;
-

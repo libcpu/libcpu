@@ -31,6 +31,13 @@ extern ast::token_list *g_root;
 	ast::register_type_name *reg_type_name;
 	ast::bound_value *bound_value;
 	ast::typed_bound_value *typed_bound_value;
+
+	ast::instruction *instruction;
+	ast::statement *statement;
+
+	ast::jump *jump;
+
+	ast::decoder_operands *decoder_operands;
 }
 
 /* Constants */
@@ -49,7 +56,7 @@ extern ast::token_list *g_root;
 /* Keywords */
 %token K_ARCH
 %token K_NAME
-%token K_ENDIAN K_DEFAULT_ENDIAN K_LITTLE K_BIG K_BOTH
+%token K_ENDIAN K_DEFAULT_ENDIAN K_LITTLE K_BIG K_PDP K_NONE K_BOTH
 %token K_BYTE_SIZE K_WORD_SIZE K_FLOAT_SIZE K_ADDRESS_SIZE
 %token K_PSR_SIZE
 %token K_MIN_PAGE_SIZE K_MAX_PAGE_SIZE K_DEFAULT_PAGE_SIZE
@@ -57,10 +64,11 @@ extern ast::token_list *g_root;
 %token K_REGISTER_FILE K_GROUP
 %token K_EXPLICIT K_EVALUATE
 %token K_MACRO K_INSN
-%token K_IF K_UNLESS K_ELSE K_WHILE K_FOR K_IS
+%token K_IF K_ELSE K_WHILE K_FOR K_IS K_RETURN
 %token K_AUGMENT_CC K_AUGMENT_SIGNED K_AUGMENT_UNSIGNED
 %token K_MEM
-%token K_JUMP K_TYPE K_CONDITION K_DELAY K_ACTION
+%token K_JUMP K_TYPE K_PRE K_CONDITION K_DELAY
+%token K_RESET K_DECODER_OPERANDS
 
 /* Symbols */
 %token T_REPEAT
@@ -103,13 +111,27 @@ extern ast::token_list *g_root;
 
 %type <list> identifier_list operand_comma_list arg_list
 %type <list> CC_flag_list
-%type <list> toplevel_decl_list
+%type <list> toplevel_decl_list toplevel_decl_list_or_null
 
 %type <range> range
 
 %type <expression> base_operand operand bit_combine expression arg
 %type <expression> cast_expr macro_expr mem_expr SU_expr CC_expr is_expr
-%type <expression> CC_flag unary_expr binary_expr
+%type <expression> CC_flag unary_expr binary_expr primary_expr
+
+%type <instruction> insn_decl jump_insn_decl macro_decl insn_group_decl
+%type <list> insn_body insn_enclosed_body
+%type <statement> insn_stmts inline_insn_stmts basic_insn_stmts
+%type <statement> assign_decl if_decl for_decl while_decl flow_decl
+%type <list> assignment_list assignment_list_or_null
+%type <expression> expression_or_null
+%type <jump> jump_decl
+%type <identifier> jump_type
+%type <expression> jump_condition jump_delay
+%type <list> jump_pre jump_action
+%type <decoder_operands> decoder_operands_decl decoder_operands_decl_or_null
+
+%type <instruction> toplevel_decl
 
 %left '/' '%' '*'
 %left '-' '+'
@@ -431,8 +453,6 @@ macro_expr: macro_identifier '(' ')'
 		  ;
 
 arg: expression
-   | string
-   { $$ = new ast::literal_expression($1); }
    ;
 
 arg_list: arg
@@ -544,102 +564,173 @@ binary_expr: unary_expr
 		   ;
 
 insn_decl: K_INSN identifier ':' ';'
+		 { $$ = new ast::instruction($2); }
 		 | K_INSN identifier ':' inline_insn_stmts ';'
-         | K_INSN identifier insn_enclosed_body
-         | K_INSN identifier insn_enclosed_body ';'
-         ;
+		 { $$ = new ast::instruction($2, $4); }
+		 | K_INSN identifier insn_enclosed_body
+		 { $$ = new ast::instruction($2, $3); }
+		 | K_INSN identifier insn_enclosed_body ';'
+		 { $$ = new ast::instruction($2, $3); }
+		 ;
 
 insn_enclosed_body: '{' insn_body '}'
+				  { $$ = $2; }
 				  ;
 
 insn_body: insn_stmts
+		 { $$ = new ast::token_list($1); }
          | insn_body insn_stmts
+	 	 { $$ = $1; $1->push($2); }
          ;
 
-basic_insn_stmts: expression
+basic_insn_stmts: CC_expr
+				{ $$ = new ast::expression_statement($1); }
+				| macro_expr
+				{ $$ = new ast::expression_statement($1); }
 				| assign_decl
 			    | type assign_decl 
+				{ $$ = $2; $2->set_lhs_type($1); }
           		;
 
 insn_stmts: insn_enclosed_body
-  		  | if_decl
+		  { $$ = new ast::statement_list_statement($1); }
+  		  | flow_decl
 		  | basic_insn_stmts ';'
-		  | basic_insn_stmts K_IF '(' expression ')' ';'
-		  | basic_insn_stmts K_UNLESS '(' expression ')' ';'
+		  { $$ = $1; }
 		  ;
 
-/*XXX I don't like this copy ! Merge the syntax. */
-inline_insn_stmts: if_decl
+inline_insn_stmts: flow_decl
 				 | basic_insn_stmts
-				 | basic_insn_stmts K_IF '(' expression ')'
-		  		 | basic_insn_stmts K_UNLESS '(' expression ')'
 		  		 ;
 
 assign_decl: operand '=' expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::EQ, $1, $3); }
            | operand T_ADDE expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::ADDE, $1, $3); }
            | operand T_SUBE expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::SUBE, $1, $3); }
            | operand T_MULE expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::MULE, $1, $3); }
            | operand T_DIVE expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::DIVE, $1, $3); }
            | operand T_REME expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::REME, $1, $3); }
            | operand T_SHLE expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::SHLE, $1, $3); }
            | operand T_SHRE expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::SHRE, $1, $3); }
            | operand T_ROLE expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::ROLE, $1, $3); }
            | operand T_RORE expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::RORE, $1, $3); }
            | operand T_ANDE expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::ANDE, $1, $3); }
            | operand T_ANDCOME expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::ANDCOME, $1, $3); }
            | operand T_ORE expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::ORE, $1, $3); }
            | operand T_ORCOME expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::ORCOME, $1, $3); }
            | operand T_XORE expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::XORE, $1, $3); }
            | operand T_XORCOME expression
+		   { $$ = new ast::assignment_statement(ast::assignment_statement::XORCOME, $1, $3); }
            ;
 
 if_decl: K_IF '(' expression ')' insn_stmts
+	   { $$ = new ast::if_statement($3, $5); }
 	   | K_IF '(' expression ')' insn_stmts K_ELSE insn_stmts
-	   | K_UNLESS '(' expression ')' insn_stmts 
-	   | K_UNLESS '(' expression ')' insn_stmts K_ELSE insn_stmts
+	   { $$ = new ast::if_statement($3, $5, $7); }
 	   ;
 
-jump_insn_decl: K_JUMP K_INSN identifier ':' inline_jump_decl
-			  | K_JUMP K_INSN identifier jump_enclosed_body
-			  | K_JUMP K_INSN identifier jump_enclosed_body ';'
-			  ;
+for_decl: K_FOR '(' assignment_list_or_null ';' expression_or_null ';' assignment_list_or_null ')'
+		{ $$ = new ast::for_statement($3, $5, $7); }
+		;
 
-inline_jump_decl: jump_type jump_delay jump_condition jump_action
-				| jump_type jump_condition jump_action
-				| jump_type jump_delay jump_action
-				| jump_type jump_action
-				;
+assignment_list: assign_decl
+			   { $$ = new ast::token_list($1); }
+			   | assignment_list ',' assign_decl
+			   { $$ = $1; $$->push($3); }
+			   ;
 
-jump_enclosed_body: '{' jump_body '}'
+expression_or_null:
+				  { $$ = 0; }
+				  | expression
 				  ;
 
-jump_body: jump_type ';' jump_delay ';' jump_condition ';' jump_action
-		 | jump_type ';' jump_condition ';' jump_action
-		 | jump_type ';' jump_delay ';' jump_action
-		 | jump_type ';' jump_action
+assignment_list_or_null:
+					   { $$ = 0; }
+					   | assignment_list
+					   ;
+
+while_decl: K_WHILE '(' expression ')'
+		  { $$ = new ast::for_statement(0, $3); }
+		  ;
+
+flow_decl: if_decl
+		 | for_decl
+		 | while_decl
+		 ;
+
+jump_insn_decl: K_JUMP K_INSN identifier ':' jump_decl
+			  { $$ = new ast::jump_instruction($3, $5); }
+			  ;
+
+jump_decl: jump_type jump_delay jump_pre jump_condition jump_action
+		 { $$ = new ast::jump($1, $2, $3, $4, $5); }
 		 ;
 
 jump_type: K_TYPE identifier
+		 { $$ = $2; }
+		 | K_TYPE K_RETURN
+		 { $$ = new ast::identifier("return"); }
 		 ;
 
-jump_condition: K_CONDITION expression
+jump_condition:
+			  { $$ = 0; }
+			  | K_CONDITION expression
+			  { $$ = $2; }
 			  ;
 
-jump_delay: K_DELAY expression
+jump_delay:
+		  { $$ = 0; }
+		  | K_DELAY expression
+		  { $$ = $2; }
 		  ;
 
-jump_action: K_ACTION inline_insn_stmts ';'
-		   | insn_enclosed_body
+jump_pre:
+		{ $$ = 0; }
+		| K_PRE inline_insn_stmts
+		{ $$ = new ast::token_list($2); }
+		| K_PRE insn_enclosed_body
+		{ $$ = $2; }
+		;
+
+jump_action: insn_enclosed_body
 		   ;
 
 insn_group_decl: K_GROUP K_INSN identifier '[' identifier_list ']' K_CONDITION expression ';'
+			   { $$ = 0; }
 		  	   ;
 
 macro_decl: K_MACRO identifier '(' ')' ':' inline_insn_stmts ';'
+		  { $$ = new ast::macro($2, $6); }
 		  | K_MACRO identifier '(' identifier_list ')' ':' inline_insn_stmts ';'
+		  { $$ = new ast::macro($2, $4, $7); }
 		  | K_MACRO identifier '(' ')' insn_enclosed_body
+		  { $$ = new ast::macro($2, $5); }
 		  | K_MACRO identifier '(' identifier_list ')' insn_enclosed_body
+		  { $$ = new ast::macro($2, $4, $6); }
 		  ;
+
+decoder_operands_decl: K_DECODER_OPERANDS '[' identifier_list ']' ';'
+					 { $$ = new ast::decoder_operands($3); }
+					 ;
+
+decoder_operands_decl_or_null:
+							 { $$ = 0; }
+							 | decoder_operands_decl
+							 ;
 
 toplevel_decl: insn_decl
 			 | jump_insn_decl
@@ -648,12 +739,21 @@ toplevel_decl: insn_decl
 			 ;
 
 toplevel_decl_list: toplevel_decl
-				  //{ $$ = new token_list($1); }
+				  { $$ = new ast::token_list($1); }
 				  | toplevel_decl_list toplevel_decl
-				  //{ $$ = $1; $1->push($2); }
+				  { $$ = $1; $1->push($2); }
 		 		  ;
 
-root: arch_decl toplevel_decl_list
-	{ g_root = new ast::token_list($1); }
+toplevel_decl_list_or_null:
+						  { $$ = 0; }
+						  | toplevel_decl_list
+						  ;
+
+root: arch_decl decoder_operands_decl_or_null toplevel_decl_list_or_null
+	{ 
+		g_root = new ast::token_list($1);
+		if ($2 != 0) g_root->push($2);
+		if ($3 != 0) g_root->push($3);
+	}
 	;
 

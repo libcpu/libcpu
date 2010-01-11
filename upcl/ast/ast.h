@@ -47,8 +47,13 @@ public:
 
 		BOUND_VALUE,
 		TYPED_BOUND_VALUE,
-		ALIAS_VALUE
+		ALIAS_VALUE,
 
+		INSTRUCTION,
+		JUMP,
+
+		STATEMENT,
+		DECODER_OPERANDS
 	};
 
 private:
@@ -644,6 +649,226 @@ public:
 
 	inline bool is_bidi() const { return m_bidi; }
 	inline token const *get_alias() const { return m_alias; }
+};
+
+class statement : public token {
+public:
+	enum statement_type {
+		STATEMENT_LIST,
+		EXPRESSION,
+		ASSIGNMENT,
+		FOR,
+		IF
+	};
+
+private:
+	statement_type m_statement_type;
+	type *m_lhs_type;
+
+protected:
+	statement(statement_type type)
+		: token(STATEMENT), m_statement_type(type)
+	{ }
+
+public:
+	inline void set_lhs_type(type *type) { m_lhs_type = type; }
+	inline type const *get_lhs_type() const { return m_lhs_type; }
+	inline statement_type get_statement_type() const { return m_statement_type; }
+};
+
+class statement_list_statement : public statement {
+	token_list *m_list;
+public:
+	statement_list_statement(token_list *list)
+		: statement(STATEMENT_LIST), m_list(list)
+	{ }
+
+public:
+	inline token_list const *get_statements() const { return m_list; }
+};
+
+class expression_statement : public statement {
+	expression *m_expression;
+public:
+	expression_statement(expression *expr)
+		: statement(EXPRESSION), m_expression(expr)
+	{ }
+
+public:
+	inline expression const *get_expression() const { return m_expression; }
+};
+
+class assignment_statement : public statement {
+public:
+	enum assignment_type {
+		EQ, ADDE, SUBE, MULE, DIVE, REME, SHLE, SHRE,
+		ROLE, RORE, ANDE, ANDCOME, ORE, ORCOME, XORE,
+		XORCOME
+	};
+
+private:
+	assignment_type m_assignment_type;
+	expression *m_operand;
+	expression *m_value;
+
+public:
+	assignment_statement(assignment_type type, expression *operand,
+			expression *value)
+		: statement(ASSIGNMENT), m_assignment_type(type),
+		m_operand(operand), m_value(value)
+	{ }
+
+	inline assignment_type get_assignment_type() const { return m_assignment_type; }
+	inline expression const *get_operand() const { return m_operand; }
+	inline expression const *get_value() const { return m_value; }
+};
+
+class if_statement : public statement {
+	expression *m_condition;
+	statement *m_true;
+	statement *m_false;
+
+public:
+	if_statement(expression *cond, statement *tstmt, statement *fstmt = 0)
+		: statement(IF), m_condition(cond), m_true(tstmt),
+		m_false(fstmt)
+	{ }
+
+	inline expression const *get_condition() const { return m_condition; }
+	inline statement const *get_true() const { return m_true; }
+	inline statement const *get_false() const { return m_false; }
+};
+
+class for_statement : public statement {
+	token_list *m_init;
+	expression *m_condition;
+	token_list *m_post;
+
+public:
+	for_statement(token_list *init = 0, expression *cond = 0, token_list *post = 0)
+		: statement(FOR), m_init(init), m_condition(cond), m_post(post)
+	{ }
+
+public:
+	inline token_list const *get_init() const { return m_init; }
+	inline expression const *get_condition() const { return m_condition; }
+	inline token_list const *get_post() const { return m_post; }
+};
+
+class instruction : public token {
+public:
+	enum instruction_type {
+		NORMAL,
+		JUMP,
+		MACRO
+	};
+
+protected:
+	instruction_type m_instruction_type;
+	identifier *m_name;
+	token_list *m_body;
+
+protected:
+	instruction(instruction_type type, identifier *name)
+		: token(INSTRUCTION), m_instruction_type(type),
+		m_name(name), m_body(0)
+	{ }
+	instruction(instruction_type type, identifier *name, statement *statement)
+	 	: token(INSTRUCTION), m_instruction_type(type),
+		m_name(name), m_body(new token_list(statement))
+	{ }
+	instruction(instruction_type type, identifier *name, token_list *body)
+		: token(INSTRUCTION), m_instruction_type(type),
+		m_name(name), m_body(body)
+	{ }
+
+public:
+	instruction(identifier *name)
+		: token(INSTRUCTION), m_instruction_type(NORMAL),
+		m_name(name), m_body(0)
+	{ }
+	instruction(identifier *name, statement *statement)
+	 	: token(INSTRUCTION), m_instruction_type(NORMAL),
+		m_name(name), m_body(new token_list(statement))
+	{ }
+	instruction(identifier *name, token_list *body)
+		: token(INSTRUCTION), m_instruction_type(NORMAL),
+		m_name(name), m_body(body)
+	{ }
+
+	inline instruction_type get_instruction_type() const { return m_instruction_type; }
+	inline identifier const *get_name() const { return m_name; }
+	inline token_list const *get_body() const { return m_body; }
+};
+
+class jump : public token {
+	identifier *m_type;
+	expression *m_delay;
+	token_list *m_pre;
+	expression *m_condition;
+	token_list *m_action;
+
+
+public:
+	jump(identifier *type, expression *delay, token_list *pre,
+			expression *condition, token_list *action)
+		: token(JUMP), m_type(type), m_delay(delay), m_pre(pre),
+		m_condition(condition), m_action(action)
+	{ }
+
+public:
+	inline identifier const *get_type() const { return m_type; }
+	inline expression const *get_delay() const { return m_delay; }
+	inline token_list const *get_pre() const { return m_pre; }
+	inline expression const *get_condition() const { return m_condition; }
+	inline token_list const *get_action() const { return m_action; }
+};
+
+class decoder_operands : public token {
+	token_list *m_operands;
+
+public:
+	decoder_operands(token_list *operands)
+		: token(DECODER_OPERANDS), m_operands(operands)
+	{ }
+
+public:
+	inline token_list const *get_operands() const { return m_operands; }
+};
+
+class jump_instruction : public instruction {
+private:
+	jump *m_jump;
+
+public:
+	jump_instruction(identifier *name, jump *info)
+		: instruction(JUMP, name), m_jump(info)
+	{ }
+
+public:
+	inline jump const *get_info() const { return m_jump; }
+};
+
+class macro : public instruction {
+private:
+	token_list *m_arguments;
+
+public:
+	macro(identifier *name, statement *stmt)
+		: instruction(MACRO, name, stmt), m_arguments(0)
+	{ }
+	macro(identifier *name, token_list *args, statement *stmt)
+		: instruction(MACRO, name, stmt), m_arguments(args)
+	{ }
+	macro(identifier *name, token_list *stmts)
+		: instruction(MACRO, name, stmts), m_arguments(0)
+	{ }
+	macro(identifier *name, token_list *args, token_list *stmts)
+		: instruction(MACRO, name, stmts), m_arguments(args)
+	{ }
+
+public:
+	inline token_list const *get_arguments() const { return m_arguments; }
 };
 
 } }

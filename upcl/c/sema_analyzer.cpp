@@ -211,7 +211,9 @@ sema_analyzer::process_register_file(ast::register_file const *reg_file)
 		m_arch_tags[ast::architecture::PSR_SIZE] = 0;
 	}
 
-	if (psr->get_type()->get_bits() != m_arch_tags[ast::architecture::PSR_SIZE]) {
+	if (psr != 0 && 
+			psr->get_type()->get_bits() !=
+				m_arch_tags[ast::architecture::PSR_SIZE]) {
 		if (m_arch_tags[ast::architecture::PSR_SIZE] == 0) {
 			fprintf(stderr,
 					"warning: register '%s' is bound to pseudo register %%PSR, "
@@ -809,8 +811,8 @@ sema_analyzer::process_bound_value_dep(register_info *bri, size_t &offset,
 			// repeat index, hence "relative" index.
 			//
 			// If the expression cannot be resolved, it will be analyzed
-			// on the second pass.
-			//
+			// later.
+			// 
 			ast::identifier const *bid = (ast::identifier const *)binding;
 
 			sema::simple_expr_evaluator e;

@@ -51,15 +51,20 @@ ID  [a-zA-Z_][a-zA-Z0-9_]*
 "type" return K_TYPE;
 "condition" return K_CONDITION;
 "delay" return K_DELAY;
-"action" return K_ACTION;
+"pre" return K_PRE;
 
 "is" return K_IS;
 
 "if" return K_IF;
-"unless" return K_UNLESS;
 "else" return K_ELSE;
 "while" return K_WHILE;
 "for" return K_FOR;
+
+"return" return K_RETURN;
+
+"reset" return K_RESET;
+
+"decoder_operands" return K_DECODER_OPERANDS;
 
 "%CC" return K_AUGMENT_CC;
 "%S" return K_AUGMENT_SIGNED;

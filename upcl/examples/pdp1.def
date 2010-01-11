@@ -2,7 +2,7 @@ arch "pdp1" {
 
 	name "DEC PDP-1";
 
-//	endian strange;
+	//	endian none;
 
 	byte_size 18;
 	word_size 18;
@@ -34,10 +34,13 @@ arch "pdp1" {
 
 }
 
+decoder_operands [ Y, N ];
+
 insn add : ac += Y;
 insn and : ac += Y;
 jump insn cal : type branch
-                action pc = 0100;
+				{ pc = 0100; }
+
 insn dac : Y = ac;
 insn dio : Y = io;
 insn dip : Y = io;
@@ -50,35 +53,34 @@ insn jda {
 	Y = AC;
 	@pdp1_jsp( t );
 }
-jump insn isp : type branch {
-	Y += 1;
-	if ( %S ( Y ) > 0 )
-		pc += Y;
-}
+
+jump insn isp : type branch
+				pre Y += 1
+				condition %S( Y ) > 0
+				{ pc += Y; }
+
 insn lac : ac = %M[ ac + Y ];
 insn law : ac = N;
 insn lio : io = Y;
-insn mus {
-	flags.X = 1;
-}
+insn mus : flags.X = 1;
 
 jump insn sad : type branch
 				condition Y != ac
-				action pc += 1;
+				{ pc += 1; }
 
 jump insn sas : type branch
 				condition Y == ac
-				action pc += 1;
+				{ pc += 1; }
 
 insn sub : ac -= Y;
-insn xct : @execute_one ( Y );
+insn xct : @trap ( 2, Y );
 insn xor : ac ^= Y;
 
 insn cla : ac = 0;
 insn clf : flags[N:1] = 0;
 insn cli : io = 0;
 insn cma : ac = ~ac;
-insn hlt : ;
+insn hlt : @trap ( 1 );
 insn lat : ac = twr;
 insn nop : ;
 insn stf : flags[N:1] = 1;

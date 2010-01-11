@@ -61,7 +61,7 @@ arch "8086" {
 	}
 }
 
-// decoder_operands [ src, dst, cond ];
+decoder_operands [ src, dst, cond ];
 
 macro ea ( seg, off ) : #i24 %result = ( [ #i16 seg ] << 4 ) + [ #i16 off ];
 macro i8086_jump ( address ) {
@@ -72,9 +72,6 @@ macro i8086_jump ( address ) {
 }
 macro i8086_jump ( seg, off ) : pc.[ seg, off ] = ( seg : off );
 macro i8086_push ( value ) {
-	// contract
-	@fatal("Can push only 16-bit words!") unless ( value is #i16 );
-
 	sp -= 2;
 	%M[ @ea ( ss, sp ) ] = value;
 }
@@ -203,7 +200,7 @@ insn inw   : ax = @call ( i8086_input_word, src );
 insn inw_dx: ax = @call ( i8086_input_word, dx );
 insn inc   : dst = %CC ( dst + 1, !C );
 insn int   : @i8086_interrupt ( intno );
-insn into  : @i8086_interrupt ( 4 ) if ( flags.O );
+insn into  : if ( flags.O ) @i8086_interrupt ( 4 );;
 insn iret {
 
 	t_ip = @i8086_pop ();
@@ -231,8 +228,8 @@ insn ror  : dst = %CC ( dst >>< src );
 insn rcl  : ( dst : flags.C ) = %CC ( ( dst : flags.C ) <<> src );
 insn rcr  : ( dst : flags.C ) = %CC ( ( dst : flags.C ) >>< src );
 
-jump insn jmp : type branch action @i8086_jump( src );
-jump insn fjmp : type branch action @i8086_jump( src );
+jump insn jmp : type branch { @i8086_jump( src ); }
+jump insn fjmp : type branch { @i8086_jump( src ); }
 jump insn fcall : type call {
 	@i8086_push ( cs );
 	@i8086_push ( ip );
@@ -243,11 +240,11 @@ jump insn ncall : type call {
 	@i8086_jump ( src );
 }
 
-jump insn nret : type return action @i8086_jump ( @i8086_pop () );
+jump insn nret : type return { @i8086_jump ( @i8086_pop () ); }
 
 jump insn jx : type branch
 			   condition @eval_cc ( cond )
-			   action @i8086_jump ( src );
+			   { @i8086_jump ( src ); }
 
 insn mov : dst = src;
 insn movsb {

@@ -34,5 +34,3 @@ arch "mips64" {
 
 //include "mips.def";
 
-insn a : ;
-
