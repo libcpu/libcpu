@@ -8,7 +8,7 @@
 #include "x86_isa.h"
 #include "x86_decode.h"
 
-static unsigned long decode_table[256] = {
+static const uint32_t decode_table[256] = {
 	/*[0x0]*/	INSTR_ADD | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0x1]*/	INSTR_ADD | ADDMODE_REG_RM | WIDTH_FULL,
 	/*[0x2]*/	INSTR_ADD | ADDMODE_RM_REG | WIDTH_BYTE,
@@ -400,14 +400,14 @@ decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 	*pc = new_pc;
 }
 
-static unsigned long mod_dst_decode[] = {
+static const uint32_t mod_dst_decode[] = {
 	/*[0x00]*/	DST_MEM,
 	/*[0x01]*/	DST_MEM_DISP_BYTE,
 	/*[0x02]*/	DST_MEM_DISP_FULL,
 	/*[0x03]*/	DST_REG,
 };
 
-static unsigned long mod_src_decode[] = {
+static const uint32_t mod_src_decode[] = {
 	/*[0x00]*/	SRC_MEM,
 	/*[0x01]*/	SRC_MEM_DISP_BYTE,
 	/*[0x02]*/	SRC_MEM_DISP_FULL,
