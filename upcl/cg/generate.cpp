@@ -614,6 +614,9 @@ upcl::cg::generate_arch_h(std::ostream &o, std::string const &fname,
 
 	o << "int arch_" << arch_name << "_tag_instr(cpu_t *cpu, addr_t pc, "
 	  << "tag_t *tag, addr_t *new_pc, addr_t *next_pc);" << std::endl;
+	o << "Value *" << std::endl
+	  << "arch_" << arch_name << "_translate_cond(cpu_t *cpu, addr_t pc, "
+	  << "BasicBlock *bb);" << std::endl;
 	
 	cg_write_guard_end(o, fname);
 }
@@ -678,18 +681,17 @@ upcl::cg::generate_opc_h(std::ostream &o, std::string const &fname,
 
 	cg_write_guard_begin(o, fname);
 
+	o << "typedef enum arch_" << arch_name << "_opcode {" << std::endl;
+	o << '\t' << "ARCH_" << upper_string(arch_name) << "_OPC_ILLEGAL = 0";
 	if (!insns.empty()) {
-		size_t index = 0;
-		o << "enum {" << std::endl;
 		for (c::instruction_vector::const_iterator i = insns.begin();
 				i != insns.end(); i++) {
-			if (i != insns.begin())
-				o << ',' << std::endl;
+			o << ',' << std::endl;
 			o << '\t' << "ARCH_" << upper_string(arch_name) << "_OPC_"
 			 << upper_string((*i)->get_name());
 		}
-		o << std::endl << "};" << std::endl;
 	}
+	o << std::endl << "} arch_" << arch_name << "_opcode_t;" << std::endl;
 
 	cg_write_guard_end(o, fname);
 }
@@ -714,8 +716,13 @@ upcl::cg::generate_tag_cpp(std::ostream &o, std::string const &fname,
 	o << '\t' << "size_t length;" << std::endl;
 	o << std::endl;
 	o << '\t' << "ARCH_" << upper_string(arch_name)
-	 	<< "_INSN_GET_OPCODE(cpu, pc, opcode, length);" << std::endl;
+	 << "_INSN_GET_OPCODE(cpu, pc, opcode, length);" << std::endl;
 	o << '\t' << "switch (opcode) {" << std::endl;
+	o << "\t\t" << "case ARCH_" << upper_string(arch_name) << "_OPC_ILLEGAL:"
+	 << std::endl
+	 << "\t\t\t" << "*tag = TAG_TRAP;" << std::endl
+	 << "\t\t\t" << "break;" << std::endl
+	 << std::endl;
 	for(c::jump_instruction_vector::const_iterator i = jumps.begin();
 			i != jumps.end(); i++) {
 		o << "\t\t" << "case "
@@ -761,5 +768,57 @@ upcl::cg::generate_tag_cpp(std::ostream &o, std::string const &fname,
 	o << std::endl;
 	o << '\t' << "*next_pc = pc + length;" << std::endl;
 	o << '\t' << "return length;" << std::endl;
+	o << '}' << std::endl;
+}
+
+void
+upcl::cg::generate_tcond_cpp(std::ostream &o, std::string const &fname,
+		std::string const &arch_name, c::jump_instruction_vector const &jumps)
+{
+	// banner
+	cg_write_banner(o, fname, true);
+
+	// includes
+	cg_write_include(o, arch_name + "_arch.h");
+
+	o << std::endl;
+
+	o << "Value *" << std::endl
+	  << "arch_" << arch_name << "_translate_cond(cpu_t *cpu, addr_t pc, "
+	  << "BasicBlock *bb)" << std::endl;
+	o << '{' << std::endl;
+	o << '\t' << "arch_" << arch_name << "_opcode_t opcode;" << std::endl;
+	o << '\t' << "size_t length;" << std::endl;
+	o << std::endl;
+	o << '\t' << "ARCH_" << upper_string(arch_name)
+	 << "_INSN_GET_OPCODE(cpu, pc, opcode, length);" << std::endl;
+	o << '\t' << "switch (opcode) {" << std::endl;
+	o << "\t\t" << "case ARCH_" << upper_string(arch_name) << "_OPC_ILLEGAL:"
+	 << std::endl
+	 << "\t\t\t" << "assert(0 && \"Illegal opcode while translating\");" << std::endl
+	 << "\t\t\t" << "return 0;" << std::endl
+	 << std::endl;
+	for(c::jump_instruction_vector::const_iterator i = jumps.begin();
+			i != jumps.end(); i++) {
+		if ((*i)->get_condition() == 0)
+			continue;
+
+		o << "\t\t" << "case "
+		 << "ARCH_" << upper_string(arch_name) << "_OPC_"
+		 << upper_string((*i)->get_name()) << ':'
+		 << std::endl;
+
+		c::expression *e = (*i)->get_condition()->simplify();
+		if (e == 0)
+			e = (*i)->get_condition();
+		o << "\t\t\t" << "return ";
+		cg::generate_libcpu_expression(o, e);
+		o << ';' << std::endl << std::endl;
+	}
+	o << "\t\t" << "default:" << std::endl;
+	o << "\t\t\t" << "break;" << std::endl;
+	o << '\t' << '}' << std::endl;
+	o << std::endl;
+	o << '\t' << "return 0;" << std::endl;
 	o << '}' << std::endl;
 }

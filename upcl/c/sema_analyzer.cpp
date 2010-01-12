@@ -182,6 +182,14 @@ sema_analyzer::parse(ast::token_list const *root)
 		std::cerr << "ERROR." << std::endl;
 	}
 
+	c::jump_instruction_vector jumps;
+
+	for (named_instruction_map::iterator i = m_insns.begin();
+			i != m_insns.end(); i++) {
+		if (i->second->is_jump())
+			jumps.push_back((c::jump_instruction *)i->second);
+	}
+
 	///
 
 	fname = m_arch_name + "_tag_stub.cpp";
@@ -190,15 +198,23 @@ sema_analyzer::parse(ast::token_list const *root)
 		
 	of.open(fname.c_str());
 	if (of) {
-		c::jump_instruction_vector jumps;
-
-		for (named_instruction_map::iterator i = m_insns.begin();
-				i != m_insns.end(); i++) {
-			if (i->second->is_jump())
-				jumps.push_back((c::jump_instruction *)i->second);
-		}
-
 		cg::generate_tag_cpp(of, fname, m_arch_name, jumps);
+		of.close();
+
+		std::cerr << "ok." << std::endl;
+	} else {
+		std::cerr << "ERROR." << std::endl;
+	}
+
+	///
+
+	fname = m_arch_name + "_tcond.cpp";
+
+	std::cerr << "generating " << fname << "...";
+		
+	of.open(fname.c_str());
+	if (of) {
+		cg::generate_tcond_cpp(of, fname, m_arch_name, jumps);
 		of.close();
 
 		std::cerr << "ok." << std::endl;

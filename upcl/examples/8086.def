@@ -61,7 +61,7 @@ arch "8086" {
 	}
 }
 
-decoder_operands [ #i16 src, #i16 dst, #i16 cond ];
+decoder_operands [ #i16 src, #i16 dst, #i16 cond, #i1 rep ];
 
 macro ea ( seg, off ) : #i24 %result = ( [ #i16 seg ] << 4 ) + [ #i16 off ];
 macro i8086_jump ( address ) {
@@ -80,20 +80,17 @@ macro i8086_pop () {
 	sp += 2;
 }
 
-macro i8086_str_src () : %result = @i8086_str_src ();
-macro i8086_str_dst () : %result = @i8086_str_dst ();
-
-macro i8086_str_inc () {
+macro i8086_str_inc (n) {
 
 	if ( flags.D ) {
 
-		si -= 1;
-		di -= 1;
+		si -= n;
+		di -= n;
 
 	} else {
 
-		si += 1;
-		di += 1;
+		si += n;
+		di += n;
 
 	}
 
@@ -256,10 +253,15 @@ insn movsb {
 }
 insn movsw {
 
-	%M[  @i8086_str_dst () ] = %M[ @i8086_str_src () ];
-  	@i8086_str_inc ();
-
-    a = %S ( [ #i32 #i16 %M[ 0 ] ] );
+	if ( rep ) {
+		for (; %S ( cx > 0 ); cx = cx - 1) {
+			#i16 %M[  @i8086_str_dst () ] = #i16 %M[ @i8086_str_src () ];
+			@i8086_str_inc (2);
+		}
+	} else {
+		#i16 %M[  @i8086_str_dst () ] = #i16 %M[ @i8086_str_src () ];
+		@i8086_str_inc (2);
+	}
 }
 
 // conditional execution for arm

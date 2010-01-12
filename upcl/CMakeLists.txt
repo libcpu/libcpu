@@ -46,6 +46,7 @@ add_executable(upcc
   c/assign_expression.cpp
   c/expression_dumper.cpp
   cg/generate.cpp
+  cg/libcpu_expression_generator.cpp
   ${FLEX_UpccLexer_OUTPUTS}
   ${BISON_UpccParser_OUTPUTS}
   )

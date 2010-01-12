@@ -27,6 +27,11 @@ namespace upcl { namespace cg {
 	void generate_tag_cpp(std::ostream &o, std::string const &fname,
 		std::string const &arch_name, c::jump_instruction_vector const &jumps);
 
+	void generate_tcond_cpp(std::ostream &o, std::string const &fname,
+		std::string const &arch_name, c::jump_instruction_vector const &jumps);
+
+  void generate_libcpu_expression(std::ostream &o, c::expression const *expr);
+
 } }
 
 #endif  // !__upcl_cg_generate_h

@@ -37,6 +37,14 @@ arch "pdp1" {
 
 decoder_operands [ #i18 Y, #i3 N ];
 
+//reset {
+//	pf = 0;
+//	ac = 0;
+//	io = 0;
+//	twr = 0;
+//	pc = 0100;
+//}
+
 insn add : ac += Y;
 insn and : ac &= Y;
 jump insn cal : type branch
@@ -49,7 +57,8 @@ insn dip : Y = io;
 insn dzm : Y = 0;
 insn idx : Y += 1;
 insn ior : ac |= Y;
-insn jda {
+
+jump insn jda : type branch {
 	t = Y;
 	Y = AC;
 	@pdp1_jsp( t );
