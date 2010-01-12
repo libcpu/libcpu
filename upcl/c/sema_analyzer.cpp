@@ -1,7 +1,5 @@
 #include "c/sema_analyzer.h"
 #include "sema/simple_expr_evaluator.h"
-#include "sema/register_dep_tracker.h"
-#include "sema/register_file_builder.h"
 #include "ast/dumper.h"
 
 #include <cassert>
@@ -47,9 +45,126 @@ sema_analyzer::parse(ast::token_list const *root)
 
 				break;
 
+			case ast::token::DECODER_OPERANDS:
+				printf("DECODER OPERANDS!\n");
+				break;
+
+			case ast::token::LIST:
+				if (!process_instructions((ast::token_list const *)t))
+					return false;
+				break;
+
 			default:
 				break;
 		}
+	}
+
+	// XXX temporary
+
+	register_def_vector const &regs = m_rfb.get_physical_registers();
+
+	// find the registers bound to psr and pc.
+	register_def *psr = 0;
+	register_def *pcr = 0;
+
+	for (register_def_vector::const_iterator i = regs.begin();
+			i != regs.end(); i++) {
+		if (psr == 0 && (*i)->get_bound_special_register() == SPECIAL_REGISTER_PSR)
+			psr = (*i);
+		else if (pcr == 0 && (*i)->get_bound_special_register() == SPECIAL_REGISTER_PC)
+			pcr = (*i);
+	}
+
+	if (pcr == 0) {
+		fprintf(stderr,
+				"error: this architecture does not define any register "
+				"bound to the %%PC pseudo register.\n");
+		return false;
+	}
+
+	if (psr == 0 && m_arch_tags[ast::architecture::PSR_SIZE] != 0) {
+		fprintf(stderr,
+				"warning: this architecture does not define any register "
+				"bound to the %%PSR pseudo register, but specifies a psr_size "
+				"of %llu bits, ignoring.\n",
+				m_arch_tags[ast::architecture::PSR_SIZE]);
+		m_arch_tags[ast::architecture::PSR_SIZE] = 0;
+	}
+
+	if (psr != 0 && 
+			psr->get_type()->get_bits() !=
+				m_arch_tags[ast::architecture::PSR_SIZE]) {
+		if (m_arch_tags[ast::architecture::PSR_SIZE] == 0) {
+			fprintf(stderr,
+					"warning: register '%s' is bound to pseudo register %%PSR, "
+					"but psr_size hasn't been defined, setting it to %zu bits.",
+					psr->get_name().c_str(),
+					psr->get_type()->get_bits());
+			m_arch_tags[ast::architecture::PSR_SIZE] = psr->get_type()->get_bits();
+		} else {
+			fprintf(stderr,
+					"error: register '%s', bound to pseudo register %%PSR, "
+					"is %zu bits long while psr_size specifies %llu bits.\n",
+					psr->get_name().c_str(),
+					psr->get_type()->get_bits(),
+					m_arch_tags[ast::architecture::PSR_SIZE]);
+			return false;
+		}
+	}
+
+	std::ofstream of;
+	std::string fname;
+
+	fname = m_arch_name + "_types.h";
+	std::cerr << "generating " << fname << "...";
+
+	of.open(fname.c_str());
+	if (of) {
+		cg::generate_types_h(of, fname, m_arch_name, regs);
+		of.close();
+
+		std::cerr << "ok." << std::endl;
+	} else {
+		std::cerr << "ERROR." << std::endl;
+	}
+
+	fname = m_arch_name + "_arch.cpp";
+
+	std::cerr << "generating " << fname << "...";
+		
+	of.open(fname.c_str());
+	if (of) {
+		cg::generate_arch_cpp(of, fname, m_arch_name, m_arch_full_name,
+				m_arch_tags, pcr, psr, regs);
+		of.close();
+
+		std::cerr << "ok." << std::endl;
+	} else {
+		std::cerr << "ERROR." << std::endl;
+	}
+
+	///
+
+	fname = m_arch_name + "_tag_stub.cpp";
+
+	std::cerr << "generating " << fname << "...";
+		
+	of.open(fname.c_str());
+	if (of) {
+		c::jump_instruction_vector jumps;
+
+		for (named_instruction_map::iterator i = m_insns.begin();
+				i != m_insns.end(); i++) {
+			if (i->second->is_jump())
+				jumps.push_back((c::jump_instruction *)i->second);
+		}
+
+		cg::generate_tag_cpp(of, fname, m_arch_name, jumps);
+		of.close();
+
+		std::cerr << "ok." << std::endl;
+	} else {
+		std::cerr << "ERROR." << std::endl;
 	}
 
 	return true;
@@ -172,95 +287,9 @@ sema_analyzer::process_register_file(ast::register_file const *reg_file)
 	//m_dpt.dump();
 	//m_dpt.dump_top();
 
-	register_file_builder builder;
-	if (!builder.analyze(&m_dpt)) {
-		fprintf(stderr, "register file builder failure.\n");
+	if (!m_rfb.analyze(&m_dpt)) {
+		fprintf(stderr, "error: cannot build register file.\n");
 		return false;
-	}
-
-
-	// XXX temporary
-
-	register_def_vector const &regs = builder.get_physical_registers();
-
-	// find the registers bound to psr and pc.
-	register_def *psr = 0;
-	register_def *pcr = 0;
-
-	for (register_def_vector::const_iterator i = regs.begin();
-			i != regs.end(); i++) {
-		if (psr == 0 && (*i)->get_bound_special_register() == SPECIAL_REGISTER_PSR)
-			psr = (*i);
-		else if (pcr == 0 && (*i)->get_bound_special_register() == SPECIAL_REGISTER_PC)
-			pcr = (*i);
-	}
-
-	if (pcr == 0) {
-		fprintf(stderr,
-				"error: this architecture does not define any register "
-				"bound to the %%PC pseudo register.\n");
-		return false;
-	}
-
-	if (psr == 0 && m_arch_tags[ast::architecture::PSR_SIZE] != 0) {
-		fprintf(stderr,
-				"warning: this architecture does not define any register "
-				"bound to the %%PSR pseudo register, but specifies a psr_size "
-				"of %llu bits, ignoring.\n",
-				m_arch_tags[ast::architecture::PSR_SIZE]);
-		m_arch_tags[ast::architecture::PSR_SIZE] = 0;
-	}
-
-	if (psr != 0 && 
-			psr->get_type()->get_bits() !=
-				m_arch_tags[ast::architecture::PSR_SIZE]) {
-		if (m_arch_tags[ast::architecture::PSR_SIZE] == 0) {
-			fprintf(stderr,
-					"warning: register '%s' is bound to pseudo register %%PSR, "
-					"but psr_size hasn't been defined, setting it to %zu bits.",
-					psr->get_name().c_str(),
-					psr->get_type()->get_bits());
-			m_arch_tags[ast::architecture::PSR_SIZE] = psr->get_type()->get_bits();
-		} else {
-			fprintf(stderr,
-					"error: register '%s', bound to pseudo register %%PSR, "
-					"is %zu bits long while psr_size specifies %llu bits.\n",
-					psr->get_name().c_str(),
-					psr->get_type()->get_bits(),
-					m_arch_tags[ast::architecture::PSR_SIZE]);
-			return false;
-		}
-	}
-
-	std::ofstream of;
-	std::string fname;
-
-	fname = m_arch_name + "_types.h";
-	std::cerr << "generating " << fname << "...";
-
-	of.open(fname.c_str());
-	if (of) {
-		cg::generate_types_h(of, fname, m_arch_name, regs);
-		of.close();
-
-		std::cerr << "ok." << std::endl;
-	} else {
-		std::cerr << "ERROR." << std::endl;
-	}
-
-	fname = m_arch_name + "_arch.cpp";
-
-	std::cerr << "generating " << fname << "...";
-		
-	of.open(fname.c_str());
-	if (of) {
-		cg::generate_arch_cpp(of, fname, m_arch_name, m_arch_full_name,
-				m_arch_tags, pcr, psr, regs);
-		of.close();
-
-		std::cerr << "ok." << std::endl;
-	} else {
-		std::cerr << "ERROR." << std::endl;
 	}
 
 	return true;
@@ -967,5 +996,103 @@ sema_analyzer::process_typed_bound_value_dep(register_info *ri, size_t &offset,
 			return false;
 	}
 
+	return true;
+}
+
+bool
+sema_analyzer::process_instructions(ast::token_list const *insns)
+{
+	size_t count = insns->size();
+	for (size_t n = 0; n < count; n++) {
+		ast::token const *t = (*insns)[n];
+		if (t->get_token_type() != ast::token::INSTRUCTION)
+			continue;
+
+		if (!process_instruction((ast::instruction const *)t))
+			return false;
+	}
+	return true;
+}
+
+bool
+sema_analyzer::process_instruction(ast::instruction const *insn)
+{
+	switch (insn->get_instruction_type()) {
+		case ast::instruction::JUMP:
+			return process_jump_instruction((ast::jump_instruction const *)insn);
+		case ast::instruction::MACRO:
+			return process_macro((ast::macro const *)insn);
+		case ast::instruction::NORMAL:
+			break;
+		default:
+			assert(0 && "This shouldn't happen.");
+			return false;
+	}
+
+	printf("INSN %s\n", insn->get_name()->get_value().c_str());
+
+	// name collision?
+	if (m_insns.find(insn->get_name()->get_value()) != m_insns.end()) {
+		fprintf(stderr, "error: instruction '%s' is being redefined.\n",
+				insn->get_name()->get_value().c_str());
+		return false;
+	}
+
+	c::instruction *cinsn = new c::instruction(insn->get_name()->get_value());
+
+	m_insns[cinsn->get_name()] = cinsn;
+
+	return true;
+}
+
+bool
+sema_analyzer::process_jump_instruction(ast::jump_instruction const *jinsn)
+{
+	ast::identifier const *name  = jinsn->get_name();
+	ast::jump const       *jump  = jinsn->get_info();
+	ast::identifier const *jtype = jump->get_type();
+	c::instruction        *insn  = 0;
+
+	printf("JUMP %s\n", name->get_value().c_str());
+
+	// name collision?
+	if (m_insns.find(name->get_value()) != m_insns.end()) {
+		fprintf(stderr, "error: instruction '%s' is being redefined.\n",
+				insn->get_name().c_str());
+		return false;
+	}
+
+	//
+	// jump can be:
+	//
+	//   * return
+	//   * call
+	//   * branch (conditional/unconditional)
+	//   * trap   (conditional/unconditional)
+	//
+	if (jtype->get_value() == "branch")
+		insn = new c::jump_instruction(c::jump_instruction::BRANCH, name->get_value());
+	else if (jtype->get_value() == "call")
+		insn = new c::jump_instruction(c::jump_instruction::CALL, name->get_value());
+	else if (jtype->get_value() == "return")
+		insn = new c::jump_instruction(c::jump_instruction::RETURN, name->get_value());
+	else if (jtype->get_value() == "trap")
+		insn = new c::jump_instruction(c::jump_instruction::TRAP, name->get_value());
+	else {
+		fprintf(stderr, "error: jump instruction '%s' is of unknown type "
+				"'%s'; valid types are: call, branch and return.",
+				name->get_value().c_str(), jtype->get_value().c_str());
+		return false;
+	}
+
+	m_insns[insn->get_name()] = insn;
+
+	return true;
+}
+
+bool
+sema_analyzer::process_macro(ast::macro const *m)
+{
+	printf("MACRO %s\n", m->get_name()->get_value().c_str());
 	return true;
 }

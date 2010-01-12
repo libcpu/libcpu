@@ -17,6 +17,23 @@ cg_write_reg_file(std::ostream &o, std::string const &arch_name,
 static void
 cg_write_psr_bitfield(std::ostream &o, c::sub_register_def const *bf);
 
+typedef std::string::value_type charT;
+
+static inline charT upper(charT arg)
+{ return std::use_facet<std::ctype<charT> >(std::locale()).toupper(arg); }
+
+static void
+make_upper_string(std::string &x)
+{ std::transform(x.begin(), x.end(), x.begin(), upper); }
+
+static std::string
+upper_string(std::string const &x)
+{
+	std::string r(x);
+	make_upper_string(r);
+	return r;
+}
+
 // transform a name suitable for C
 static std::string
 make_def_name(std::string const &name)
@@ -281,6 +298,9 @@ cg_write_psr_bitfield(std::ostream &o, c::sub_register_vector const &bitfields)
 static void
 cg_write_psr_bitfield(std::ostream &o, c::sub_register_def const *bf)
 {
+	if (bf->get_name().find('$') != std::string::npos)
+		return;
+
 	c::sub_register_vector const &sub_bitfields =
 		bf->get_sub_register_vector();
 	if (!sub_bitfields.empty()) {
@@ -307,12 +327,7 @@ cg_write_psr_bitfield(std::ostream &o, c::sub_register_def const *bf)
 	else
 		o << '0';
 
-	std::string name(bf->get_name());
-	size_t dp = name.rfind('$');
-	if (dp != std::string::npos)
-		name = name.substr(dp);
-
-	o << ", \"" << name << "\" }" << std::endl;
+	o << ", \"" << bf->get_name() << "\" }" << std::endl;
 }
 
 // emit a PSR-bound register flags layout
@@ -637,4 +652,78 @@ upcl::cg::generate_arch_cpp(std::ostream &o, std::string const &fname,
 	o << "// Architecture Accessor: Read Processor Status Register" << std::endl;
 	cg_generate_arch_get_psr(o, arch_name, psr);
 	o << std::endl;
+}
+
+void
+upcl::cg::generate_tag_cpp(std::ostream &o, std::string const &fname,
+		std::string const &arch_name, c::jump_instruction_vector const &jumps)
+{
+	// banner
+	cg_write_banner(o, fname);
+
+	// includes
+	cg_write_std_include(o, "assert.h");
+	o << std::endl;
+	cg_write_include(o, "libcpu.h");
+	cg_write_include(o, "frontend.h");
+	cg_write_include(o, arch_name + "_types.h");
+
+	o << std::endl;
+
+	o << "int" << std::endl
+	  << "arch_" << arch_name << "_tag_instr(cpu_t *cpu, addr_t pc, "
+	  << "tag_t *tag, addr_t *new_pc, addr_t *next_pc)" << std::endl;
+	o << '{' << std::endl;
+	o << '\t' << "arch_" << arch_name << "_opcode_t opcode;" << std::endl;
+	o << '\t' << "size_t length;" << std::endl;
+	o << std::endl;
+	o << '\t' << "ARCH_" << upper_string(arch_name)
+	 	<< "_INSN_GET_OPCODE(cpu, pc, opcode, length);" << std::endl;
+	o << '\t' << "switch (opcode) {" << std::endl;
+	for(c::jump_instruction_vector::const_iterator i = jumps.begin();
+			i != jumps.end(); i++) {
+		o << "\t\t" << "case "
+		 << "ARCH_" << upper_string(arch_name) << "_OPC_"
+		 << upper_string((*i)->get_name()) << ':'
+		 << std::endl;
+		o << "\t\t\t" << "*tag = TAG_";
+		switch ((*i)->get_type()) {
+			case c::jump_instruction::BRANCH:
+				if ((*i)->get_condition() != 0)
+					o << "COND_BRANCH";
+				else
+					o << "BRANCH";
+				break;
+			case c::jump_instruction::CALL:
+				o << "CALL";
+				break;
+			case c::jump_instruction::RETURN:
+				o << "RET";
+				break;
+			case c::jump_instruction::TRAP:
+				if ((*i)->get_condition() != 0)
+					o << "COND_TRAP";
+				else
+					o << "TRAP";
+				break;
+			default:
+				o << "CONTINUE";
+				break;
+		}
+		o << ';' << std::endl;
+		o << "\t\t\t" << "//" << std::endl;
+		o << "\t\t\t" << "// Insert here tagging code." << std::endl;
+		o << "\t\t\t" << "//" << std::endl;
+		o << "\t\t\t" << "*new_pc = NEW_PC_NONE;" << std::endl;
+		o << "\t\t\t" << "break;" << std::endl;
+		o << std::endl;
+	}
+	o << "\t\t" << "default:" << std::endl;
+	o << "\t\t\t" << "*tag = TAG_CONTINUE;" << std::endl;
+	o << "\t\t\t" << "break;" << std::endl;
+	o << '\t' << '}' << std::endl;
+	o << std::endl;
+	o << '\t' << "*next_pc = pc + length;" << std::endl;
+	o << '\t' << "return length;" << std::endl;
+	o << '}' << std::endl;
 }

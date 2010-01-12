@@ -643,7 +643,7 @@ if_decl: K_IF '(' expression ')' insn_stmts
 	   { $$ = new ast::if_statement($3, $5, $7); }
 	   ;
 
-for_decl: K_FOR '(' assignment_list_or_null ';' expression_or_null ';' assignment_list_or_null ')'
+for_decl: K_FOR '(' assignment_list_or_null ';' expression_or_null ';' assignment_list_or_null ')' 
 		{ $$ = new ast::for_statement($3, $5, $7); }
 		;
 
@@ -663,7 +663,7 @@ assignment_list_or_null:
 					   | assignment_list
 					   ;
 
-while_decl: K_WHILE '(' expression ')'
+while_decl: K_WHILE '(' expression ')' 
 		  { $$ = new ast::for_statement(0, $3); }
 		  ;
 
