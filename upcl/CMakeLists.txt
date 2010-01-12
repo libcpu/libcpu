@@ -33,6 +33,7 @@ add_executable(upcc
   c/sema_analyzer.cpp
   c/register_def.cpp
   c/sub_register_def.cpp
+  c/decoder_operand_def.cpp
   c/expression.cpp
   c/cast_expression.cpp
   c/unary_expression.cpp
@@ -40,6 +41,7 @@ add_executable(upcc
   c/bit_slice_expression.cpp
   c/bit_combine_expression.cpp
   c/register_expression.cpp
+  c/decoder_operand_expression.cpp
   c/signed_expression.cpp
   c/assign_expression.cpp
   c/expression_dumper.cpp

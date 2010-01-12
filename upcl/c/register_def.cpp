@@ -13,6 +13,23 @@
 using namespace upcl;
 using namespace upcl::c;
 
+register_def::register_def(unsigned flags, std::string const &name,
+		c::type *type)
+	: m_flags(flags), m_name(name), m_type(type),
+	m_special_bind(NO_SPECIAL_REGISTER), m_bind(0), m_expr(0)
+{
+}
+
+register_def::register_def(std::string const &name, c::type *type)
+	: m_flags(0), m_name(name), m_type(type),
+	m_special_bind(NO_SPECIAL_REGISTER), m_bind(0), m_expr(0)
+{
+}
+
+register_def::~register_def()
+{
+}
+
 bool
 register_def::is_hardwired() const
 {

@@ -1,5 +1,7 @@
 #include "c/sema_analyzer.h"
+#include "c/expression_dumper.h"
 #include "sema/simple_expr_evaluator.h"
+#include "sema/convert.h"
 #include "ast/dumper.h"
 
 #include <cassert>
@@ -13,6 +15,7 @@ using upcl::sema::register_dep_tracker;
 using upcl::sema::register_file_builder;
 using upcl::sema::register_info;
 using upcl::sema::register_info_vector;
+using upcl::sema::expr_convert;
 
 #include "cg/generate.h"
 
@@ -46,7 +49,8 @@ sema_analyzer::parse(ast::token_list const *root)
 				break;
 
 			case ast::token::DECODER_OPERANDS:
-				printf("DECODER OPERANDS!\n");
+				if (!process_decoder_operands((ast::decoder_operands const *)t))
+					return false;
 				break;
 
 			case ast::token::LIST:
@@ -115,6 +119,19 @@ sema_analyzer::parse(ast::token_list const *root)
 	std::ofstream of;
 	std::string fname;
 
+	fname = m_arch_name + "_arch.h";
+	std::cerr << "generating " << fname << "...";
+
+	of.open(fname.c_str());
+	if (of) {
+		cg::generate_arch_h(of, fname, m_arch_name);
+		of.close();
+
+		std::cerr << "ok." << std::endl;
+	} else {
+		std::cerr << "ERROR." << std::endl;
+	}
+
 	fname = m_arch_name + "_types.h";
 	std::cerr << "generating " << fname << "...";
 
@@ -136,6 +153,28 @@ sema_analyzer::parse(ast::token_list const *root)
 	if (of) {
 		cg::generate_arch_cpp(of, fname, m_arch_name, m_arch_full_name,
 				m_arch_tags, pcr, psr, regs);
+		of.close();
+
+		std::cerr << "ok." << std::endl;
+	} else {
+		std::cerr << "ERROR." << std::endl;
+	}
+
+	///
+
+	fname = m_arch_name + "_opc.h";
+
+	std::cerr << "generating " << fname << "...";
+		
+	of.open(fname.c_str());
+	if (of) {
+		c::instruction_vector insns;
+
+		for (named_instruction_map::iterator i = m_insns.begin();
+				i != m_insns.end(); i++)
+			insns.push_back(i->second);
+
+		cg::generate_opc_h(of, fname, m_arch_name, insns);
 		of.close();
 
 		std::cerr << "ok." << std::endl;
@@ -999,6 +1038,48 @@ sema_analyzer::process_typed_bound_value_dep(register_info *ri, size_t &offset,
 	return true;
 }
 
+//
+// Decoder Operands
+//
+
+bool
+sema_analyzer::process_decoder_operands(ast::decoder_operands const *dec)
+{
+	ast::token_list const *operands = dec->get_operands();
+	size_t count = operands->size();
+	for (size_t n = 0; n < count; n++) {
+		ast::typed_identifier const *tyid =
+		 	(ast::typed_identifier const *)(*operands)[n];
+
+		ast::identifier const *id = tyid->get_identifier();
+		ast::type const *ty = tyid->get_type();
+
+		if (m_operands.find(id->get_value()) != m_operands.end()) {
+			fprintf(stderr, "error: decoder operand '%s' is already defined.\n",
+					id->get_value().c_str());
+			return false;
+		}
+
+		// convert type
+		c::type *cty = sema::convert_type(ty);
+		if (cty == 0) {
+			fprintf(stderr, "error: cannot convert type '%s' for decoder operand '%s'.\n",
+					ty->get_value().c_str(),
+					id->get_value().c_str());
+			return false;
+		}
+
+		c::decoder_operand_def *decopr =
+			new c::decoder_operand_def(id->get_value(), cty);
+
+		m_operands[decopr->get_name()] = decopr;
+	}
+	return true;
+}
+
+//
+// Instructions
+//
 bool
 sema_analyzer::process_instructions(ast::token_list const *insns)
 {
@@ -1051,7 +1132,8 @@ sema_analyzer::process_jump_instruction(ast::jump_instruction const *jinsn)
 	ast::identifier const *name  = jinsn->get_name();
 	ast::jump const       *jump  = jinsn->get_info();
 	ast::identifier const *jtype = jump->get_type();
-	c::instruction        *insn  = 0;
+	ast::expression const *jcond = jump->get_condition();
+	c::jump_instruction   *insn  = 0;
 
 	printf("JUMP %s\n", name->get_value().c_str());
 
@@ -1062,6 +1144,7 @@ sema_analyzer::process_jump_instruction(ast::jump_instruction const *jinsn)
 		return false;
 	}
 
+
 	//
 	// jump can be:
 	//
@@ -1070,21 +1153,56 @@ sema_analyzer::process_jump_instruction(ast::jump_instruction const *jinsn)
 	//   * branch (conditional/unconditional)
 	//   * trap   (conditional/unconditional)
 	//
+	c::jump_instruction::jump_type type;
+	
 	if (jtype->get_value() == "branch")
-		insn = new c::jump_instruction(c::jump_instruction::BRANCH, name->get_value());
+		type = c::jump_instruction::BRANCH;
 	else if (jtype->get_value() == "call")
-		insn = new c::jump_instruction(c::jump_instruction::CALL, name->get_value());
+		type = c::jump_instruction::CALL;
 	else if (jtype->get_value() == "return")
-		insn = new c::jump_instruction(c::jump_instruction::RETURN, name->get_value());
+		type = c::jump_instruction::RETURN;
 	else if (jtype->get_value() == "trap")
-		insn = new c::jump_instruction(c::jump_instruction::TRAP, name->get_value());
+		type = c::jump_instruction::TRAP;
 	else {
 		fprintf(stderr, "error: jump instruction '%s' is of unknown type "
-				"'%s'; valid types are: call, branch and return.",
+				"'%s'; valid types are: branch, trap, call and return.",
 				name->get_value().c_str(), jtype->get_value().c_str());
 		return false;
 	}
 
+	c::expression *cond = 0;
+	if (jcond != 0) {
+		switch (type) {
+			case c::jump_instruction::BRANCH:
+			case c::jump_instruction::TRAP:
+				break;
+
+			default:
+				fprintf(stderr, "warning: jump instruction '%s' is conditional, "
+						"but there's no conditional support for the specified type "
+						"of jump, ignoring.\n",
+						name->get_value().c_str());
+				jcond = 0;
+				break;
+		}
+
+		if (jcond != 0) {
+			fprintf(stderr, "info: converting conditional expression from AST\n");
+
+			// convert the condition
+			cond = expr_convert(this).convert(jcond);
+			if (cond == 0) {
+				fprintf(stderr, "error: cannot convert condition expression for jump "
+						"instruction '%s'.\n",
+						name->get_value().c_str());
+				return false;
+			}
+
+			print_expression(cond);
+		}
+	}
+
+	insn = new c::jump_instruction(type, name->get_value(), cond);
 	m_insns[insn->get_name()] = insn;
 
 	return true;
@@ -1095,4 +1213,33 @@ sema_analyzer::process_macro(ast::macro const *m)
 {
 	printf("MACRO %s\n", m->get_name()->get_value().c_str());
 	return true;
+}
+
+//
+// Interface for expression conversion.
+//
+c::expression *
+sema_analyzer::expr_convert_lookup_identifier(std::string const &name) const
+{
+	std::clog << '\t' << "looking up decoder operand '" << name << "'" << std::endl;
+	
+	// Try first as a decoder operand.
+	named_decoder_operand_map::const_iterator i1 = m_operands.find(name);
+	if (i1 != m_operands.end())
+		return c::expression::fromDecoderOperand(i1->second);
+
+	std::clog << '\t' << "looking up register '" << name << "'" << std::endl;
+	c::register_def *reg = m_rfb.get_register(name);
+	if (reg != 0)
+		return c::expression::fromRegister(reg);
+
+	return 0;
+}
+
+c::expression *
+sema_analyzer::expr_convert_lookup_identifier(std::string const &base,
+		std::string const &name) const
+{
+	std::clog << '\t' << "looking up qualified identifier '" << base << '.' << name << "'" << std::endl;
+	return 0;
 }

@@ -12,6 +12,7 @@ class expression;
 typedef std::vector<expression *> expression_vector;
 
 class register_def;
+class decoder_operand_def;
 class type;
 
 class expression {
@@ -23,7 +24,7 @@ public:
 
 		REGISTER,		// Register
 		LOCAL,			// Local Variable
-		DECARG,			// Decoder Argument
+		DECOPR,			// Decoder Operand
 
 		UNARY,			// Unary Expression
 		BINARY,			// Binary Expression
@@ -53,6 +54,7 @@ public:
 	static expression *fromInteger(int64_t x, unsigned bits);
 	static expression *fromInteger(char const *string, unsigned bits);
 	static expression *fromRegister(register_def *reg);
+	static expression *fromDecoderOperand(decoder_operand_def *reg);
 
 public:
 	static expression *fromInteger(uint32_t x, unsigned bits)

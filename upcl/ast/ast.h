@@ -33,6 +33,7 @@ public:
 		RANGE,
 		EXPRESSION,
 		QUALIFIED_IDENTIFIER,
+		TYPED_IDENTIFIER,
 		TAGGED_VALUE,
 
 		ARCHITECTURE,
@@ -175,6 +176,19 @@ typedef list<identifier> identifier_list;
 typedef literal<token::STRING> string;
 typedef literal<token::NUMBER> number;
 typedef literal<token::TYPE> type;
+
+class typed_identifier : public token {
+	type *m_type;
+	identifier *m_id;
+public:
+	typed_identifier(type *ty, identifier *id)
+		: token(TYPED_IDENTIFIER), m_type(ty), m_id(id)
+	{ }
+
+public:
+	inline type const *get_type() const { return m_type; }
+	inline identifier const *get_identifier() const { return m_id; }
+};
 
 class tagged_value : public token {
 	int m_tag;
@@ -743,16 +757,29 @@ class for_statement : public statement {
 	token_list *m_init;
 	expression *m_condition;
 	token_list *m_post;
+	token_list *m_body;
 
 public:
-	for_statement(token_list *init = 0, expression *cond = 0, token_list *post = 0)
-		: statement(FOR), m_init(init), m_condition(cond), m_post(post)
+	for_statement(expression *cond, statement *stmt)
+		: statement(FOR), m_init(0), m_condition(cond), m_post(0),
+		m_body(new ast::token_list(stmt))
+	{ }
+	for_statement(expression *cond, token_list *body)
+		: statement(FOR), m_init(0), m_condition(cond), m_post(0), m_body(body)
+	{ }
+	for_statement(token_list *init, expression *cond, token_list *post, statement *stmt)
+		: statement(FOR), m_init(init), m_condition(cond), m_post(post),
+		m_body(new ast::token_list(stmt))
+	{ }
+	for_statement(token_list *init, expression *cond, token_list *post, token_list *body)
+		: statement(FOR), m_init(init), m_condition(cond), m_post(post), m_body(body)
 	{ }
 
 public:
 	inline token_list const *get_init() const { return m_init; }
 	inline expression const *get_condition() const { return m_condition; }
 	inline token_list const *get_post() const { return m_post; }
+	inline token_list const *get_body() const { return m_body; }
 };
 
 class instruction : public token {

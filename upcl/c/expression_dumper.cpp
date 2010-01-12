@@ -1,3 +1,7 @@
+#include <cassert>
+
+#include "c/expression_dumper.h"
+
 #include "c/unary_expression.h"
 #include "c/binary_expression.h"
 #include "c/bit_slice_expression.h"
@@ -5,16 +9,13 @@
 #include "c/integer_expression.h"
 #include "c/float_expression.h"
 #include "c/register_expression.h"
+#include "c/decoder_operand_expression.h"
 #include "c/cast_expression.h"
-
-#include <cassert>
 
 using namespace upcl;
 using namespace upcl::c;
 
-void dump_expr(expression const *e);
-
-void
+static void
 dump_unary(unary_expression const *e)
 {
 	switch (e->get_operation()) {
@@ -31,14 +32,14 @@ dump_unary(unary_expression const *e)
 			assert(0 && "Not implemented yet.");
 			break;
 	}
-	dump_expr(e->sub_expr(0));
+	dump_expression(e->sub_expr(0));
 }
 
-void
+static void
 dump_binary(binary_expression const *e)
 {
 	printf("( ");
-	dump_expr(e->sub_expr(0));
+	dump_expression(e->sub_expr(0));
 	switch (e->get_operation()) {
 		case binary_expression::ADD:
 			printf(" + ");
@@ -98,22 +99,22 @@ dump_binary(binary_expression const *e)
 			assert(0 && "Not implemented yet.");
 			break;
 	}
-	dump_expr(e->sub_expr(1));
+	dump_expression(e->sub_expr(1));
 	printf(" )");
 }
 
-void
+static void
 dump_bit_slice(bit_slice_expression const *e)
 {
-	dump_expr(e->sub_expr(0));
+	dump_expression(e->sub_expr(0));
 	printf("[ ");
-	dump_expr(e->sub_expr(1));
+	dump_expression(e->sub_expr(1));
 	printf(" : ");
-	dump_expr(e->sub_expr(2));
+	dump_expression(e->sub_expr(2));
 	printf(" ]");
 }
 
-void
+static void
 dump_bit_combine(bit_combine_expression const *e)
 {
 	expression const *sub;
@@ -122,12 +123,12 @@ dump_bit_combine(bit_combine_expression const *e)
 	for (size_t n = 0; (sub = e->sub_expr(n)) != 0; n++) {
 		if (n != 0)
 			printf(" : ");
-		dump_expr(sub);
+		dump_expression(sub);
 	}
 	printf(" )");
 }
 
-void
+static void
 dump_type(type const *ty)
 {
 	printf("#");
@@ -148,18 +149,18 @@ dump_type(type const *ty)
 	printf("%zu", ty->get_bits());
 }
 
-void
+static void
 dump_cast(cast_expression const *e)
 {
 	printf("[ ");
 	dump_type(e->get_type());
 	printf(" ");
-	dump_expr(e->sub_expr(0));
+	dump_expression(e->sub_expr(0));
 	printf(" ]");
 }
 
 void
-dump_expr(expression const *e)
+upcl::c::dump_expression(expression const *e)
 {
 	switch (e->get_expression_operation()) {
 		case expression::UNARY:
@@ -170,6 +171,10 @@ dump_expr(expression const *e)
 			break;
 		case expression::REGISTER:
 			printf("%s", ((register_expression const *)e)->get_register()->get_name().c_str());
+			dump_type(e->get_type());
+			break;
+		case expression::DECOPR:
+			printf("%s", ((decoder_operand_expression const *)e)->get_operand()->get_name().c_str());
 			dump_type(e->get_type());
 			break;
 		case expression::INTEGER:
@@ -191,7 +196,7 @@ dump_expr(expression const *e)
 			break;
 		case expression::SIGNED:
 			printf("%%S ( ");
-			dump_expr(e->sub_expr(0));
+			dump_expression(e->sub_expr(0));
 			printf(" )");
 			break;
 		default:
@@ -201,14 +206,14 @@ dump_expr(expression const *e)
 }
 
 void
-print_expr(expression const *expr)
+upcl::c::print_expression(expression const *expr)
 {
-	dump_expr(expr); 
+	dump_expression(expr); 
 	printf(" [%zu]\n", expr->get_type()->get_bits());
 }
 
 #if 0
-void
+static void
 test_expr(expression *m)
 {
 	printf("m = ");

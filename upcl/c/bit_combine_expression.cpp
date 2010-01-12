@@ -3,14 +3,12 @@
 #include <set>
 
 #include "c/bit_combine_expression.h"
+#include "c/expression_dumper.h"
 #include "c/fast_aliases.h"
 #include "c/type.h"
 
 using namespace upcl;
 using namespace upcl::c;
-
-void
-print_expr(expression const *expr);
 
 bit_combine_expression::bit_combine_expression(expression_vector const &exprs)
 	: expression(BIT_COMBINE), m_type(0)
@@ -725,7 +723,7 @@ bit_combine_expression::and_bit_combine(expression *expr) const
 
 	expression *result = new bit_combine_expression(exprs);
 
-	print_expr(result);
+	print_expression(result);
 
 	return result->simplify();
 }
@@ -762,7 +760,7 @@ bit_combine_expression::or_bit_combine(expression *expr) const
 
 	expression *result = new bit_combine_expression(exprs);
 
-	print_expr(result);
+	print_expression(result);
 
 	return result->simplify();
 }
@@ -799,7 +797,7 @@ bit_combine_expression::xor_bit_combine(expression *expr) const
 
 	expression *result = new bit_combine_expression(exprs);
 
-	print_expr(result);
+	print_expression(result);
 
 	return result->simplify();
 }

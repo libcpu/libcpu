@@ -61,7 +61,7 @@ arch "8086" {
 	}
 }
 
-decoder_operands [ src, dst, cond ];
+decoder_operands [ #i16 src, #i16 dst, #i16 cond ];
 
 macro ea ( seg, off ) : #i24 %result = ( [ #i16 seg ] << 4 ) + [ #i16 off ];
 macro i8086_jump ( address ) {

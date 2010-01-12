@@ -49,16 +49,11 @@ class register_def {
 	register_set *m_set;
 
 protected:
-	register_def(unsigned flags, std::string const &name, c::type *type)
-		: m_flags(flags), m_name(name), m_type(type),
-		m_special_bind(NO_SPECIAL_REGISTER), m_bind(0), m_expr(0)
-	{ }
+	register_def(unsigned flags, std::string const &name, c::type *type);
 
 public:
-	register_def(std::string const &name, c::type *type)
-		: m_flags(0), m_name(name), m_type(type),
-		m_special_bind(NO_SPECIAL_REGISTER), m_bind(0), m_expr(0)
-	{ }
+	register_def(std::string const &name, c::type *type);
+	virtual ~register_def();
 
 protected:
 	inline void change_flags(unsigned set, unsigned clr = 0)
@@ -103,9 +98,6 @@ public:
 public:
 	virtual bool add_uow(register_def *rdef);
 	virtual bool is_uow() const;
-    
-protected:
-	virtual ~register_def() {}
 };
 
 } }

@@ -6,6 +6,7 @@
 #include "c/unary_expression.h"
 #include "c/integer_expression.h"
 #include "c/float_expression.h"
+#include "c/decoder_operand_expression.h"
 #include "c/register_expression.h"
 #include "c/assign_expression.h"
 #include "c/bit_slice_expression.h"
@@ -30,6 +31,12 @@ expression *
 expression::fromRegister(register_def *reg)
 {
 	return new register_expression(reg);
+}
+
+expression *
+expression::fromDecoderOperand(decoder_operand_def *decopr)
+{
+	return new decoder_operand_expression(decopr);
 }
 
 expression *

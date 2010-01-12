@@ -16,34 +16,16 @@ class sub_register_def : public register_def {
 
 public:
  	sub_register_def(register_def *master, std::string const &name,
-			type *ty, bool bidi = false)
-		: register_def(name, ty), m_master(master), m_bidi(bidi),
-		m_first_bit(0), m_bit_count(0)
- 	{
-		if (!m_master->add_sub(this))
-			abort();
- 	}
+			type *ty, bool bidi = false);
  
 	sub_register_def(register_def *master, std::string const &name,
 			type *ty, expression *first_bit = 0,
-			expression *bit_count = 0, bool bidi = false)
-		: register_def(name, ty), m_master(master), m_bidi(bidi),
-		m_first_bit(first_bit), m_bit_count(bit_count)
-	{
-		if (!m_master->add_sub(this))
-			abort();
-	}
+			expression *bit_count = 0, bool bidi = false);
 
 	sub_register_def(register_def *master, std::string const &name,
 			type *ty, size_t first_bit, size_t bit_count,
-			bool bidi = false)
-		: register_def(name, ty), m_master(master), m_bidi(bidi),
-		m_first_bit(expression::fromInteger(first_bit, sizeof(first_bit)*8)),
-		m_bit_count(expression::fromInteger(bit_count, sizeof(bit_count)*8))
-	{
-		if (!m_master->add_sub(this))
-			abort();
-	}
+			bool bidi = false);
+	virtual ~sub_register_def();
 
 	virtual bool is_virtual() const;
 	virtual bool is_bound() const;
@@ -64,9 +46,6 @@ public:
 	virtual expression *get_bit_count() const;
 
 	virtual register_def *get_master_register() const;
-    
-protected:
-	virtual ~sub_register_def() {}
 };
 
 } }

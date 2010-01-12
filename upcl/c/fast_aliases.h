@@ -38,5 +38,9 @@
 
 #define CEQ expression::Eq
 #define CNE expression::Ne
+#define CLT expression::Lt
+#define CLE expression::Le
+#define CGT expression::Gt
+#define CGE expression::Ge
 
 #endif  // !__upcl_c_fast_aliases_h

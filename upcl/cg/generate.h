@@ -10,6 +10,9 @@
 
 namespace upcl { namespace cg {
 
+	void generate_arch_h(std::ostream &o, std::string const &fname,
+		std::string const &arch_name);
+
 	void generate_types_h(std::ostream &o, std::string const &fname,
 		std::string const &arch_name, c::register_def_vector const &regs);
 
@@ -17,6 +20,9 @@ namespace upcl { namespace cg {
 		std::string const &arch_name, std::string const &arch_full_name,
 		uint64_t const *arch_tags, c::register_def const *pcr,
 		c::register_def const *psr, c::register_def_vector const &regs);
+
+	void generate_opc_h(std::ostream &o, std::string const &fname,
+		std::string const &arch_name, c::instruction_vector const &insns);
 
 	void generate_tag_cpp(std::ostream &o, std::string const &fname,
 		std::string const &arch_name, c::jump_instruction_vector const &jumps);

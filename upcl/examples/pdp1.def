@@ -20,7 +20,8 @@ arch "pdp1" {
 
 		group S {
 
-			[ #i12 pc -> %PC ]
+			[ #i12 pc -> %PC ],
+			[ #i3 pf ] // program flags
 
 		}
 
@@ -34,10 +35,10 @@ arch "pdp1" {
 
 }
 
-decoder_operands [ Y, N ];
+decoder_operands [ #i18 Y, #i3 N ];
 
 insn add : ac += Y;
-insn and : ac += Y;
+insn and : ac &= Y;
 jump insn cal : type branch
 				{ pc = 0100; }
 
@@ -56,13 +57,13 @@ insn jda {
 
 jump insn isp : type branch
 				pre Y += 1
-				condition %S( Y ) > 0
+				condition %S( Y > 0 )
 				{ pc += Y; }
 
 insn lac : ac = %M[ ac + Y ];
 insn law : ac = N;
 insn lio : io = Y;
-insn mus : flags.X = 1;
+insn mus : ;
 
 jump insn sad : type branch
 				condition Y != ac
@@ -77,11 +78,11 @@ insn xct : @trap ( 2, Y );
 insn xor : ac ^= Y;
 
 insn cla : ac = 0;
-insn clf : flags[N:1] = 0;
+insn clf : pf[N:1] = 0;
 insn cli : io = 0;
 insn cma : ac = ~ac;
 insn hlt : @trap ( 1 );
 insn lat : ac = twr;
 insn nop : ;
-insn stf : flags[N:1] = 1;
+insn stf : pf[N:1] = 1;
 

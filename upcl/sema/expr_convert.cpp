@@ -9,7 +9,8 @@ using namespace upcl;
 using namespace upcl::sema;
 using namespace upcl::c;
 
-expr_convert::expr_convert()
+expr_convert::expr_convert(expr_convert_lookup *lookup)
+	: m_lookup(lookup)
 {
 }
 
@@ -25,6 +26,8 @@ expr_convert::convert(ast::expression const *expr)
 			return convert_unary((ast::unary_expression const *)expr);
 		case ast::expression::BINARY:
 			return convert_binary((ast::binary_expression const *)expr);
+		case ast::expression::CALL: // XXX
+			return CCONST(0);
 		default:
 			assert(0 && "IMPLEMENT ME!");
 			return 0;
@@ -40,16 +43,15 @@ expr_convert::convert_literal(ast::literal_expression const *expr)
 		case ast::token::IDENTIFIER:
 			return convert_identifier((ast::identifier const *)literal);
 
-#if 0
 		case ast::token::QUALIFIED_IDENTIFIER:
 			return convert_qualified_identifier(
 					(ast::qualified_identifier const *)literal);
-#endif
 
 		case ast::token::NUMBER:
 			return convert_number((ast::number const *)literal);
 
 		default:
+			assert(0 && "IMPLEMENT ME!");
 			return 0;
 	}
 }
@@ -166,6 +168,24 @@ expr_convert::convert_binary(ast::binary_expression const *expr)
 		case ast::binary_expression::XORCOM:
 			return CXOR(a, CCOM(b));
 
+		case ast::binary_expression::EQ:
+			return CEQ(a, b);
+
+		case ast::binary_expression::NE:
+			return CNE(a, b);
+
+		case ast::binary_expression::LT:
+			return CLT(a, b);
+
+		case ast::binary_expression::LE:
+			return CLE(a, b);
+
+		case ast::binary_expression::GT:
+			return CGT(a, b);
+
+		case ast::binary_expression::GE:
+			return CGE(a, b);
+
 		default:
 			assert(0 && "IMPLEMENT ME! (binary)");
 			break;
@@ -177,8 +197,43 @@ expr_convert::convert_binary(ast::binary_expression const *expr)
 c::expression *
 expr_convert::convert_identifier(ast::identifier const *ident)
 {
-	assert(0 && "NYI");
-	return 0;
+	if (m_lookup == 0)
+		return 0;
+
+	return m_lookup->expr_convert_lookup_identifier(ident->get_value());
+}
+
+c::expression *
+expr_convert::convert_qualified_identifier(ast::qualified_identifier const *ident)
+{
+	if (m_lookup == 0)
+		return 0;
+
+	ast::identifier const *base = ident->get_base_identifier();
+	ast::token_list const *sub_ids = ident->get_identifier_list();
+
+	if (sub_ids == 0)
+		return m_lookup->expr_convert_lookup_identifier(base->get_value());
+
+	size_t count = sub_ids->size();
+	if (count == 1)
+		return m_lookup->expr_convert_lookup_identifier(base->get_value(),
+				((ast::identifier const *)(*sub_ids)[0])->get_value());
+
+	// build a bit combine expression
+	c::expression_vector exprs;
+	for (size_t n = 0; n < count; n++) {
+		c::expression *expr;
+
+		expr = m_lookup->expr_convert_lookup_identifier(base->get_value(),
+				((ast::identifier const *)(*sub_ids)[n])->get_value());
+		if (expr == 0)
+			return 0;
+		
+		exprs.push_back(expr);
+	}
+
+	return c::expression::BitCombine(exprs);
 }
 
 

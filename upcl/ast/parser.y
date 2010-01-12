@@ -38,6 +38,7 @@ extern ast::token_list *g_root;
 	ast::jump *jump;
 
 	ast::decoder_operands *decoder_operands;
+	ast::typed_identifier *typed_identifier;
 }
 
 /* Constants */
@@ -130,6 +131,8 @@ extern ast::token_list *g_root;
 %type <expression> jump_condition jump_delay
 %type <list> jump_pre jump_action
 %type <decoder_operands> decoder_operands_decl decoder_operands_decl_or_null
+%type <typed_identifier> typed_identifier
+%type <list> typed_identifier_list
 
 %type <instruction> toplevel_decl
 
@@ -395,6 +398,16 @@ identifier_list: identifier
 			   { $$ = $1; $1->push($3); }
 			   ;
 
+typed_identifier: type identifier
+				{ $$ = new ast::typed_identifier($1, $2); }
+				;
+
+typed_identifier_list: typed_identifier
+					 { $$ = new ast::token_list($1); }
+					 | typed_identifier_list ',' typed_identifier
+			   		 { $$ = $1; $1->push($3); }
+			   		 ;
+
 base_operand: qualified_identifier
 			{ $$ = new ast::literal_expression($1); }
 	 		| multi_qualified_identifier
@@ -643,8 +656,10 @@ if_decl: K_IF '(' expression ')' insn_stmts
 	   { $$ = new ast::if_statement($3, $5, $7); }
 	   ;
 
-for_decl: K_FOR '(' assignment_list_or_null ';' expression_or_null ';' assignment_list_or_null ')' 
-		{ $$ = new ast::for_statement($3, $5, $7); }
+for_decl: K_FOR '(' assignment_list_or_null ';' expression_or_null ';' assignment_list_or_null ')' insn_stmts ';'
+		{ $$ = new ast::for_statement($3, $5, $7, $9); }
+		| K_FOR '(' assignment_list_or_null ';' expression_or_null ';' assignment_list_or_null ')' insn_enclosed_body
+		{ $$ = new ast::for_statement($3, $5, $7, $9); }
 		;
 
 assignment_list: assign_decl
@@ -663,8 +678,10 @@ assignment_list_or_null:
 					   | assignment_list
 					   ;
 
-while_decl: K_WHILE '(' expression ')' 
-		  { $$ = new ast::for_statement(0, $3); }
+while_decl: K_WHILE '(' expression ')' insn_stmts ';'
+		  { $$ = new ast::for_statement($3, $5); }
+		  | K_WHILE '(' expression ')' insn_enclosed_body
+		  { $$ = new ast::for_statement($3, $5); }
 		  ;
 
 flow_decl: if_decl
@@ -723,7 +740,7 @@ macro_decl: K_MACRO identifier '(' ')' ':' inline_insn_stmts ';'
 		  { $$ = new ast::macro($2, $4, $6); }
 		  ;
 
-decoder_operands_decl: K_DECODER_OPERANDS '[' identifier_list ']' ';'
+decoder_operands_decl: K_DECODER_OPERANDS '[' typed_identifier_list ']' ';'
 					 { $$ = new ast::decoder_operands($3); }
 					 ;
 

@@ -20,6 +20,15 @@ public:
 
 	bool analyze(register_dep_tracker *rdt);
 
+	inline c::register_def *get_register(std::string const &name) const
+	{ 
+		named_register_def_map::const_iterator i = m_named_rdefs.find(name);
+		if (i != m_named_rdefs.end())
+			return i->second;
+		else
+			return 0;
+	}
+
 	inline c::register_def_vector const &get_physical_registers() const
 	{ return m_rdefs; }
 
