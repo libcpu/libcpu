@@ -29,6 +29,19 @@ public:
 			return 0;
 	}
 
+	inline c::sub_register_def *get_register(std::string const &base,
+			std::string const &name) const
+	{ 
+		if (name.empty())
+			return 0;
+
+		c::register_def *def = get_register(base);
+		if (def == 0)
+			return 0;
+		else
+			return def->get_sub_register(name);
+	}
+
 	inline c::register_def_vector const &get_physical_registers() const
 	{ return m_rdefs; }
 
@@ -48,6 +61,9 @@ private:
 			register_info const *);
 	c::register_def *create_pseudo_aliased_sub(register_info const *,
 			c::register_def *, c::type *, register_info const *);
+
+public:
+	void dump_named() const;
 };
 
 } }

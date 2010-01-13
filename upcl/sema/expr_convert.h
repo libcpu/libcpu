@@ -35,6 +35,7 @@ private:
 	c::expression *convert_number(ast::number const *number);
 	c::expression *convert_identifier(ast::identifier const *ident);
 	c::expression *convert_qualified_identifier(ast::qualified_identifier const *ident);
+	c::expression *convert_call(ast::call_expression const *expr);
 };
 
 } }

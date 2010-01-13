@@ -25,9 +25,11 @@ cast_expression::simplify(bool sign) const
 	if (!expr->is_equal(m_expr))
 		expr = (new cast_expression(m_type, expr))->simplify(sign);
 
+#if 0
 	// If non-signed, and casting a signed expression, make it unsigned!
 	if (!sign && expr->get_expression_operation() == expression::SIGNED)
 		expr = (new cast_expression(m_type, expr->sub_expr(0)))->simplify();
+#endif
 
 	if (expr->get_type()->get_bits() == m_type->get_bits())
 		return expr;

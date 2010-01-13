@@ -72,6 +72,12 @@ register_def::set_expression(expression *expression)
 	m_expr = expression;
 }
 
+expression *
+register_def::get_expression() const
+{
+	return m_expr;
+}
+
 void
 register_def::set_binding(register_def *binding)
 {

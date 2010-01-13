@@ -33,7 +33,7 @@ public:
 		RANGE,
 		EXPRESSION,
 		QUALIFIED_IDENTIFIER,
-		TYPED_IDENTIFIER,
+		DECODER_OPERAND,
 		TAGGED_VALUE,
 
 		ARCHITECTURE,
@@ -177,15 +177,24 @@ typedef literal<token::STRING> string;
 typedef literal<token::NUMBER> number;
 typedef literal<token::TYPE> type;
 
-class typed_identifier : public token {
+class decoder_operand : public token {
+public:
+	enum operand_attribute {
+		NONE,
+		CONST,
+		CCFLAGS
+	};
+private:
 	type *m_type;
 	identifier *m_id;
+	operand_attribute m_attr;
 public:
-	typed_identifier(type *ty, identifier *id)
-		: token(TYPED_IDENTIFIER), m_type(ty), m_id(id)
+	decoder_operand(type *ty, identifier *id, operand_attribute const &attr = NONE)
+		: token(DECODER_OPERAND), m_type(ty), m_id(id), m_attr(attr)
 	{ }
 
 public:
+	inline operand_attribute get_attribute() const { return m_attr; }
 	inline type const *get_type() const { return m_type; }
 	inline identifier const *get_identifier() const { return m_id; }
 };

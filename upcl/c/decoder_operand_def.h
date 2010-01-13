@@ -17,10 +17,17 @@ class decoder_operand_def {
 	std::string m_name;
 	type *m_type;
 
-protected:
-	decoder_operand_def(unsigned flags, std::string const &name, c::type *type);
+public:
+	enum operand_flags {
+		NONE = 0,
+
+		CONSTANT = 1, // this operand can be evaluated at translation time and
+		              // not at runtime
+		CCFLAGS = 2   // this operand can be used with builtin instrinsic @eval_cc
+	};
 
 public:
+	decoder_operand_def(unsigned flags, std::string const &name, c::type *type);
 	decoder_operand_def(std::string const &name, c::type *type);
 	virtual ~decoder_operand_def();
 

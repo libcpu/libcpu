@@ -8,7 +8,7 @@
 #define CMUL expression::Mul
 #define CDIV expression::Div
 #define CREM expression::Rem
-#define CAND expression::And
+#define CAND c::expression::And
 #define COR expression::Or
 #define CXOR expression::Xor
 #define CSHL expression::Shl
@@ -22,14 +22,14 @@
 #define CNEG expression::Neg
 #define CCOM expression::Com
 #define CNOT expression::Not
-#define CCONSTn(x,n) (expression::fromInteger(x, n))
+#define CCONSTn(x,n) c::expression::fromInteger(x, n)
 #define CCONST(x) (((x) == 0 ? CCONSTn(0ULL, sizeof(x)*8) : \
 			CCONSTn((x), sizeof(x)*8)))
 #define CREG expression::fromRegister
 #define CASSIGN expression::Assign
-#define CBITSLICE expression::BitSlice
+#define CBITSLICE c::expression::BitSlice
 #define CBITCOMBINE expression::BitCombine
-#define CCAST expression::Cast
+#define CCAST c::expression::Cast
 #define CSIGN expression::Signed
 #define CUNSIGN(x) (x)
 #define __CMASK(n,b) CSUB(CSHL(CCONSTn(1U, n), b), CCONSTn(1U, n))

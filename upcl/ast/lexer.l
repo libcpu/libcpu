@@ -63,6 +63,8 @@ ID  [a-zA-Z_][a-zA-Z0-9_]*
 "return" return K_RETURN;
 
 "reset" return K_RESET;
+"const" return K_CONST;
+"ccflags" return K_CCFLAGS;
 
 "decoder_operands" return K_DECODER_OPERANDS;
 
@@ -110,6 +112,7 @@ ID  [a-zA-Z_][a-zA-Z0-9_]*
 "&~=" return T_ANDCOME;
 "|~=" return T_ORCOME;
 "^~=" return T_XORCOME;
+
 
 "**" return T_REPEAT;
 

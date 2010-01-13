@@ -2,6 +2,7 @@
 
 #include "cg/generate.h"
 
+#include "c/fast_aliases.h"
 #include "c/unary_expression.h"
 #include "c/binary_expression.h"
 #include "c/bit_slice_expression.h"
@@ -128,18 +129,18 @@ dump_binary(std::ostream &o, binary_expression const *e,
 	o << ')';
 }
 
-#if 0
 static void
-dump_bit_slice(bit_slice_expression const *e)
+dump_bit_slice(std::ostream &o, bit_slice_expression const *bse)
 {
-	dump_expression(e->sub_expr(0));
-	printf("[ ");
-	dump_expression(e->sub_expr(1));
-	printf(" : ");
-	dump_expression(e->sub_expr(2));
-	printf(" ]");
+	assert(bse->get_type()->get_bits() <= 64 && "Not yet tested.");
+
+	expression *e = CAND(CSHR(bse->sub_expr(0),
+			bse->sub_expr(1)), CMASKBIT(bse->sub_expr(2)))->simplify();
+
+	generate_libcpu_expression(o, e);
 }
 
+#if 0
 static void
 dump_bit_combine(bit_combine_expression const *e)
 {
@@ -187,12 +188,41 @@ dump_cast(cast_expression const *e)
 #endif
 
 static void
+dump_sub_register(std::ostream &o, register_expression const *super,
+		sub_register_def const *sub)
+{
+	expression *e = 0;
+	if (sub->is_hardwired()) {
+		e = sub->get_expression()->simplify();
+	} else {
+		e = CBITSLICE(CREG(sub->get_master_register()),
+				sub->get_first_bit(), sub->get_bit_count());
+		if (e != 0)
+			e = e->simplify();
+	}
+	if (e == 0) {
+		assert(0 && "Failed converting bitfield!");
+	}
+
+	generate_libcpu_expression(o, e, 0);
+}
+
+static void
 dump_register(std::ostream &o, register_expression const *e)
 {
 	register_def const *reg = e->get_register();
 
-	// XXX handle subregs!
-	o << "REG(" << reg->get_name() << ")";
+	if (reg->is_sub_register()) {
+		dump_sub_register(o, e, (sub_register_def const *)reg);
+		return;
+	}
+
+	if (reg->is_hardwired())
+		generate_libcpu_expression(o, reg->get_expression()->simplify(), 0);
+	else if (!reg->is_virtual())
+		o << "REG(" << reg->get_name() << ")";
+	else
+		assert(0 && "Virtual registers not yet implmented.");
 }
 
 static void
@@ -207,8 +237,21 @@ static void
 dump_integer(std::ostream &o, integer_expression const *e, unsigned flags)
 {
 	uint64_t value = e->get_value((flags & F_SIGNED) != 0);
-	o << "CONSTn(" << e->get_type()->get_bits() << ','
-	 << "0x" << std::hex << value << "ULL" << std::dec << ")";
+	if (e->get_type()->get_bits() == 64)
+		o << "CONST(";
+	else
+		o << "CONSTn(" << e->get_type()->get_bits() << ',';
+
+	if (value == 0)
+		o << 0;
+	else {
+		o << "0x" << std::hex << value << std::dec;
+		if (e->get_type()->get_bits() > 32) {
+			if ((int32_t)value != (int64_t)value)
+				o << "ULL";
+		}
+	}
+	o << ")";
 }
 
 static void
@@ -237,11 +280,13 @@ generate_libcpu_expression(std::ostream &o, expression const *e,
 			dump_type(e->get_type());
 			break;
 		case expression::CAST:
-			dump_cast((cast_expression const *)e);
+			dump_cast(o, (cast_expression const *)e, flags);
 			break;
+#endif
 		case expression::BIT_SLICE:
-			dump_bit_slice((bit_slice_expression const *)e);
+			dump_bit_slice(o, (bit_slice_expression const *)e);
 			break;
+#if 0
 		case expression::BIT_COMBINE:
 			dump_bit_combine((bit_combine_expression const *)e);
 			break;

@@ -3,6 +3,7 @@
 //
 #include "cg/generate.h"
 #include "ast/ast.h"
+#include "c/fast_aliases.h"
 
 #include <cctype>
 #include <sstream>
@@ -712,12 +713,11 @@ upcl::cg::generate_tag_cpp(std::ostream &o, std::string const &fname,
 	  << "arch_" << arch_name << "_tag_instr(cpu_t *cpu, addr_t pc, "
 	  << "tag_t *tag, addr_t *new_pc, addr_t *next_pc)" << std::endl;
 	o << '{' << std::endl;
-	o << '\t' << "arch_" << arch_name << "_opcode_t opcode;" << std::endl;
-	o << '\t' << "size_t length;" << std::endl;
+	o << '\t' << "arch_" << arch_name << "_insn_t insn;" << std::endl;
 	o << std::endl;
 	o << '\t' << "ARCH_" << upper_string(arch_name)
-	 << "_INSN_GET_OPCODE(cpu, pc, opcode, length);" << std::endl;
-	o << '\t' << "switch (opcode) {" << std::endl;
+	 << "_INSN_FETCH(cpu, pc, insn);" << std::endl;
+	o << '\t' << "switch (insn.opcode) {" << std::endl;
 	o << "\t\t" << "case ARCH_" << upper_string(arch_name) << "_OPC_ILLEGAL:"
 	 << std::endl
 	 << "\t\t\t" << "*tag = TAG_TRAP;" << std::endl
@@ -757,7 +757,7 @@ upcl::cg::generate_tag_cpp(std::ostream &o, std::string const &fname,
 		o << "\t\t\t" << "//" << std::endl;
 		o << "\t\t\t" << "// Insert here tagging code." << std::endl;
 		o << "\t\t\t" << "//" << std::endl;
-		o << "\t\t\t" << "*new_pc = NEW_PC_NONE;" << std::endl;
+		o << "\t\t\t" << "*new_pc = insn.jump_pc;" << std::endl;
 		o << "\t\t\t" << "break;" << std::endl;
 		o << std::endl;
 	}
@@ -766,8 +766,8 @@ upcl::cg::generate_tag_cpp(std::ostream &o, std::string const &fname,
 	o << "\t\t\t" << "break;" << std::endl;
 	o << '\t' << '}' << std::endl;
 	o << std::endl;
-	o << '\t' << "*next_pc = pc + length;" << std::endl;
-	o << '\t' << "return length;" << std::endl;
+	o << '\t' << "*next_pc = pc + insn.length;" << std::endl;
+	o << '\t' << "return insn.length;" << std::endl;
 	o << '}' << std::endl;
 }
 
@@ -787,12 +787,11 @@ upcl::cg::generate_tcond_cpp(std::ostream &o, std::string const &fname,
 	  << "arch_" << arch_name << "_translate_cond(cpu_t *cpu, addr_t pc, "
 	  << "BasicBlock *bb)" << std::endl;
 	o << '{' << std::endl;
-	o << '\t' << "arch_" << arch_name << "_opcode_t opcode;" << std::endl;
-	o << '\t' << "size_t length;" << std::endl;
+	o << '\t' << "arch_" << arch_name << "_insn_t insn;" << std::endl;
 	o << std::endl;
 	o << '\t' << "ARCH_" << upper_string(arch_name)
-	 << "_INSN_GET_OPCODE(cpu, pc, opcode, length);" << std::endl;
-	o << '\t' << "switch (opcode) {" << std::endl;
+	 << "_INSN_FETCH(cpu, pc, insn);" << std::endl;
+	o << '\t' << "switch (insn.opcode) {" << std::endl;
 	o << "\t\t" << "case ARCH_" << upper_string(arch_name) << "_OPC_ILLEGAL:"
 	 << std::endl
 	 << "\t\t\t" << "assert(0 && \"Illegal opcode while translating\");" << std::endl
@@ -808,7 +807,9 @@ upcl::cg::generate_tcond_cpp(std::ostream &o, std::string const &fname,
 		 << upper_string((*i)->get_name()) << ':'
 		 << std::endl;
 
-		c::expression *e = (*i)->get_condition()->simplify();
+		c::expression *e = CCAST(c::type::get_integer_type(1),
+				(*i)->get_condition())->simplify();
+
 		if (e == 0)
 			e = (*i)->get_condition();
 		o << "\t\t\t" << "return ";

@@ -27,7 +27,7 @@ expr_convert::convert(ast::expression const *expr)
 		case ast::expression::BINARY:
 			return convert_binary((ast::binary_expression const *)expr);
 		case ast::expression::CALL: // XXX
-			return CCONST(0);
+			return CCONST(0);//convert_call((ast::call_expression const *)expr);
 		default:
 			assert(0 && "IMPLEMENT ME!");
 			return 0;
@@ -246,4 +246,21 @@ expr_convert::convert_number(ast::number const *number)
 		return 0;
 
 	return CCONST(value);
+}
+
+c::expression *
+expr_convert::convert_call(ast::call_expression const *expr)
+{
+	ast::identifier const *name = expr->get_name();
+
+	// special builtin instrinsics:
+	//   @call( identifier, [ expression [ , ... ] ] )
+	//   @trap( expression, [ expression [ , ... ] ] )
+	//   @eval_cc( decoder operand 'ccflags' or constant expression )
+	//   @debug() - enter debugger
+	
+	if (name->get_value() == "eval_cc")
+	{}
+
+	return 0;
 }

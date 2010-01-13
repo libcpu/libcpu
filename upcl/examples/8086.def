@@ -58,10 +58,11 @@ arch "8086" {
 
 		group INT : [ #i8 intno ];
 
+		group Z : [ #i8 zero <- 0 ];
 	}
 }
 
-decoder_operands [ #i16 src, #i16 dst, #i16 cond, #i1 rep ];
+decoder_operands [ #i16 src, #i16 dst, ccflags #i16 cond, const #i1 rep ];
 
 macro ea ( seg, off ) : #i24 %result = ( [ #i16 seg ] << 4 ) + [ #i16 off ];
 macro i8086_jump ( address ) {
@@ -191,10 +192,10 @@ insn idivw {
 }
 insn imulb : ax = %CC ( %S ( al * src ) );
 insn imulw : ( dx : ax ) = %CC ( %S ( ax * src ) );
-insn inb   : al = @call ( i8086_input_byte, src );
-insn inb_dx: al = @call ( i8086_input_byte, dx );
-insn inw   : ax = @call ( i8086_input_word, src );
-insn inw_dx: ax = @call ( i8086_input_word, dx );
+insn inb   : al = @call ( i8086_input_byte, [ #i32 src ] );
+insn inb_dx: al = @call ( i8086_input_byte, [ #i32 dx ] );
+insn inw   : ax = @call ( i8086_input_word, [ #i32 src ] );
+insn inw_dx: ax = @call ( i8086_input_word, [ #i32 dx ] );
 insn inc   : dst = %CC ( dst + 1, !C );
 insn int   : @i8086_interrupt ( intno );
 insn into  : if ( flags.O ) @i8086_interrupt ( 4 );;
@@ -239,16 +240,15 @@ jump insn ncall : type call {
 
 jump insn nret : type return { @i8086_jump ( @i8086_pop () ); }
 
-jump insn jx : type branch
-			   condition @eval_cc ( cond )
-			   { @i8086_jump ( src ); }
+jump insn jcc : type branch
+			    condition @eval_cc ( cond )
+			    { @i8086_jump ( src ); }
 
 insn mov : dst = src;
 insn movsb {
 
-
 	#i8 %M[ @i8086_str_dst () ] = #i8 %M[ @i8086_str_src () ];
-  	@i8086_str_inc ();
+  	@i8086_str_inc (1);
 
 }
 insn movsw {
@@ -263,6 +263,17 @@ insn movsw {
 		@i8086_str_inc (2);
 	}
 }
+
+////////////
+//
+//
+//
+//
+jump insn test_jump_1 : type branch
+	condition sw.TOP == 1
+{ pc = 1; }
+
+
 
 // conditional execution for arm
 //

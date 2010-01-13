@@ -38,7 +38,7 @@ extern ast::token_list *g_root;
 	ast::jump *jump;
 
 	ast::decoder_operands *decoder_operands;
-	ast::typed_identifier *typed_identifier;
+	ast::decoder_operand *decoder_operand;
 }
 
 /* Constants */
@@ -69,7 +69,7 @@ extern ast::token_list *g_root;
 %token K_AUGMENT_CC K_AUGMENT_SIGNED K_AUGMENT_UNSIGNED
 %token K_MEM
 %token K_JUMP K_TYPE K_PRE K_CONDITION K_DELAY
-%token K_RESET K_DECODER_OPERANDS
+%token K_RESET K_DECODER_OPERANDS K_CONST K_CCFLAGS
 
 /* Symbols */
 %token T_REPEAT
@@ -131,8 +131,8 @@ extern ast::token_list *g_root;
 %type <expression> jump_condition jump_delay
 %type <list> jump_pre jump_action
 %type <decoder_operands> decoder_operands_decl decoder_operands_decl_or_null
-%type <typed_identifier> typed_identifier
-%type <list> typed_identifier_list
+%type <decoder_operand> decoder_operand
+%type <list> decoder_operand_list
 
 %type <instruction> toplevel_decl
 
@@ -397,16 +397,6 @@ identifier_list: identifier
 			   | identifier_list ',' identifier
 			   { $$ = $1; $1->push($3); }
 			   ;
-
-typed_identifier: type identifier
-				{ $$ = new ast::typed_identifier($1, $2); }
-				;
-
-typed_identifier_list: typed_identifier
-					 { $$ = new ast::token_list($1); }
-					 | typed_identifier_list ',' typed_identifier
-			   		 { $$ = $1; $1->push($3); }
-			   		 ;
 
 base_operand: qualified_identifier
 			{ $$ = new ast::literal_expression($1); }
@@ -740,7 +730,21 @@ macro_decl: K_MACRO identifier '(' ')' ':' inline_insn_stmts ';'
 		  { $$ = new ast::macro($2, $4, $6); }
 		  ;
 
-decoder_operands_decl: K_DECODER_OPERANDS '[' typed_identifier_list ']' ';'
+decoder_operand: type identifier
+				{ $$ = new ast::decoder_operand($1, $2); }
+				| K_CONST type identifier
+				{ $$ = new ast::decoder_operand($2, $3, ast::decoder_operand::CONST); }
+				| K_CCFLAGS type identifier
+				{ $$ = new ast::decoder_operand($2, $3, ast::decoder_operand::CCFLAGS); }
+				;
+
+decoder_operand_list: decoder_operand
+					 { $$ = new ast::token_list($1); }
+					 | decoder_operand_list ',' decoder_operand
+			   		 { $$ = $1; $1->push($3); }
+			   		 ;
+
+decoder_operands_decl: K_DECODER_OPERANDS '[' decoder_operand_list ']' ';'
 					 { $$ = new ast::decoder_operands($3); }
 					 ;
 

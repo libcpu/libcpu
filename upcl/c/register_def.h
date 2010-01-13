@@ -94,6 +94,7 @@ public:
 	{ return m_subs; }
 
 	virtual sub_register_def *get_sub_register(std::string const &name);
+	virtual expression *get_expression() const;
 
 public:
 	virtual bool add_uow(register_def *rdef);

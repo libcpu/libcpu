@@ -1064,11 +1064,11 @@ sema_analyzer::process_decoder_operands(ast::decoder_operands const *dec)
 	ast::token_list const *operands = dec->get_operands();
 	size_t count = operands->size();
 	for (size_t n = 0; n < count; n++) {
-		ast::typed_identifier const *tyid =
-		 	(ast::typed_identifier const *)(*operands)[n];
+		ast::decoder_operand const *deco =
+		 	(ast::decoder_operand const *)(*operands)[n];
 
-		ast::identifier const *id = tyid->get_identifier();
-		ast::type const *ty = tyid->get_type();
+		ast::identifier const *id = deco->get_identifier();
+		ast::type const *ty = deco->get_type();
 
 		if (m_operands.find(id->get_value()) != m_operands.end()) {
 			fprintf(stderr, "error: decoder operand '%s' is already defined.\n",
@@ -1085,8 +1085,41 @@ sema_analyzer::process_decoder_operands(ast::decoder_operands const *dec)
 			return false;
 		}
 
+		unsigned flags = 0;
+		switch (deco->get_attribute()) {
+			// if this decoder operand represent conditional flags, mark as
+			// such and constant, it is used in conjuction with @eval_cc
+			// builtin instrinsic.
+			case ast::decoder_operand::CCFLAGS:
+				flags |= c::decoder_operand_def::CCFLAGS;
+				// fallthrough
+			case ast::decoder_operand::CONST:
+				flags |= c::decoder_operand_def::CONSTANT;
+				break;
+			default:
+				break;
+		}
+
+		// if it's CCFLAGS, we require at least 8bit operand size of type integer.
+		if (flags & c::decoder_operand_def::CCFLAGS) {
+			if (cty->get_type_id() != c::type::INTEGER) {
+				fprintf(stderr, "error: decoder operand '%s' represents "
+						"special operand 'ccflags', it shall be of type "
+						"integer.\n",
+						id->get_value().c_str());
+				return false;
+			}
+			if (cty->get_bits() < 8) {
+				fprintf(stderr, "error: decoder operand '%s' represents "
+						"special operand 'ccflags', it shall be of at "
+						"least 8 bits.\n",
+						id->get_value().c_str());
+				return false;
+			}
+		}
+
 		c::decoder_operand_def *decopr =
-			new c::decoder_operand_def(id->get_value(), cty);
+			new c::decoder_operand_def(flags, id->get_value(), cty);
 
 		m_operands[decopr->get_name()] = decopr;
 	}
@@ -1214,6 +1247,9 @@ sema_analyzer::process_jump_instruction(ast::jump_instruction const *jinsn)
 				return false;
 			}
 
+			// simplify
+			cond = cond->simplify();
+
 			print_expression(cond);
 		}
 	}
@@ -1249,6 +1285,8 @@ sema_analyzer::expr_convert_lookup_identifier(std::string const &name) const
 	if (reg != 0)
 		return c::expression::fromRegister(reg);
 
+	std::clog << '\t' << "cannot find identifier '" << name << "'" << std::endl;
+
 	return 0;
 }
 
@@ -1256,6 +1294,12 @@ c::expression *
 sema_analyzer::expr_convert_lookup_identifier(std::string const &base,
 		std::string const &name) const
 {
-	std::clog << '\t' << "looking up qualified identifier '" << base << '.' << name << "'" << std::endl;
+	std::clog << '\t' << "looking up register '" << base << '.' << name << "'" << std::endl;
+	c::sub_register_def *reg = m_rfb.get_register(base, name);
+	if (reg != 0)
+		return c::expression::fromRegister(reg);
+
+	std::clog << '\t' << "cannot find identifier '" << name << "'" << std::endl;
+
 	return 0;
 }

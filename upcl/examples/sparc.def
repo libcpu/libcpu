@@ -55,3 +55,9 @@ arch "sparc32" {
 	}
 
 }
+
+jump insn jump_1 : type branch
+	condition g1 == 1
+{ pc =  1; }
+
+

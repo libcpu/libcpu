@@ -240,8 +240,6 @@ register_file_builder::create_top(register_info const *ri)
 	printf("Register '%s' Type '%s'\n", 
 			ri->name.c_str(), ri->type->get_value().c_str());
 #endif
-
-
 	c::type *rtype = convert_type(ri->type);
 	if (rtype == 0)
 		return 0;
@@ -280,6 +278,7 @@ register_file_builder::create_top(register_info const *ri)
 		rdef = new c::bound_register_def(ri->name, rtype, preg);
 	} else if (ri->special_eval != 0) {
 		// special evaluation?
+		fprintf(stderr, "info: special evaluation function in register not yet supported!\n");
 	} else {
 		// normal register
 		rdef = new c::register_def(ri->name, rtype);
@@ -309,8 +308,9 @@ register_file_builder::create_sub(register_info const *top_ri,
 {
 	c::type *type = 0;
 	c::register_def *rdef = 0;
+	bool is_explicit = (sub_ri->flags & register_info::EXPLICIT_FLAG) != 0;
 
-//	printf("analyze_sub(%s)\n", sub_ri->name.c_str());
+	//printf("analyze_sub(%s) [expl %u]\n", sub_ri->name.c_str(), is_explicit);
 
 	type = convert_type(sub_ri->type);
 	if (type == 0)
@@ -417,6 +417,10 @@ register_file_builder::create_sub(register_info const *top_ri,
 			if (sub == 0)
 				return 0;
 		}
+
+		// if not explicit, register in global defs.
+		if (!is_explicit)
+			m_named_rdefs[rdef->get_name()] = rdef;
 	} else {
 		fprintf(stderr, "FAILED CREATING REG %s\n", 
 				sub_ri->name.c_str());
@@ -503,4 +507,13 @@ register_file_builder::create_pseudo_aliased_sub(register_info const *top_ri,
 			true);
 
 	return rdef;
+}
+
+void
+register_file_builder::dump_named() const
+{
+	for (named_register_def_map::const_iterator i = m_named_rdefs.begin();
+			i != m_named_rdefs.end(); i++) {
+		printf("NAMED: %s\n", i->first.c_str());
+	}
 }
