@@ -7,6 +7,7 @@
 
 #include <cctype>
 #include <sstream>
+#include <algorithm>
 
 using namespace upcl;
 
