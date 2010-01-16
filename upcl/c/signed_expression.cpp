@@ -37,10 +37,7 @@ signed_expression::simplify(bool) const
 type *
 signed_expression::get_type() const
 {
-	if (m_expr->get_expression_operation() == expression::CAST)
-		return m_expr->sub_expr(0)->get_type();
-	else
-		return m_expr->get_type();
+  return m_expr->get_type();
 }
 
 bool

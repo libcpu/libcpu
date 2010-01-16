@@ -38,6 +38,8 @@ cast_expression::simplify(bool sign) const
 	if (evaluate_as_integer(value, sign))
 		return expression::fromInteger(value, m_type->get_bits());
 
+	return const_cast<cast_expression *>(this);
+
 	// resolve to a bitslice.
 	return CBITSLICE(expr, CCONST(0), CCONST(m_type->get_bits()))->simplify();
 }

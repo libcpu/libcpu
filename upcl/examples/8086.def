@@ -270,7 +270,15 @@ insn movsw {
 //
 //
 jump insn test_jump_1 : type branch
-	condition sw.TOP == 1
+	condition sw.TOP + 1
+{ pc = 1; }
+
+jump insn test_jump_2 : type branch
+	condition %S ( [ #i2 sw.ZE ] )
+{ pc = 1; }
+
+jump insn test_jump_3 : type branch
+//	condition ( sw.C3 : sw.C2 : sw.C1 : sw.C0 )
 { pc = 1; }
 
 
