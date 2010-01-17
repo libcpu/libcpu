@@ -267,7 +267,7 @@ arch_fapra_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 		LET(RD, OR(R(RA), R(RB)));
 		break;
 	case NOT:
-		LET(RD, NOT(R(RA)));
+		LET(RD, COM(R(RA)));
 		break;
 	case SAL:
 		LET(RD, SHL(R(RA), R(RB)));
