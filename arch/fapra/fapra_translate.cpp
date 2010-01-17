@@ -96,6 +96,8 @@ static inline uint32_t imm(uint32_t ins) {
 #define RB ((instr >> 11) & 0x1F)
 #define GetImmediate (instr & 0xFFFF)
 
+#define INST_SIZE 4
+
 //////////////////////////////////////////////////////////////////////
 // tagging
 //////////////////////////////////////////////////////////////////////
@@ -155,9 +157,9 @@ int arch_fapra_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc,
 		break;
 	}
 
-	*next_pc = pc + 4;
+	*next_pc = pc + INST_SIZE;
 
-	return 4;
+	return INST_SIZE;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -207,31 +209,17 @@ arch_fapra_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 
 	LOG("cond (%08llx) %08x\n", pc, instr);
 
-	switch(instr >> 26) {
-	case 0x01: /* INCPU_REGIMM */
-		switch (GetRegimmInstruction) {
-			case 0x00: /* INCPUR_BLTZ */	return ICMP_SLT(R(RS),CONST(0));
-			case 0x01: /* INCPUR_BGEZ */	return ICMP_SGE(R(RS),CONST(0));
-			case 0x02: /* INCPUR_BLTZL */	return ICMP_SLT(R(RS),CONST(0));
-			case 0x03: /* INCPUR_BGEZL */	return ICMP_SGE(R(RS),CONST(0));
-			case 0x10: /* INCPUR_BLTZAL */	return ICMP_SLT(R(RS),CONST(0));
-			case 0x11: /* INCPUR_BGEZAL */	return ICMP_SGE(R(RS),CONST(0));
-			case 0x12: /* INCPUR_BLTZALL */	return ICMP_SLT(R(RS),CONST(0));
-			case 0x13: /* INCPUR_BGEZALL */	return ICMP_SGE(R(RS),CONST(0));
-		}
-	case 0x04: /* INCPU_BEQ */		
-		if (!RS && !RT) // special case: B
-			return NULL; /* should never be reached */
-		else
-			return ICMP_EQ(R(RS), R(RT));
-	case 0x05: /* INCPU_BNE */		return ICMP_NE(R(RS), R(RT));
-	case 0x06: /* INCPU_BLEZ */		return ICMP_SLE(R(RS),CONST(0));
-	case 0x07: /* INCPU_BGTZ */		return ICMP_SGT(R(RS),CONST(0));
-	case 0x14: /* INCPU_BEQL */		return ICMP_EQ(R(RS), R(RT));
-	case 0x15: /* INCPU_BNEL */		return ICMP_NE(R(RS), R(RT));
-	case 0x16: /* INCPU_BLEZL */	return ICMP_SLE(R(RS), CONST(0));
-	case 0x17: /* INCPU_BGTZL */	return ICMP_SGT(R(RS), CONST(0));
-  default: assert(0 && "Not handled"); return NULL;
+	switch (opc(instr)) {
+	default:
+		fprintf(stderr, "Illegal instruction!\n");
+		exit(EXIT_FAILURE);
+	case BZ:
+		// Emit nothing.
+		return ICMP_EQ(R(RA), CONST(0));
+		break;
+	case BNZ:
+		return ICMP_NE(R(RA), CONST(0));
+		break;
 	}
 }
 
@@ -253,16 +241,20 @@ arch_fapra_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 	case SARI:
 	case RFE:
 	default:
-	  fprintf(stderr, "Illegal instruction!\n");
-	  exit(EXIT_FAILURE);
+		fprintf(stderr, "Illegal instruction!\n");
+		exit(EXIT_FAILURE);
 	case LDW:
-	  break;
+		LOAD32(RD, ADD(R(RA), IMM));
+		break;
 	case STW:
-	  break;
+		STORE32(R(RD), ADD(R(RA), IMM));
+		break;
 	case LDB:
-	  break;
+		LOAD8(RD, ADD(R(RA), IMM));
+		break;
 	case STB:
-	  break;
+		STORE8(R(RD), ADD(R(RA), IMM));
+		break;
 	case LDIH:
 		LET(RD, OR(AND(R(RD), CONST(0xFFFF)), CONST(GetImmediate << 16)));
 		break;
@@ -270,20 +262,28 @@ arch_fapra_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 		LET(RD, OR(AND(R(RD), CONST(0xFFFF0000)), IMMU));
 		break;
 	case JMP:
-	  break;
+		LET_PC(R(RA));
+		break;
 	case BRA:
-	  break;
+//		LET_PC(CONST(pc + simm(instr)));
+		break;
 	case BZ:
-	  break;
+		// Emit nothing.
+		break;
 	case BNZ:
-	  break;
+		// Emit nothing.
+		break;
 	case NOP:
 		// Emit nothing.
 		break;
 	case CALL:
-	  break;
+		LET_PC(R(RA));
+		LET(RD, CONST(pc + INST_SIZE));
+		break;
 	case BL:
-	  break;
+//		LET_PC(CONST(pc + simm(instr)));
+		LET(RD, CONST(pc + INST_SIZE));
+		break;
 	case ADDI:
 		LET(RD, ADD(R(RA), IMM));
 		break;
@@ -313,7 +313,5 @@ arch_fapra_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 		break;
 	}
 
-	tag_t dummy1;
-	addr_t dummy2, dummy3;
-	return arch_fapra_tag_instr(cpu, pc, &dummy1, &dummy2, &dummy3);
+	return INST_SIZE;
 }
