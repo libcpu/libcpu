@@ -72,6 +72,8 @@ main(int argc, char **argv)
 		arch = CPU_ARCH_M88K;
 	else if (!strcmp("arm", s_arch))
 		arch = CPU_ARCH_ARM;
+	else if (!strcmp("fapra", s_arch))
+		arch = CPU_ARCH_FAPRA;
 	else {
 		printf("unknown architecture '%s'!\n", s_arch);
 		return 0;
@@ -130,6 +132,12 @@ main(int argc, char **argv)
 			reg_lr = &((reg_arm_t*)cpu->rf.grf)->r[14];
 			reg_param = &((reg_arm_t*)cpu->rf.grf)->r[0];
 			reg_result = &((reg_arm_t*)cpu->rf.grf)->r[0];
+			break;
+		case CPU_ARCH_FAPRA:
+			reg_pc = &((reg_fapra32_t*)cpu->rf.grf)->pc;
+			reg_lr = &((reg_fapra32_t*)cpu->rf.grf)->r[0];
+			reg_param = &((reg_fapra32_t*)cpu->rf.grf)->r[3];
+			reg_result = &((reg_fapra32_t*)cpu->rf.grf)->r[3];
 			break;
 		default:
 			fprintf(stderr, "architecture %u not handled.\n", arch);
