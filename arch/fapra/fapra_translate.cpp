@@ -31,215 +31,127 @@ using namespace llvm;
 
 #define fapra_BRANCH_TARGET ((uint32_t)(pc + 4 + (uint32_t)(((sint32_t)(sint16_t)GetImmediate<<2))))
 
+enum {
+  LDW = 0x10,
+  STW = 0x11,
+  LDB = 0x1C,
+  STB = 0x1D,
+
+  LDIH = 0x20,
+  LDIL = 0x21,
+
+  JMP = 0x30,
+  BRA = 0x34,
+  BZ = 0x35,
+  BNZ = 0x36,
+  NOP = 0x32,
+  CALL = 0x33,
+  BL = 0x37,
+  RFE = 0x3F,
+
+  ADDI = 0x0F,
+  ADD = 0x00,
+  SUB = 0x01,
+  AND = 0x02,
+  OR = 0x03,
+  NOT = 0x05,
+  SARI = 0x0B,
+  SAL = 0x06,
+  SAR = 0x07,
+  MUL = 0x08,
+
+  PERM = 0x09,
+  RDC8 = 0x0A,
+  TGE = 0x0C,
+  TSE = 0x0D
+};
+
+// Instruction decoding helper functions.
+static inline uint32_t opc(uint32_t ins) {
+  return ins >> 26;
+}
+
+static inline uint32_t rd(uint32_t ins) {
+  return (ins >> 21) & 0x1F;
+}
+
+static inline uint32_t ra(uint32_t ins) {
+  return (ins >> 16) & 0x1F;
+}
+
+static inline uint32_t rb(uint32_t ins) {
+  return (ins >> 11) & 0x1F;
+}
+
+static inline uint32_t simm(uint32_t ins) {
+  return ((int32_t) ((ins & 0xFFFF) << 16)) >> 16;
+}
+
+static inline uint32_t imm(uint32_t ins) {
+  return ins & 0xFFFF;
+}
+
 //////////////////////////////////////////////////////////////////////
 // tagging
 //////////////////////////////////////////////////////////////////////
 
 #include "tag.h"
-int arch_fapra_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc) {
-	uint32_t instr = INSTR(pc);
+int arch_fapra_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc,
+						 addr_t *next_pc) {
+	uint32_t ins = INSTR(pc);
 
-	switch(instr >> 26) {
-		case 0x00: //INCPU_SPECIAL
-			switch(instr & 0x3F) {
-				case 0x08: //INCPUS_JR
-					//XXX is not necessarily a return!
-					*tag = TAG_RET | TAG_DELAY_SLOT;
-					break;
-				case 0x09:  //INCPUS_JALR
-					*new_pc = NEW_PC_NONE;
-					*tag = TAG_BRANCH | TAG_DELAY_SLOT;
-					break;
-				case 0x01: //IN_invalid
-				case 0x05: //IN_invalid
-				case 0x0A: //IN_invalid
-				case 0x0B: //IN_invalid
-				case 0x0C: //INCPUS_SYSCALL
-				case 0x0D: //INCPUS_BREAK
-				case 0x0E: //IN_invalid
-				case 0x15: //IN_invalid
-				case 0x28: //IN_invalid
-				case 0x29: //IN_invalid
-				case 0x35: //IN_invalid
-				case 0x37: //IN_invalid
-				case 0x39: //IN_invalid
-				case 0x3D: //IN_invalid
-					*tag = TAG_TRAP;
-					break;
-				default:
-					*tag = TAG_CONTINUE;
-					break;
-			}
-			break;
-		case 0x01: //INCPU_REGIMM
-			switch (GetRegimmInstruction) {
-				case 0x00: //INCPUR_BLTZ
-				case 0x01: //INCPUR_BGEZ
-					*new_pc = fapra_BRANCH_TARGET;
-					*tag = TAG_COND_BRANCH | TAG_DELAY_SLOT;
-					break;
-				case 0x10: //INCPUR_BLTZAL
-				case 0x11: //INCPUR_BGEZAL
-					*new_pc = fapra_BRANCH_TARGET;
-					*tag = TAG_CALL | TAG_DELAY_SLOT;
-					break;
-				case 0x02: //INCPUR_BLTZL
-				case 0x03: //INCPUR_BGEZL
-					*new_pc = fapra_BRANCH_TARGET;
-					*tag = TAG_COND_BRANCH | TAG_DELAY_SLOT;
-					break;
-				case 0x12: //INCPUR_BLTZALL
-				case 0x13: //INCPUR_BGEZALL
-					*new_pc = fapra_BRANCH_TARGET;
-					*tag = TAG_CALL | TAG_DELAY_SLOT;
-					break;
-				case 0x04: //IN_invalid
-				case 0x05: //IN_invalid
-				case 0x06: //IN_invalid
-				case 0x07: //IN_invalid
-				case 0x0D: //IN_invalid
-				case 0x0F: //IN_invalid
-				case 0x14: //IN_invalid
-				case 0x15: //IN_invalid
-				case 0x16: //IN_invalid
-				case 0x17: //IN_invalid
-				case 0x18: //IN_invalid
-				case 0x19: //IN_invalid
-				case 0x1A: //IN_invalid
-				case 0x1B: //IN_invalid
-				case 0x1C: //IN_invalid
-				case 0x1D: //IN_invalid
-				case 0x1E: //IN_invalid
-				case 0x1F: //IN_invalid
-					*tag = TAG_TRAP;
-					break;
-				default:
-					*tag = TAG_CONTINUE;
-					break;
-			}
-		case 0x02: //INCPU_J
-			*new_pc = (pc & 0xF0000000) | (GetTarget << 2);
-			*tag = TAG_COND_BRANCH;
-		case 0x03: //INCPU_JAL
-			*new_pc = (pc & 0xF0000000) | (GetTarget << 2);
-			*tag = TAG_CALL;
-			break;
-		case 0x04: //INCPU_BEQ
-			if (!RS && !RT) { // special case: B
-				*new_pc = fapra_BRANCH_TARGET;
-				*tag = TAG_BRANCH | TAG_DELAY_SLOT;
-			} else {
-				*new_pc = fapra_BRANCH_TARGET;
-				*tag = TAG_COND_BRANCH | TAG_DELAY_SLOT;
-			}
-			break;
-		case 0x05: //INCPU_BNE
-		case 0x06: //INCPU_BLEZ
-		case 0x07: //INCPU_BGTZ
-			*new_pc = fapra_BRANCH_TARGET;
-			*tag = TAG_COND_BRANCH | TAG_DELAY_SLOT;
-			break;
-		case 0x10: //INCPU_COP0
-			// we don't translate any of the INCPU_COP0 branch
-			*tag = TAG_TRAP;
-			break;
-		case 0x11: //INCPU_COP1
-			switch(GetFMT) {
-				case 0x03: //IN_invalid
-				case 0x07: //IN_invalid
-				case 0x09: //IN_invalid
-				case 0x0A: //IN_invalid
-				case 0x0B: //IN_invalid
-				case 0x0C: //IN_invalid
-				case 0x0D: //IN_invalid
-				case 0x0E: //IN_invalid
-				case 0x0F: //IN_invalid
-					*tag = TAG_TRAP;
-					break;
-				case 0x10: //INCOP1_S
-					switch(GetCOP1FloatInstruction) {
-						case 0x00: //INCOP1_ADD
-								case 0x10: //IN_invalid
-								case 0x11: //IN_invalid
-								case 0x12: //IN_invalid
-								case 0x13: //IN_invalid
-								case 0x14: //IN_invalid
-								case 0x15: //IN_invalid
-								case 0x16: //IN_invalid
-								case 0x17: //IN_invalid
-								case 0x18: //IN_invalid
-								case 0x19: //IN_invalid
-								case 0x1A: //IN_invalid
-								case 0x1B: //IN_invalid
-								case 0x1C: //IN_invalid
-								case 0x1D: //IN_invalid
-								case 0x1E: //IN_invalid
-								case 0x1F: //IN_invalid
-								case 0x22: //IN_invalid
-								case 0x23: //IN_invalid
-								case 0x26: //IN_invalid
-								case 0x27: //IN_invalid
-								case 0x28: //IN_invalid
-								case 0x29: //IN_invalid
-								case 0x2A: //IN_invalid
-								case 0x2B: //IN_invalid
-								case 0x2C: //IN_invalid
-								case 0x2D: //IN_invalid
-								case 0x2E: //IN_invalid
-								case 0x2F: //IN_invalid
-									*tag = TAG_TRAP;
-									break;
-								default:
-									*tag = TAG_CONTINUE;
-									break;
-							}
-				case 0x12: //IN_invalid
-				case 0x13: //IN_invalid
-				case 0x16: //IN_invalid
-				case 0x17: //IN_invalid
-				case 0x18: //IN_invalid
-				case 0x19: //IN_invalid
-				case 0x1A: //IN_invalid
-				case 0x1B: //IN_invalid
-				case 0x1C: //IN_invalid
-				case 0x1D: //IN_invalid
-				case 0x1E: //IN_invalid
-				case 0x1F: //IN_invalid
-					*tag = TAG_TRAP;
-					break;
-				default:
-					*tag = TAG_CONTINUE;
-					break;
-			}
-		case 0x14: //INCPU_BEQL
-		case 0x15: //INCPU_BNEL
-		case 0x16: //INCPU_BLEZL
-		case 0x17: //INCPU_BGTZL
-			*new_pc = fapra_BRANCH_TARGET;
-			*tag = TAG_COND_BRANCH | TAG_DELAY_SLOT;
-			break;
-		case 0x12: //IN_invalid
-		case 0x13: //IN_invalid
-		case 0x1C: //IN_invalid
-		case 0x1D: //IN_invalid
-		case 0x1E: //IN_invalid
-		case 0x1F: //IN_invalid
-		case 0x32: //IN_invalid
-		case 0x33: //IN_invalid
-		case 0x36: //IN_invalid
-		case 0x3A: //IN_invalid
-		case 0x3B: //IN_invalid
-		case 0x3E: //IN_invalid
-			*tag = TAG_TRAP;
-			break;
-		default:
-			*tag = TAG_CONTINUE;
-			break;
+	switch (opc(ins)) {
+	case RFE:
+	case PERM:
+	case RDC8:
+	case TGE:
+	case TSE:
+	default:
+	  fprintf(stderr, "Illegal instruction!\n");
+	  exit(EXIT_FAILURE);
+	case LDW:
+	case STW:
+	case LDB:
+	case STB:
+	case LDIH:
+	case LDIL:
+	case ADDI:
+	case ADD:
+	case SUB:
+	case AND:
+	case OR:
+	case NOT:
+	case SARI:
+	case SAL:
+	case SAR:
+	case MUL:
+	case NOP:
+		*tag = TAG_CONTINUE;
+		break;
+	case JMP:
+		*tag = TAG_RET;
+		break;
+	case BRA:
+		*tag = TAG_BRANCH;
+		*new_pc = pc + simm(ins);
+		break;
+	case BZ:
+	case BNZ:
+		*tag = TAG_COND_BRANCH;
+		*new_pc = pc + simm(ins);
+		break;
+	case CALL:
+		*tag = TAG_CALL;
+		*new_pc = NEW_PC_NONE;
+		break;
+	case BL:
+		*tag = TAG_CALL;
+		*new_pc = pc + simm(ins);
+		break;
 	}
-	if (*tag & TAG_DELAY_SLOT)
-		*next_pc = pc + 8;
-	else
-		*next_pc = pc + 4;
+
+	*next_pc = pc + 4;
+
 	return 4;
 }
 
