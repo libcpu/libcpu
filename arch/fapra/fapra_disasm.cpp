@@ -6,7 +6,7 @@ static inline uint32_t opc(uint32_t ins) {
   return ins >> 26;
 }
 
-static char *disas_opc(uint32_t ins) {
+static const char *disas_opc(uint32_t ins) {
 	switch (opc(ins)) {
 	default:
 		fprintf(stderr, "Illegal instruction!\n");
