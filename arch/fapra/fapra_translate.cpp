@@ -65,7 +65,7 @@ static inline uint32_t rb(uint32_t ins) {
   return (ins >> 11) & 0x1F;
 }
 
-static inline uint32_t simm(uint32_t ins) {
+static inline sint32_t simm(uint32_t ins) {
   return ((int32_t) ((ins & 0xFFFF) << 16)) >> 16;
 }
 
