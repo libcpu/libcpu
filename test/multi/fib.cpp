@@ -72,8 +72,6 @@ main(int argc, char **argv)
 		arch = CPU_ARCH_M88K;
 	else if (!strcmp("arm", s_arch))
 		arch = CPU_ARCH_ARM;
-	else if (!strcmp("ppc", s_arch))
-		arch = CPU_ARCH_PPC;
 	else if (!strcmp("fapra", s_arch))
 		arch = CPU_ARCH_FAPRA;
 	else {
