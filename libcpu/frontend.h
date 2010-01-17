@@ -43,6 +43,7 @@ void arch_debug_me(cpu_t *cpu, BasicBlock *bb);
 
 /* host functions */
 uint32_t RAM32BE(uint8_t *RAM, addr_t a);
+uint32_t RAM32LE(uint8_t *RAM, addr_t a);
 
 /*
  * a collection of preprocessor macros
