@@ -13,24 +13,6 @@ using namespace llvm;
 // fapra: instruction decoding
 //////////////////////////////////////////////////////////////////////
 
-#define RS	((instr >> 21) & 0x1F)
-#define RT	((instr >> 16) & 0x1F)
-#define RD	((instr >> 11) & 0x1F)
-
-
-#define GetSA	((instr >> 6) & 0x1F)
-#define GetTarget (instr & 0x3FFFFFF)
-
-#define GetFunction (instr & 0x3F)
-//#define GetSpecialInstruction GetFunction
-#define GetRegimmInstruction RT
-#define GetFMT RS
-//#define GetCacheType (RT&BitM2)
-//#define GetCacheInstr ((RT>>2)&BitM3)
-#define GetCOP1FloatInstruction GetFunction
-
-#define fapra_BRANCH_TARGET ((uint32_t)(pc + 4 + (uint32_t)(((sint32_t)(sint16_t)GetImmediate<<2))))
-
 enum {
   LDW = 0x10,
   STW = 0x11,
@@ -178,26 +160,11 @@ arch_fapra_get_imm(cpu_t *cpu, uint32_t instr, uint32_t bits, bool sext,
 
 #define IMM arch_fapra_get_imm(cpu, instr, 0, true, bb)
 #define IMMU arch_fapra_get_imm(cpu, instr, 0, false, bb)
-#define IMM32 arch_fapra_get_imm(cpu, instr, 32, true, bb)
-
-//////////////////////////////////////////////////////////////////////
-
-Value *
-arch_fapra_get_sa(cpu_t *cpu, uint32_t instr, uint32_t bits, BasicBlock *bb) {
-	return ConstantInt::get(getIntegerType(bits? bits : cpu->info.word_size), GetSA);
-}
-
-#define SA arch_fapra_get_sa(cpu, instr, 0, bb)
-#define SA32 arch_fapra_get_sa(cpu, instr, 32, bb)
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
 #define LET_PC(v) new StoreInst(v, cpu->ptr_PC, bb)
-
-#define LINKr(i) LET32(i, CONST((uint64_t)(sint64_t)(sint32_t)pc+8))
-
-#define LINK LINKr(31)
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
