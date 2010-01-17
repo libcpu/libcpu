@@ -442,7 +442,8 @@ bit_combine_expression::simplify_binary(
 						CSUB(CCONST(get_type()->get_bits()), other)))->simplify();
 
 		default:
-			assert(0 && "This operation is not supported on bit-combining.");
+			//assert(0 && "This operation is not supported on bit-combining.");
+			break;
 	}
 
 	return 0;

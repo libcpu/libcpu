@@ -36,6 +36,8 @@ private:
 	c::expression *convert_identifier(ast::identifier const *ident);
 	c::expression *convert_qualified_identifier(ast::qualified_identifier const *ident);
 	c::expression *convert_call(ast::call_expression const *expr);
+	c::expression *convert_bit_combine(ast::bit_combine_expression const *expr);
+
 };
 
 } }

@@ -28,6 +28,8 @@ expr_convert::convert(ast::expression const *expr)
 			return convert_binary((ast::binary_expression const *)expr);
 		case ast::expression::CALL: // XXX
 			return CCONST(0);//convert_call((ast::call_expression const *)expr);
+		case ast::expression::BIT_COMBINE:
+			return convert_bit_combine((ast::bit_combine_expression const *)expr);
 		default:
 			assert(0 && "IMPLEMENT ME!");
 			return 0;
@@ -236,7 +238,6 @@ expr_convert::convert_qualified_identifier(ast::qualified_identifier const *iden
 	return c::expression::BitCombine(exprs);
 }
 
-
 c::expression *
 expr_convert::convert_number(ast::number const *number)
 {
@@ -263,4 +264,27 @@ expr_convert::convert_call(ast::call_expression const *expr)
 	{}
 
 	return 0;
+}
+
+c::expression *
+expr_convert::convert_bit_combine(ast::bit_combine_expression const *expr)
+{
+	c::expression_vector exprs;
+
+	ast::token_list const *tokens = expr->get_expressions();
+	if (tokens == 0 || tokens->size() == 0) {
+		fprintf(stderr, "error: a bit combine expression cannot be empty.\n");
+		return 0;
+	}
+
+	size_t count = tokens->size();
+	for (size_t n = 0; n < count; n++) {
+		c::expression *e = convert((ast::expression const *)(*tokens)[n]);
+		if (e == 0)
+			return 0;
+
+		exprs.push_back(e);
+	}
+
+	return c::expression::BitCombine(exprs);
 }

@@ -135,20 +135,22 @@ dump_bit_slice(std::ostream &o, bit_slice_expression const *bse)
 {
 	assert(bse->get_type()->get_bits() <= 64 && "Not yet tested.");
 
-	expression *e;
+	expression *e  = bse->sub_expr(0);
+	expression *fb = bse->sub_expr(1);
+	expression *bc = bse->sub_expr(2);
+	
 	uint64_t bits;
-	bool need_cast = (bse->sub_expr(1)->evaluate_as_integer(bits) &&
+	bool     is_cast = (bc->evaluate_as_integer(bits) &&
 			bse->get_type()->get_bits() == bits);
 
 	// is this a cast? bitslice can represent a cast.
-	if (bse->sub_expr(0)->is_zero() && need_cast) {
-		e = CCAST(bse->get_type(), bse->sub_expr(2));
+	if (fb->is_zero() && is_cast) {
+		e = CCAST(bse->get_type(), e);
 	} else {
-		e = CAND(CSHR(bse->sub_expr(0), bse->sub_expr(1)),
-				CMASKBIT(bse->sub_expr(2)))->simplify();
+		e = CAND(CSHR(e, fb), CMASKBIT(bc))->simplify();
 
-		if (need_cast) 
-			e = CCAST(bse->get_type(), e);
+		if (is_cast) 
+			e = CCAST(bse->get_type(), e)->simplify();
 	}
 
 	generate_libcpu_expression(o, e);
@@ -157,15 +159,37 @@ dump_bit_slice(std::ostream &o, bit_slice_expression const *bse)
 static void
 dump_bit_combine(std::ostream &o, bit_combine_expression const *e)
 {
-	expression const *sub;
+	uint32_t asize;
+	size_t   count;
+	expression *sub = 0;
 
-	o << '(';
-	for (size_t n = 0; (sub = e->sub_expr(n)) != 0; n++) {
-		if (n != 0)
-			o << " : ";
-		generate_libcpu_expression(o, e, 0);
+	if (e->get_type()->get_bits() > 64) {
+		fprintf(stderr, "error: bit combines larger than 64bits not yet implemented.\n");
+		abort();
 	}
-	o << ')';
+
+	for (count = 0; (sub = e->sub_expr(count)) != 0; count++)
+		;
+
+	if (count == 1) {
+		sub = e->sub_expr(0);
+	} else {
+		size_t shift = 0;
+		
+		sub = 0;
+		for (size_t n = 0; n < count; n++) {
+			size_t m = count - n - 1;
+			c::expression *se = CCAST(e->get_type(), e->sub_expr(m));
+
+			if (sub == 0)
+				sub = se;
+			else
+				sub = COR(sub, CSHL(se, CCONST(shift)));
+
+			shift += se->get_type()->get_bits();
+		}
+	}
+	generate_libcpu_expression(o, sub, 0);
 }
 
 #if 0
@@ -206,7 +230,39 @@ dump_sub_register(std::ostream &o, register_expression const *super,
 		sub_register_def const *sub)
 {
 	expression *e = 0;
-	if (sub->is_hardwired()) {
+	if (sub->is_bound_to_special()) {
+		switch (sub->get_bound_special_register()) {
+			case SPECIAL_REGISTER_PC:
+				o << "PC_REG";
+				break;
+			case SPECIAL_REGISTER_NPC:
+				o << "NPC_REG";
+				break;
+			case SPECIAL_REGISTER_PSR:
+				o << "PSR_REG";
+				break;
+			case SPECIAL_REGISTER_C:
+				o << "PSR_C_REG";
+				break;
+			case SPECIAL_REGISTER_N:
+				o << "PSR_N_REG";
+				break;
+			case SPECIAL_REGISTER_P:
+				o << "PSR_P_REG";
+				break;
+			case SPECIAL_REGISTER_V:
+				o << "PSR_V_REG";
+				break;
+			case SPECIAL_REGISTER_Z:
+				o << "PSR_Z_REG";
+				break;
+			default:
+				fprintf(stderr, "error: special register %u unhandled\n",
+						sub->get_bound_special_register());
+				abort();
+		}
+		return;
+	} else if (sub->is_hardwired()) {
 		e = sub->get_expression()->simplify();
 	} else {
 		e = CBITSLICE(CREG(sub->get_master_register()),
@@ -214,10 +270,8 @@ dump_sub_register(std::ostream &o, register_expression const *super,
 		if (e != 0)
 			e = e->simplify();
 	}
-	if (e == 0) {
-		assert(0 && "Failed converting bitfield!");
-	}
 
+	assert(e != 0 && "Failed converting bitfield!");
 	generate_libcpu_expression(o, e, 0);
 }
 
