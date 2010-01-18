@@ -94,9 +94,25 @@ int arch_fapra_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc,
 		*tag = TAG_COND_BRANCH;
 		*new_pc = pc + simm(ins);
 		break;
-	case CALL:
+	case CALL: {
+		// Look for sequences like:
+		//   ldih $X, 0x...
+		//   ldil $X, 0x...
+		//   call $Y, $X ($Y is the link register)
+
+		// FIXME Make sure those two memory accesses are not out of bounds.
+		uint32_t ldih = INSTR(pc - (INST_SIZE * 2));
+		uint32_t ldil = INSTR(pc - INST_SIZE);
+
+		if (opc(ldih) == LDIH && opc(ldil) == LDIL
+			&& rd(ldih) == rd(ldil) && rd(ldih) == ra(ins)) {
+			*new_pc = (imm(ldih) << 16) | imm(ldil);
+		} else {
+			*new_pc = NEW_PC_NONE;
+		}
+
 		*tag = TAG_CALL;
-		*new_pc = NEW_PC_NONE;
+	}
 		break;
 	case BL:
 		*tag = TAG_CALL;
