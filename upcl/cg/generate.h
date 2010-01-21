@@ -13,7 +13,7 @@ namespace upcl { namespace cg {
 	void generate_arch_h(std::ostream &o, std::string const &fname,
 		std::string const &arch_name);
 
-	void generate_types_h(std::ostream &o, std::string const &fname,
+	void generate_regfile_h(std::ostream &o, std::string const &fname,
 		std::string const &arch_name, c::register_def_vector const &regs);
 
 	void generate_arch_cpp(std::ostream &o, std::string const &fname,

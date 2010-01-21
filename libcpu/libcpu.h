@@ -26,35 +26,44 @@ class Value;
 using namespace llvm;
 
 struct cpu;
+
 typedef void        (*fp_init)(struct cpu *cpu, struct cpu_archinfo *info, struct cpu_archrf *rf);
 typedef void        (*fp_done)(struct cpu *cpu);
+// @@@BEGIN_DEPRECATION
 typedef StructType *(*fp_get_struct_reg)(struct cpu *cpu);
 typedef addr_t      (*fp_get_pc)(struct cpu *cpu, void *regs);
+// @@@END_DEPRECATION
 typedef void        (*fp_emit_decode_reg)(struct cpu *cpu, BasicBlock *bb);
 typedef void        (*fp_spill_reg_state)(struct cpu *cpu, BasicBlock *bb);
 typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc);
 typedef int         (*fp_disasm_instr)(struct cpu *cpu, addr_t pc, char *line, unsigned int max_line);
 typedef Value      *(*fp_translate_cond)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
 typedef int         (*fp_translate_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
+// @@@BEGIN_DEPRECATION
 // idbg support
 typedef uint64_t    (*fp_get_psr)(struct cpu *cpu, void *regs);
 typedef int         (*fp_get_reg)(struct cpu *cpu, void *regs, unsigned reg_no, uint64_t *value);
 typedef int         (*fp_get_fp_reg)(struct cpu *cpu, void *regs, unsigned reg_no, void *value);
+// @@@END_DEPRECATION
 
 typedef struct {
 	fp_init init;
 	fp_done done;
+// @@@BEGIN_DEPRECATION
 	fp_get_pc get_pc;
+// @@@END_DEPRECATION
 	fp_emit_decode_reg emit_decode_reg;
 	fp_spill_reg_state spill_reg_state;
 	fp_tag_instr tag_instr;
 	fp_disasm_instr disasm_instr;
 	fp_translate_cond translate_cond;
 	fp_translate_instr translate_instr;
+// @@@BEGIN_DEPRECATION
 	// idbg support
 	fp_get_psr get_psr;
 	fp_get_reg get_reg;
 	fp_get_fp_reg get_fp_reg;
+// @@@END_DEPRECATION
 } arch_func_t;
 
 typedef enum {
@@ -69,14 +78,20 @@ typedef enum {
 } cpu_arch_t;
 
 enum {
-	CPU_FLAG_ENDIAN_MASK   = (1 << 1),
+	CPU_FLAG_ENDIAN_MASK   = (3 << 1),
 	CPU_FLAG_ENDIAN_BIG    = (0 << 1),
 	CPU_FLAG_ENDIAN_LITTLE = (1 << 1),
+	CPU_FLAG_ENDIAN_MIDDLE = (2 << 1), // Middle endian (ie. PDP-11) NYI.
+	CPU_FLAG_ENDIAN_NONE   = (3 << 1), // Mainly word oriented machines, where 
+									   // word size is not a power of two.
+									   // (ie. PDP-10)
 
-	CPU_FLAG_HARDWIRE_GPR0 = (1 << 2),
-	CPU_FLAG_HARDWIRE_FPR0 = (1 << 3),
-	CPU_FLAG_DELAY_SLOT    = (1 << 4),
-	CPU_FLAG_DELAY_NULLIFY = (1 << 5),
+	// @@@BEGIN_DEPRECATION
+	CPU_FLAG_HARDWIRE_GPR0 = (1 << 4),
+	CPU_FLAG_HARDWIRE_FPR0 = (1 << 4),
+	// @@@END_DEPRECATION
+	CPU_FLAG_DELAY_SLOT    = (1 << 5),
+	CPU_FLAG_DELAY_NULLIFY = (1 << 6),
 
 	// internal flags.
 	CPU_FLAG_FP80          = (1 << 15), // FP80 is natively supported.
@@ -84,6 +99,7 @@ enum {
 	CPU_FLAG_SWAPMEM       = (1 << 17), // Swap load/store
 };
 
+// @@@BEGIN_DEPRECATION
 // Four register classes
 enum {
 	CPU_REG_GPR, // General Purpose
@@ -94,6 +110,7 @@ enum {
 				 // to avoid confusing the client about the number of
 				 // registers available.
 };
+// @@@END_DEPRECATION
 
 #define TIMER_COUNT	4
 #define TIMER_TAG	0
@@ -101,11 +118,47 @@ enum {
 #define TIMER_BE	2
 #define TIMER_RUN	3
 
-typedef struct flags_layout {
+// flags' types
+enum {
+	CPU_FLAGTYPE_NONE = 0,
+	CPU_FLAGTYPE_CARRY = 'C',
+	CPU_FLAGTYPE_OVERFLOW = 'V',
+	CPU_FLAGTYPE_NEGATIVE = 'N',
+	CPU_FLAGTYPE_PARITY = 'P',
+	CPU_FLAGTYPE_ZERO = 'Z'
+};
+
+typedef struct cpu_flags_layout {
 	int shift;	/* bit position */
 	char type;	/* 'N', 'V', 'Z', 'C' or 0 (some other flag unknown to the generic code) */
 	const char *name; /* symbolic name */
-} flags_layout_t;
+} cpu_flags_layout_t;
+
+// register layout types
+enum {
+	CPU_REGTYPE_INVALID = -1,
+	CPU_REGTYPE_INT = 'i',
+	CPU_REGTYPE_FLOAT = 'f',
+	CPU_REGTYPE_VECTOR = 'v'
+};
+
+// register layout flags
+enum {
+	// special registers
+	CPU_REGFLAG_SPECIAL_MASK = 0xf,
+	CPU_REGFLAG_PC  = 1,
+	CPU_REGFLAG_NPC = 2,
+	CPU_REGFLAG_PSR = 3
+};
+
+typedef struct cpu_register_layout {
+	char type;
+	unsigned bits_size;
+	unsigned aligned_size;
+	unsigned byte_offset;
+	unsigned flags;
+	char const *name;
+} cpu_register_layout_t;
 
 typedef struct cpu_archinfo {
 	cpu_arch_t type;
@@ -123,23 +176,31 @@ typedef struct cpu_archinfo {
 	uint32_t float_size;
 	uint32_t vector_size;
 	uint32_t address_size;
+	uint32_t psr_size;
 
 	uint32_t min_page_size;
 	uint32_t max_page_size;
 	uint32_t default_page_size;
 
+	// @@@BEGIN_DEPRECATION
 	uint32_t register_count[4];
 	uint32_t register_size[4];
+	// @@@END_DEPRECATION
 
-	uint32_t flags_size;
-	flags_layout_t *flags_layout;
+	cpu_register_layout_t const *register_layout;
+	uint32_t register_count2;
+	cpu_flags_layout_t const *flags_layout;
+	uint32_t flags_count;
 } cpu_archinfo_t;
 
 typedef struct cpu_archrf {
+	// @@@BEGIN_DEPRECATION
 	void *pc;  // Program Counter
 	void *grf; // GP register file
 	void *frf; // FP register file
 	void *vrf; // Vector register file
+	// @@@END_DEPRECATION
+	void *storage;
 } cpu_archrf_t;
 
 typedef std::map<addr_t, BasicBlock *> bbaddr_map;

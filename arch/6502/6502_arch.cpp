@@ -11,15 +11,15 @@
 #include "frontend.h"
 #include "6502_internal.h"
 
-static flags_layout_t arch_6502_flags_layout[] = {
-	{ N_SHIFT, 'N', "N" },	/* negative */
-	{ V_SHIFT, 'V', "V" },	/* overflow */
+static cpu_flags_layout_t arch_6502_flags_layout[] = {
+	{ N_SHIFT, CPU_FLAGTYPE_NEGATIVE, "N" },	/* negative */
+	{ V_SHIFT, CPU_FLAGTYPE_OVERFLOW, "V" },	/* overflow */
 	{ X_SHIFT, 0,   "X" },	/* unassigned */
 	{ B_SHIFT, 0,   "B" },	/* break */
 	{ D_SHIFT, 0,   "D" },	/* decimal mode */
 	{ I_SHIFT, 0,   "I" },	/* interrupt disable */
-	{ Z_SHIFT, 'Z', "Z" },	/* zero */
-	{ C_SHIFT, 'C', "C" },	/* carry */
+	{ Z_SHIFT, CPU_FLAGTYPE_ZERO, "Z" },	/* zero */
+	{ C_SHIFT, CPU_FLAGTYPE_CARRY, "C" },	/* carry */
 	{ -1, 0, NULL }
 };
 
@@ -39,6 +39,7 @@ arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->byte_size = 8;
 	info->word_size = 8;
 	info->address_size = 16;
+	info->psr_size = 8;
 	// There are 4 8-bit GPRs
 	info->register_count[CPU_REG_GPR] = 4;
 	info->register_size[CPU_REG_GPR] = info->word_size;
@@ -46,7 +47,7 @@ arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->register_count[CPU_REG_XR] = 1;
 	info->register_size[CPU_REG_XR] = 8;
 
-	info->flags_size = 8;
+	info->flags_count = 8;
 	info->flags_layout = arch_6502_flags_layout;
 
 	reg_6502_t *reg;

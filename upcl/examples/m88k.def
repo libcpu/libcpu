@@ -18,10 +18,7 @@ arch "m88k" {
 			// r0 is hardwired to zero.
 			[ #i32 r0 <- 0 ],
 			// define r1..r31 as 32bit registers.
-			[ 31 ** #i32 r?:1 ],
-			 
-			// XXX check if r[0:1] pair is assumed to be zero.
-			[ 16 ** #i64 d? -> #i32 ( _ <-> r?:( ( _ * 2 ) + 1 ) : _ <-> r?:( ( _ * 2 ) + 0 ) ) ]
+			[ 31 ** #i32 r?:1 ]
 		}
 
 		// Extended Floating Register Group
@@ -48,3 +45,111 @@ arch "m88k" {
 	}
 
 }
+
+decoder_operands [ #i32 dst, #i32 dst2, #i32 src1, #i32 src2, const #i32 wmask,
+				 const #i9 vec9 ];
+
+// Perform addition/subtraction with over/underflow check, trap 1 on overflow.
+insn add     : dst = %OFTRAP ( src1 + src2, 1 );
+insn add_ci  : dst = %OFTRAP ( src1 + src2 + psr.C, 1 );
+insn add_co  : dst = %OFTRAP ( %CC ( src1 + src2 ), 1 );
+insn add_cio : dst = %OFTRAP ( %CC ( src1 + src2 + psr.C ), 1 );
+
+insn sub     : dst = %OFTRAP ( src1 - src2, 1 );
+insn sub_ci  : dst = %OFTRAP ( src1 - src2 - psr.C, 1 );
+insn sub_co  : dst = %OFTRAP ( %CC ( src1 - src2 ), 1 );
+insn sub_cio : dst = %OFTRAP ( %CC ( src1 - src2 - psr.C ), 1 );
+
+insn addu     : dst = src1 + src2;
+insn addu_ci  : dst = src1 + src2 + psr.C;
+insn addu_co  : dst = %CC ( src1 + src2 );
+insn addu_cio : dst = %CC ( src1 + src2 + psr.C );
+
+insn subu     : dst = src1 - src2;
+insn subu_ci  : dst = src1 - src2 - psr.C;
+insn subu_co  : dst = %CC ( src1 - src2 );
+insn subu_cio : dst = %CC ( src1 - src2 - psr.C );
+
+insn muls     : dst = %S ( src1 * src2 );
+insn mulu     : dst = %U ( src1 * src2 );
+
+// Divisions never fault on div by zero.
+insn divs     : dst = ( src2 == 0 ) ? 0 : %S ( src1 / src2 );
+insn divu     : dst = ( src2 == 0 ) ? 0 : %U ( src1 / src2 );
+
+insn mask     : dst = src1 & ( 0xffff0000 | src2 );
+insn mask_u   : dst = src1 & ( ( src2 << 16 ) | 0xffff );
+
+insn and      : dst = src1 & src2;
+insn and_c    : dst = src1 &~ src2;
+insn and_u    : dst = src1 & ( src2 << 16 );
+
+insn or       : dst = src1 | src2;
+insn or_c     : dst = src1 |~ src2;
+insn or_u     : dst = src1 | ( src2 << 16 );
+
+insn xor      : dst = src1 ^ src2;
+insn xor_c    : dst = src1 ^~ src2;
+insn xor_u    : dst = src1 ^ ( src2 << 16 );
+
+insn rot      : dst = src1 >>< ( src2 & 0x1f );
+
+insn mak      : dst = ( src1 & wmask ) << src2;
+insn set      : dst = src1 | ( wmask << src2 );
+insn clr      : dst = src1 &~ ( wmask << src2 );
+insn ext      : dst = %S ( src1 >> ( src2 & 0x1f ) );
+insn extu     : dst = %U ( src1 >> ( src2 & 0x1f ) );
+
+insn ff0      : dst = @ffc ( src1 );
+insn ff1      : dst = @ffs ( src1 );
+
+insn lda      : dst = src1 + ( src2 << 2 );
+insn lda_h    : dst = src1 + ( src2 << 1 );
+insn lda_d    : dst = src1 + ( src2 << 3 );
+insn lda_x    : dst = src1 + ( src2 << 4 );
+
+insn ld       : dst = #i32 %M[ src1 + src2 ];
+insn ld_h     : dst = %S ( [ #i32 #i16 %M[ src1 + src2 ] ] );
+insn ld_hu    : dst = #i16 %M[ src1 + src2 ];
+insn ld_b     : dst = %S ( [ #i32 #i8 %M[ src1 + src2 ] ] );
+insn ld_bu    : dst = #i8 %M[ src1 + src2 ];
+insn ld_d     : ( dst : dst2 ) = #i64 %M[ src1 + src2 ];
+insn ld_x     : xdst = #f80 %M[ src1 + src2 ];
+
+insn st       : #i32 %M[ src1 + src2 ] = dst;
+insn st_h     : #i16 %M[ src1 + src2 ] = dst; 
+insn st_b     : #i8 %M[ src1 + src2 ] = dst;
+insn st_d     : #i64 %M[ src1 + src2 ] = ( dst : dst2 );
+insn st_x     : #f80 %M[ src1 + src2 ] = xdst;
+
+insn xmem {
+	t = #i32 %M[ src1 + src2 ];
+	#i32 %M[ src1 + src2 ] = dst;
+	dst = t;
+}
+
+insn xmem_bu {
+	t = #i8 %M[ src1 + src2 ];
+	#i8 %M[ src1 + src2 ] = dst;
+	dst = t;
+}
+
+jump insn jmp : type call { pc = src1; }
+jump insn jmp_n : type call delay 1 { pc = src1; }
+jump insn jsr : type call { r1 = snip; pc = src1; }
+jump insn jsr_n : type call delay 1 { r1 = snip; pc = src1; }
+
+jump insn tb1 : type trap
+				condition (src1 & src2) != 0
+				{
+				  trapno = vec9;
+				  @trap ( 2 );
+				}
+
+jump insn tb0 : type trap
+				condition (src1 & src2) == 0
+				{
+				  trapno = vec9;
+				  @trap ( 2 );
+				}
+

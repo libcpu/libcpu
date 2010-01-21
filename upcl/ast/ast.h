@@ -279,8 +279,10 @@ public:
 		BIT_COMBINE,
 		CAST,
 		CALL,
-		CC
-		
+		CC,
+		OFTRAP,
+		FLOAT_ORDERING,
+		SELECT
 	};
 
 private:
@@ -480,6 +482,44 @@ public:
 
 	inline expression const *get_expression() const { return m_expr; }
 	inline token_list const *get_flags() const { return m_flags; }
+};
+
+class OFTRAP_expression : public expression {
+	expression *m_expr;
+	expression *m_trap;
+
+public:
+	OFTRAP_expression(expression *expr, expression *trap = 0)
+		: expression(OFTRAP), m_expr(expr), m_trap(trap)
+	{ }
+	inline expression const *get_expression() const { return m_expr; }
+	inline expression const *get_trap() const { return m_trap; }
+};
+
+class float_ordering_expression : public expression {
+	expression *m_expr;
+	bool m_ordered;
+
+public:
+	float_ordering_expression(expression *expr, bool ordered)
+		: expression(FLOAT_ORDERING), m_expr(expr), m_ordered(ordered)
+	{ }
+	inline expression const *get_expression() const { return m_expr; }
+	inline bool is_ordered() const { return m_ordered; }
+};
+
+class select_expression : public expression {
+	expression *m_expr;
+	expression *m_true;
+	expression *m_false;
+
+public:
+	select_expression(expression *expr, expression *t, expression *f)
+		: expression(SELECT), m_expr(expr), m_true(t), m_false(f)
+	{ }
+	inline expression const *get_expression() const { return m_expr; }
+	inline expression const *get_true() const { return m_true; }
+	inline expression const *get_false() const { return m_false; }
 };
 
 class register_file : public token {

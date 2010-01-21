@@ -69,8 +69,11 @@ ID  [a-zA-Z_][a-zA-Z0-9_]*
 "decoder_operands" return K_DECODER_OPERANDS;
 
 "%CC" return K_AUGMENT_CC;
+"%OFTRAP" return K_AUGMENT_OFTRAP;
 "%S" return K_AUGMENT_SIGNED;
 "%U" return K_AUGMENT_UNSIGNED;
+"%ORD" return K_AUGMENT_ORDERED;
+"%UNO" return K_AUGMENT_UNORDERED;
 
 "%M"|"%MEM" return K_MEM;
 

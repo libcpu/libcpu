@@ -1,3 +1,5 @@
+#ifndef __libcpu_fp_types_h
+#define __libcpu_fp_types_h
 
 typedef union _fp32_reg { 
 	uint32_t i;
@@ -44,3 +46,4 @@ typedef struct _fp128_reg {
 #endif
 } fp128_reg_t;
 
+#endif  // __libcpu_fp_types_h

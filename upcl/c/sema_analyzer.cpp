@@ -132,12 +132,12 @@ sema_analyzer::parse(ast::token_list const *root)
 		std::cerr << "ERROR." << std::endl;
 	}
 
-	fname = m_arch_name + "_types.h";
+	fname = m_arch_name + "_regfile.h";
 	std::cerr << "generating " << fname << "...";
 
 	of.open(fname.c_str());
 	if (of) {
-		cg::generate_types_h(of, fname, m_arch_name, regs);
+		cg::generate_regfile_h(of, fname, m_arch_name, regs);
 		of.close();
 
 		std::cerr << "ok." << std::endl;

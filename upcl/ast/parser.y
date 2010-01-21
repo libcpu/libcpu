@@ -66,7 +66,8 @@ extern ast::token_list *g_root;
 %token K_EXPLICIT K_EVALUATE
 %token K_MACRO K_INSN
 %token K_IF K_ELSE K_WHILE K_FOR K_IS K_RETURN
-%token K_AUGMENT_CC K_AUGMENT_SIGNED K_AUGMENT_UNSIGNED
+%token K_AUGMENT_CC K_AUGMENT_OFTRAP K_AUGMENT_SIGNED K_AUGMENT_UNSIGNED
+%token K_AUGMENT_ORDERED K_AUGMENT_UNORDERED
 %token K_MEM
 %token K_JUMP K_TYPE K_PRE K_CONDITION K_DELAY
 %token K_RESET K_DECODER_OPERANDS K_CONST K_CCFLAGS
@@ -118,6 +119,7 @@ extern ast::token_list *g_root;
 
 %type <expression> base_operand operand bit_combine expression arg
 %type <expression> cast_expr macro_expr mem_expr SU_expr CC_expr is_expr
+%type <expression> OFTRAP_expr ORD_expr select_expr
 %type <expression> CC_flag unary_expr binary_expr primary_expr
 
 %type <instruction> insn_decl jump_insn_decl macro_decl insn_group_decl
@@ -441,6 +443,9 @@ primary_expr: operand
 			| macro_expr
 			| mem_expr
 			| CC_expr
+			| OFTRAP_expr
+			| ORD_expr
+			| select_expr
 			| SU_expr
 			| is_expr
 			; 
@@ -470,6 +475,10 @@ mem_expr: K_MEM '[' expression ']'
 		{ $$ = new ast::memory_expression($4, $1); }
 		;
 
+select_expr: expression '?' expression ':' expression
+		   { $$ = new ast::select_expression($1, $3, $5); }
+		   ;
+
 SU_expr: K_AUGMENT_SIGNED '(' expression ')'
 	   { $$ = new ast::unary_expression(ast::unary_expression::SIGNED, $3); }
 	   | K_AUGMENT_UNSIGNED '(' expression ')'
@@ -496,6 +505,18 @@ CC_flag_list: CC_flag
 			| CC_flag_list ',' CC_flag
 			{ $$ = $1; $1->push($3); }
 			;
+
+OFTRAP_expr: K_AUGMENT_OFTRAP '(' expression ')'
+	   	   { $$ = new ast::OFTRAP_expression($3); }
+		   | K_AUGMENT_OFTRAP '(' expression ',' expression ')'
+	   	   { $$ = new ast::OFTRAP_expression($3, $5); }
+		   ;
+
+ORD_expr: K_AUGMENT_ORDERED '(' expression ')'
+	   	{ $$ = new ast::float_ordering_expression($3, true); }
+		| K_AUGMENT_UNORDERED '(' expression ')'
+	   	{ $$ = new ast::float_ordering_expression($3, false); }
+		;
 
 is_expr: expression K_IS type
 	   { $$ = new ast::binary_expression(ast::binary_expression::IS,
@@ -587,6 +608,8 @@ insn_body: insn_stmts
          ;
 
 basic_insn_stmts: CC_expr
+				{ $$ = new ast::expression_statement($1); }
+				| OFTRAP_expr
 				{ $$ = new ast::expression_statement($1); }
 				| macro_expr
 				{ $$ = new ast::expression_statement($1); }

@@ -153,7 +153,7 @@ cg_print_typed_var(std::ostream &o, size_t indent, size_t data_size,
 
 	size_t nbits = type->get_bits();
 	if (type->get_type_id() == c::type::FLOAT)
-		o << "fp_reg" << nbits << "_t " << make_register_c_name(name);
+		o << "fp" << nbits << "_reg_t " << make_register_c_name(name);
 	else {
 		o << "uint" << data_size << "_t " << make_register_c_name(name);
 		if (nbits > 64)
@@ -312,26 +312,35 @@ cg_write_psr_bitfield(std::ostream &o, c::sub_register_def const *bf)
 		return;
 	}
 
+
 	uint64_t shift = 0;
-	char special = 0;
 	if (bf->get_first_bit()->evaluate(shift)) {
+		o << '\t' << "{ " << shift << ", ";
 		switch (bf->get_bound_special_register()) {
-			case c::SPECIAL_REGISTER_C: special = 'C'; break;
-			case c::SPECIAL_REGISTER_N: special = 'N'; break;
-			case c::SPECIAL_REGISTER_P: special = 'P'; break;
-			case c::SPECIAL_REGISTER_V: special = 'V'; break;
-			case c::SPECIAL_REGISTER_Z: special = 'Z'; break;
-			default: break;
+			case c::SPECIAL_REGISTER_C:
+				o << "CPU_FLAGTYPE_CARRY";
+				break;
+			case c::SPECIAL_REGISTER_N: 
+				o << "CPU_FLAGTYPE_NEGATIVE";
+				break;
+			case c::SPECIAL_REGISTER_P:
+				o << "CPU_FLAGTYPE_PARITY";
+				break;
+			case c::SPECIAL_REGISTER_V:
+				o << "CPU_FLAGTYPE_OVERFLOW";
+				break;
+			case c::SPECIAL_REGISTER_Z:
+				o << "CPU_FLAGTYPE_ZERO";
+				break;
+			default:
+				o << "CPU_FLAGTYPE_NONE";
+				break;
 		}
+		o << ", \"" << bf->get_name() << "\" }," << std::endl;
+	} else {
+		fprintf(stderr, "fatal error: bitfield start position shall be constant.");
+		abort();
 	}
-
-	o << '\t' << "{ " << shift << ", ";
-	if (special != 0)
-		o << '\'' << special << '\'';
-	else
-		o << '0';
-
-	o << ", \"" << bf->get_name() << "\" }" << std::endl;
 }
 
 // emit a PSR-bound register flags layout
@@ -339,7 +348,7 @@ static void
 cg_write_psr_flags_layout(std::ostream &o, std::string const &arch_name, 
 		std::string const &reg_name, c::sub_register_vector const &bitfields)
 {
-	o << "static flags_layout_t const arch_" << arch_name << "_flags_layout[] = {" << std::endl;
+	o << "static cpu_flags_layout_t const arch_" << arch_name << "_flags_layout[] = {" << std::endl;
 	for (c::sub_register_vector::const_iterator i = bitfields.begin();
 			i != bitfields.end(); i++)
 		cg_write_psr_bitfield(o, *i);
@@ -355,7 +364,7 @@ cg_write_register_file(std::ostream &o, std::string const &arch_name,
 	size_t offset = 0, padding_count = 0;
 
 	// dump the register file struct
-	o << "PACKED(struct reg_" << arch_name << "_t {" << std::endl;
+	o << "typedef PACKED(struct _reg_" << arch_name << " {" << std::endl;
 	for (c::register_def_vector::const_iterator i = regs.begin ();
 			i != regs.end(); i++) {
 
@@ -378,7 +387,7 @@ cg_write_register_file(std::ostream &o, std::string const &arch_name,
 
 		offset += byte_size;
 	}
-	o << "});" << std::endl;
+	o << "}) reg_" << arch_name << "_t;" << std::endl;
 }
 
 // emit the register file layout.
@@ -386,7 +395,7 @@ void
 cg_write_register_file_layout(std::ostream &o, std::string const &arch_name,
 		c::register_def_vector const &regs)
 {	
-	o << "static register_layout_t const arch_" << arch_name << "_register_layout[] = {" << std::endl;
+	o << "static cpu_register_layout_t const arch_" << arch_name << "_register_layout[] = {" << std::endl;
 	size_t offset = 0;
 	for (c::register_def_vector::const_iterator i = regs.begin ();
 			i != regs.end(); i++) {
@@ -405,18 +414,18 @@ cg_write_register_file_layout(std::ostream &o, std::string const &arch_name,
 		o << '\t' << "{ ";
 		switch ((*i)->get_type()->get_type_id()) {
 			case c::type::INTEGER:
-				o << "REG_TYPE_INT";
+				o << "CPU_REGTYPE_INT";
 				break;
 			case c::type::FLOAT:
-				o << "REG_TYPE_FLOAT";
+				o << "CPU_REGTYPE_FLOAT";
 				break;
 			case c::type::VECTOR:
 			case c::type::VECTOR_INTEGER:
 			case c::type::VECTOR_FLOAT:
-				o << "REG_TYPE_VECTOR";
+				o << "CPU_REGTYPE_VECTOR";
 				break;
 			default:
-				o << "REG_TYPE_UNKNOWN";
+				o << "CPU_REGTYPE_UNKNOWN";
 				break;
 		}
 		o << ", ";
@@ -426,13 +435,13 @@ cg_write_register_file_layout(std::ostream &o, std::string const &arch_name,
 		// flags
 		switch ((*i)->get_bound_special_register()) {
 			case c::SPECIAL_REGISTER_PC:
-				o << "REG_FLAG_PC";
+				o << "CPU_REGFLAG_PC";
 				break;
 			case c::SPECIAL_REGISTER_NPC:
-				o << "REG_FLAG_NPC";
+				o << "CPU_REGFLAG_NPC";
 				break;
 			case c::SPECIAL_REGISTER_PSR:
-				o << "REG_FLAG_PSR";
+				o << "CPU_REGFLAG_PSR";
 				break;
 			default:
 				o << '0';
@@ -452,10 +461,12 @@ skip:
 // emit function to initialize architecture.
 static void
 cg_generate_arch_init(std::ostream &o, std::string const &arch_name,
-		std::string const &full_name, uint64_t const *tags)
+		std::string const &full_name, uint64_t const *tags, size_t regs_count,
+		size_t flags_count)
 {
 	o << "static void" << std::endl;
-	o << "arch_" << arch_name << "_init(arch_info_t *info, arch_regfile_t *rf)" << std::endl;
+	o << "arch_" << arch_name << "_init(cpu_t *, cpu_archinfo_t *info, "
+	 "cpu_archrf_t *rf)" << std::endl;
 	o << '{' << std::endl;
 	
 	o << '\t' << "reg_" << arch_name << "_t *register_file = NULL;" << std::endl;
@@ -501,8 +512,12 @@ cg_generate_arch_init(std::ostream &o, std::string const &arch_name,
 		o << '\t' << "info->float_size = " << tags[ast::architecture::FLOAT_SIZE] << ';' << std::endl;
 	// psr size
 	if (tags[ast::architecture::PSR_SIZE] != 0) {
-		o << '\t' << "info->flags_size = " << tags[ast::architecture::PSR_SIZE] << ';' << std::endl;
+		o << '\t' << "info->psr_size = " << tags[ast::architecture::PSR_SIZE] << ';' << std::endl;
 	}
+	o << '\t' << "info->register_layout = arch_" << arch_name << "_register_layout;" << std::endl;
+	o << '\t' << "info->register_count2 = " << regs_count << ';' << std::endl;
+	o << '\t' << "info->flags_layout = arch_" << arch_name << "_flags_layout;" << std::endl;
+	o << '\t' << "info->flags_count = " << flags_count << ';' << std::endl;
 
 	o << std::endl;
 	o << '\t' << "// Register file initialization" << std::endl;
@@ -510,8 +525,6 @@ cg_generate_arch_init(std::ostream &o, std::string const &arch_name,
 	 << std::endl;
 	o << '\t' << "assert(register_file != NULL);" << std::endl;
 	o << '\t' << "rf->storage = register_file;" << std::endl;
-	o << '\t' << "rf->layout = arch_" << arch_name << "_register_layout;" << std::endl;
-	o << '\t' << "rf->flags_layout = arch_" << arch_name << "_flags_layout;" << std::endl;
 	o << '}' << std::endl;
 }
 
@@ -520,9 +533,9 @@ static void
 cg_generate_arch_done(std::ostream &o, std::string const &arch_name)
 {
 	o << "static void" << std::endl;
-	o << "arch_" << arch_name << "_done(void *feptr, arch_regfile_t *rf)" << std::endl;
+	o << "arch_" << arch_name << "_done(cpu_t *cpu)" << std::endl;
 	o << '{' << std::endl;
-	o << '\t' << "free(rf->storage);" << std::endl;
+	o << '\t' << "free(cpu->rf.storage);" << std::endl;
 	o << '}' << std::endl;
 }
 
@@ -610,21 +623,27 @@ upcl::cg::generate_arch_h(std::ostream &o, std::string const &fname,
 	o << std::endl;
 
 	cg_write_include(o, arch_name + "_opc.h");
-	cg_write_include(o, arch_name + "_types.h");
+	cg_write_include(o, arch_name + "_regfile.h");
+	cg_write_include(o, arch_name + "_decoder.h");
 
 	o << std::endl;
 
 	o << "int arch_" << arch_name << "_tag_instr(cpu_t *cpu, addr_t pc, "
 	  << "tag_t *tag, addr_t *new_pc, addr_t *next_pc);" << std::endl;
-	o << "Value *" << std::endl
-	  << "arch_" << arch_name << "_translate_cond(cpu_t *cpu, addr_t pc, "
-	  << "BasicBlock *bb);" << std::endl;
-	
+	o << "int arch_" << arch_name << "_tag_instr(cpu_t *cpu, addr_t pc, "
+	  << "tag_t *tag, addr_t *new_pc, addr_t *next_pc);" << std::endl;
+	o << "llvm::Value *arch_" << arch_name << "_translate_cond(cpu_t *cpu, "
+	  << "addr_t pc, llvm::BasicBlock *bb);" << std::endl;
+	o << "int arch_" << arch_name << "_disasm_instr(cpu_t *cpu, "
+	  << "addr_t pc, char *line, unsigned int max_line);" << std::endl;
+	o << "int arch_" << arch_name << "_translate_instr(cpu_t *cpu, "
+	  << "addr_t pc, llvm::BasicBlock *bb);" << std::endl;
+
 	cg_write_guard_end(o, fname);
 }
 
 void
-upcl::cg::generate_types_h(std::ostream &o, std::string const &fname,
+upcl::cg::generate_regfile_h(std::ostream &o, std::string const &fname,
 		std::string const &arch_name, c::register_def_vector const &regs)
 {
 	cg_write_banner(o, fname, false, "the register file");
@@ -665,7 +684,8 @@ upcl::cg::generate_arch_cpp(std::ostream &o, std::string const &fname,
 	}
 
 	o << "// Architecture Initalization" << std::endl;
-	cg_generate_arch_init(o, arch_name, arch_full_name, arch_tags);
+	cg_generate_arch_init(o, arch_name, arch_full_name, arch_tags, regs.size(),
+			(psr != 0) ? psr->get_sub_register_vector().size() : 0);
 	o << std::endl;
 	o << "// Architecture Finalization" << std::endl;
 	cg_generate_arch_done(o, arch_name);
@@ -781,12 +801,14 @@ upcl::cg::generate_tcond_cpp(std::ostream &o, std::string const &fname,
 
 	// includes
 	cg_write_include(o, arch_name + "_arch.h");
+	cg_write_include(o, "libcpu/libcpu_llvm.h");
+	cg_write_include(o, "llvm/Instructions.h");
 
 	o << std::endl;
 
-	o << "Value *" << std::endl
+	o << "llvm::Value *" << std::endl
 	  << "arch_" << arch_name << "_translate_cond(cpu_t *cpu, addr_t pc, "
-	  << "BasicBlock *bb)" << std::endl;
+	  << "llvm::BasicBlock *bb)" << std::endl;
 	o << '{' << std::endl;
 	o << '\t' << "arch_" << arch_name << "_insn_t insn;" << std::endl;
 	o << std::endl;

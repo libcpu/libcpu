@@ -1,7 +1,5 @@
 #include "llvm/Instructions.h"
 
-#define OPT_LOCAL_REGISTERS //XXX
-
 #include "libcpu.h"
 #include "libcpu_llvm.h"
 #include "frontend.h"
@@ -444,7 +442,7 @@ arch_m88k_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 	switch (insn.opcode()) {
 		case M88K_OPC_BCND:
 		case M88K_OPC_BCND_N:
-			return arch_m88k_bcnd_cond(cpu, R32(insn.rs1()), (m88k_bcnd_t)bit, bb);
+			return arch_m88k_bcnd_cond(cpu, R32(insn.rs1()), (m88k_bcnd_t)(bit & 0xf), bb);
 		case M88K_OPC_BB0:
 		case M88K_OPC_BB0_N:
 			return ICMP_EQ(AND(R32(insn.rs1()), CONST32(1 << bit)), CONST(0));
@@ -739,8 +737,8 @@ arch_m88k_xmem(cpu_t *cpu, bool byte, m88k_reg_t rd, Value *src1, Value *src2, B
 int
 arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
-#define BAD do { printf("%s:%d\n", __func__, __LINE__); exit(1); } while(0)
-#define LOGX LOG("%s:%d\n", __func__, __LINE__);
+#define BAD do { printf("%s:%u: BAD INSTRUCTION AT PC %llx\n", __func__, __LINE__, pc); exit(1); } while(0)
+#define LOGX LOG("%s:%d PC=%llx\n", __func__, __LINE__, pc);
 	m88k_insn instr = INSTR(pc);
 	m88k_opcode_t opc = instr.opcode();
 	m88k_insnfmt_t fmt = instr.format();

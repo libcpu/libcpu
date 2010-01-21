@@ -19,7 +19,9 @@ using namespace upcl::c;
 using namespace upcl::cg;
 
 enum {
-	F_SIGNED = 1
+	F_SIGNED = 1,
+	F_FLOAT = 2,
+	F_FORD = 4 // float: ordered compare
 };
 
 static void
@@ -81,7 +83,10 @@ dump_binary(std::ostream &o, binary_expression const *e,
 			o << "SHL";
 			break;
 		case binary_expression::SHR:
-			o << "SHR";
+			if (flags & F_SIGNED)
+				o << "ASHR";
+			else
+				o << "LSHR";
 			break;
 		case binary_expression::ROL:
 			o << "ROL";
@@ -90,31 +95,63 @@ dump_binary(std::ostream &o, binary_expression const *e,
 			o << "ROR";
 			break;
 		case binary_expression::EQ:
-			o << "ICMP_EQ";
+			if (flags & F_FLOAT) {
+				if (flags & F_FORD)
+					o << "FPCMP_OEQ";
+				else
+					o << "FPCMP_UEQ";
+			} else
+				o << "ICMP_EQ";
 			break;
 		case binary_expression::NE:
-			o << "ICMP_NE";
+			if (flags & F_FLOAT) {
+				if (flags & F_FORD)
+					o << "FPCMP_ONE";
+				else
+					o << "FPCMP_UNE";
+			} else
+				o << "ICMP_NE";
 			break;
 		case binary_expression::LE:
-			if (flags & F_SIGNED)
+			if (flags & F_FLOAT) {
+				if (flags & F_FORD)
+					o << "FPCMP_OLE";
+				else
+					o << "FPCMP_ULE";
+			} else if (flags & F_SIGNED)
 				o << "ICMP_SLE";
 			else
 				o << "ICMP_ULE";
 			break;
 		case binary_expression::LT:
-			if (flags & F_SIGNED)
+			if (flags & F_FLOAT) {
+				if (flags & F_FORD)
+					o << "FPCMP_OLT";
+				else
+					o << "FPCMP_ULT";
+			} else if (flags & F_SIGNED)
 				o << "ICMP_SLT";
 			else
 				o << "ICMP_ULT";
 			break;
 		case binary_expression::GE:
-			if (flags & F_SIGNED)
+			if (flags & F_FLOAT) {
+				if (flags & F_FORD)
+					o << "FPCMP_OGE";
+				else
+					o << "FPCMP_UGE";
+			} else if (flags & F_SIGNED)
 				o << "ICMP_SGE";
 			else
 				o << "ICMP_UGE";
 			break;
 		case binary_expression::GT:
-			if (flags & F_SIGNED)
+			if (flags & F_FLOAT) {
+				if (flags & F_FORD)
+					o << "FPCMP_OGT";
+				else
+					o << "FPCMP_UGT";
+			} else if (flags & F_SIGNED)
 				o << "ICMP_SGT";
 			else
 				o << "ICMP_UGT";
@@ -189,41 +226,11 @@ dump_bit_combine(std::ostream &o, bit_combine_expression const *e)
 			shift += se->get_type()->get_bits();
 		}
 	}
+
+	sub = sub->simplify();
+
 	generate_libcpu_expression(o, sub, 0);
 }
-
-#if 0
-static void
-dump_type(type const *ty)
-{
-	printf("#");
-	switch (ty->get_type_id()) {
-		case type::INTEGER:
-			printf("i");
-			break;
-		case type::FLOAT:
-			printf("f");
-			break;
-		case type::VECTOR:
-			printf("v");
-			break;
-		default:
-			assert(0 && "Shouldn't happen.");
-			break;
-	}
-	printf("%zu", ty->get_bits());
-}
-
-static void
-dump_cast(cast_expression const *e)
-{
-	printf("[ ");
-	dump_type(e->get_type());
-	printf(" ");
-	dump_expression(e->sub_expr(0));
-	printf(" ]");
-}
-#endif
 
 static void
 dump_sub_register(std::ostream &o, register_expression const *super,

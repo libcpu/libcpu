@@ -182,25 +182,25 @@ emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 	cpu->ptr_PC->setName("pc");
 
 	// flags
-	if (cpu->info.flags_size) {
+	if (cpu->info.psr_size != 0) {
 		// declare flags
-		flags_layout_t *flags_layout = cpu->info.flags_layout;
-		int i;
-		for (i = 0; flags_layout[i].shift >= 0; i++) {
-			Value *f = new AllocaInst(getIntegerType(1), flags_layout[i].name, bb);
+		cpu_flags_layout_t const *flags_layout = cpu->info.flags_layout;
+		for (size_t i = 0; i < cpu->info.flags_count; i++) {
+			Value *f = new AllocaInst(getIntegerType(1), flags_layout[i].name,
+					bb);
 			cpu->ptr_FLAG[flags_layout[i].shift] = f;
 			/* set pointers to standard NVZC flags */
 			switch (flags_layout[i].type) {
-				case 'N':
+				case CPU_FLAGTYPE_NEGATIVE:
 					cpu->ptr_N = f;
 					break;
-				case 'V':
+				case CPU_FLAGTYPE_OVERFLOW:
 					cpu->ptr_V = f;
 					break;
-				case 'Z':
+				case CPU_FLAGTYPE_ZERO:
 					cpu->ptr_Z = f;
 					break;
-				case 'C':
+				case CPU_FLAGTYPE_CARRY:
 					cpu->ptr_C = f;
 					break;
 			}
@@ -258,7 +258,7 @@ spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 		cpu->f.spill_reg_state(cpu, bb);
 
 	// flags
-	if (cpu->info.flags_size) {
+	if (cpu->info.psr_size != 0) {
 		Value *flags = arch_flags_encode(cpu, bb);
 		new StoreInst(flags, cpu->ptr_xr[0], false, bb);
 	}
