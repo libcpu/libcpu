@@ -363,9 +363,6 @@ namespace {
 				}
 				break;
 
-			case expression::SIGNED:
-				return is_negative(UNEX(expr)->sub_expr(0), true);
-
 			case expression::UNARY:
 				return (UNEX(expr)->get_operation() == unary_expression::NEG);
 
@@ -546,6 +543,7 @@ namespace {
 expression *
 binary_expression::simplify(bool sign) const
 {
+	sign |= is_signed();
 	switch (get_type()->get_type_id()) {
 		case type::INTEGER:
 			return simplify_binary_expression<uint64_t>(this, sign);

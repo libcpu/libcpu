@@ -37,7 +37,12 @@ private:
 	c::expression *convert_qualified_identifier(ast::qualified_identifier const *ident);
 	c::expression *convert_call(ast::call_expression const *expr);
 	c::expression *convert_bit_combine(ast::bit_combine_expression const *expr);
-
+public:
+	c::expression *convert_memory(ast::memory_expression const *expr,
+			c::type *hint_type = 0);
+private:
+	c::expression *convert_of_trap(ast::OFTRAP_expression const *expr);
+	c::expression *convert_cc(ast::CC_expression const *expr);
 };
 
 } }

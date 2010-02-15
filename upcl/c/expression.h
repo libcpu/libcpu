@@ -25,26 +25,44 @@ public:
 		REGISTER,		// Register
 		LOCAL,			// Local Variable
 		DECOPR,			// Decoder Operand
+		MEMREF,			// Memory Reference
 
 		UNARY,			// Unary Expression
 		BINARY,			// Binary Expression
-		ASSIGN,			// Assignment Expression
 
 		CAST,			// Cast Expression
 		BITCAST,		// BitCast Expression
 		BIT_COMBINE,	// Bit Combine Expression
-		BIT_SLICE,		// Bit Slice Expression
-
-		SIGNED			// Signed Expression
+		BIT_SLICE		// Bit Slice Expression
 	};
 
-	operation m_expr_op;
+	enum flags {
+		SIGNED = 1,
+		FLOAT_ORDERED = 2
+	};
+	operation   m_expr_op;
+	unsigned    m_flags;
+	expression *m_trap; // trap code if OF_TRAP
+	unsigned    m_ccf;  // cc flags to be updated
 
 protected:
 	expression(operation const &op);
 
 public:
 	virtual ~expression();
+
+public:
+	virtual void update_cc(unsigned ccflags);
+	virtual unsigned get_update_cc() const;
+
+	virtual void overflow_trap(expression *trap_code);
+	virtual expression *get_overflow_trap_code() const;
+
+	virtual bool make_signed();
+	virtual bool is_signed() const;
+
+	virtual bool make_float_ordered();
+	virtual bool is_float_ordered() const;
 
 public:
 	static expression *fromFloat(double d, unsigned bits);
@@ -98,13 +116,17 @@ public:
 	static expression *Gt(expression *a, expression *b);
 
 public:
-	static expression *Assign(expression *lhs, expression *rhs, type *ty = 0);
 	static expression *Cast(type *ty, expression *expr);
-	static expression *Signed(expression *expr);
 	static expression *BitSlice(expression *expr, expression *first_bit,
 		expression *bit_count);
 	static expression *BitCombine(expression *expr, ...);
 	static expression *BitCombine(expression_vector const &exprs);
+	static expression *MemoryReference(type *type, expression *location);
+
+public:
+	static expression *Signed(expression *expr);
+	static expression *UpdateCC(expression *expr, unsigned ccflags);
+	static expression *OverflowTrap(expression *expr, expression *trap_code);
 
 public:
 	virtual bool is_constant() const = 0;

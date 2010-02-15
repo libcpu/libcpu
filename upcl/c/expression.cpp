@@ -8,23 +8,72 @@
 #include "c/float_expression.h"
 #include "c/decoder_operand_expression.h"
 #include "c/register_expression.h"
-#include "c/assign_expression.h"
 #include "c/bit_slice_expression.h"
 #include "c/bit_combine_expression.h"
 #include "c/cast_expression.h"
-#include "c/signed_expression.h"
+#include "c/memory_ref_expression.h"
 #include "c/type.h"
 
 using namespace upcl;
 using namespace upcl::c;
 
 expression::expression(operation const &op)
-	: m_expr_op(op)
+	: m_expr_op(op), m_flags(0), m_trap(0), m_ccf(0)
 {
 }
 
 expression::~expression()
 {
+}
+
+void
+expression::update_cc(unsigned ccflags)
+{
+	m_ccf = ccflags;
+}
+
+unsigned
+expression::get_update_cc() const
+{
+	return m_ccf;
+}
+
+void
+expression::overflow_trap(expression *trap_code)
+{
+	m_trap = trap_code;
+}
+
+expression *
+expression::get_overflow_trap_code() const
+{
+	return m_trap;
+}
+
+bool
+expression::make_signed()
+{
+	m_flags |= SIGNED;
+	return true;
+}
+
+bool
+expression::is_signed() const
+{
+	return (m_flags & SIGNED) != 0;
+}
+
+bool
+expression::make_float_ordered()
+{
+	m_flags |= FLOAT_ORDERED;
+	return true;
+}
+
+bool
+expression::is_float_ordered() const
+{
+	return (m_flags & FLOAT_ORDERED) != 0;
 }
 
 expression *
@@ -224,12 +273,6 @@ expression::Gt(expression *a, expression *b)
 }
 
 expression *
-expression::Assign(expression *lhs, expression *rhs, type *ty)
-{
-	return new assign_expression(lhs, rhs, ty);
-}
-
-expression *
 expression::BitSlice(expression *expr, expression *first_bit,
 		expression *bit_count)
 {
@@ -264,7 +307,28 @@ expression::Cast(type *ty, expression *expr)
 expression *
 expression::Signed(expression *expr)
 {
-	return new signed_expression(expr);
+	expr->make_signed();
+	return expr;
+}
+
+expression *
+expression::UpdateCC(expression *expr, unsigned ccflags)
+{
+	expr->update_cc(ccflags);
+	return expr;
+}
+
+expression *
+expression::OverflowTrap(expression *expr, expression *trap_code)
+{
+	expr->overflow_trap(trap_code);
+	return expr;
+}
+
+expression *
+expression::MemoryReference(type *type, expression *location)
+{
+	return new memory_ref_expression(type, location);
 }
 
 expression *

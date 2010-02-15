@@ -51,7 +51,7 @@ convert_integer(std::string const &v, uint64_t &value)
 			if (len - 1 > 64)
 				fprintf(stderr, "warning: binary constant is too large.\n");
 
-			value = strtoull(cs + 1, NULL, 2);
+			value = strtoull(cs, NULL, 2);
 		} else if (tolower(*cs) == 'x') { // base 16
 			if (*++cs == '\0')
 				return false;
@@ -63,7 +63,7 @@ convert_integer(std::string const &v, uint64_t &value)
 			if (len - 1 > 16)
 				fprintf(stderr, "warning: hexadecimal constant is too large.\n");
 
-			value = strtoull(cs + 1, NULL, 16);
+			value = strtoull(cs, NULL, 16);
 		} else { // base 8
 			// skip leading zeroes
 			while (*cs == '0')

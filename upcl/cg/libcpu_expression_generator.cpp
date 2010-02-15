@@ -316,7 +316,7 @@ dump_integer(std::ostream &o, integer_expression const *e, unsigned flags)
 	if (nbits == 64)
 		o << "CONST(";
 	else if (nbits < 64)
-		o << "CONSTn(" << e->get_type()->get_bits() << ',';
+		o << "CONSTs(" << e->get_type()->get_bits() << ',';
 	else {
 		o << "ERROR:INTEGER_TOO_LARGE";
 		fprintf(stderr, "error: cannot write integers larger than 64bits, "
@@ -429,9 +429,9 @@ dump_cast(std::ostream &o, cast_expression const *e, unsigned flags)
 			shift = asize_in - size_in;
 
 			if (flags & F_SIGNED)
-				o << "SRA(";
+				o << "ASHR(";
 			else
-				o << "SRL(";
+				o << "LSHR(";
 		}
 
 		// extend or shift appropriately
@@ -448,7 +448,7 @@ dump_cast(std::ostream &o, cast_expression const *e, unsigned flags)
 
 		// if we will shift right, shift left now.
 		if (shift != 0)
-			o << "SLL(";
+			o << "SHL(";
 
 		// intermediate truncation
 		if (master_size != 0 && master_size > asize_in)

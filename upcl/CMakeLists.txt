@@ -42,9 +42,11 @@ add_executable(upcc
   c/bit_combine_expression.cpp
   c/register_expression.cpp
   c/decoder_operand_expression.cpp
-  c/signed_expression.cpp
-  c/assign_expression.cpp
+  c/memory_ref_expression.cpp
   c/expression_dumper.cpp
+  c/statement.cpp
+  c/store_statement.cpp
+  c/assign_statement.cpp
   cg/generate.cpp
   cg/libcpu_expression_generator.cpp
   ${FLEX_UpccLexer_OUTPUTS}

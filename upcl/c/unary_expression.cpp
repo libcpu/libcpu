@@ -206,6 +206,7 @@ namespace {
 expression *
 unary_expression::simplify(bool sign) const
 {
+	sign |= is_signed();
 	switch (get_type()->get_type_id()) {
 		case type::INTEGER:
 			return simplify_unary_expression<uint64_t>(this, sign);

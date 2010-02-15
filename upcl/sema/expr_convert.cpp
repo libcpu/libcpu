@@ -30,6 +30,12 @@ expr_convert::convert(ast::expression const *expr)
 			return CCONST(0);//convert_call((ast::call_expression const *)expr);
 		case ast::expression::BIT_COMBINE:
 			return convert_bit_combine((ast::bit_combine_expression const *)expr);
+		case ast::expression::OFTRAP:
+			return convert_of_trap((ast::OFTRAP_expression const *)expr);
+		case ast::expression::CC:
+			return convert_cc((ast::CC_expression const *)expr);
+		case ast::expression::MEMORY:
+			return convert_memory((ast::memory_expression const *)expr);
 		default:
 			assert(0 && "IMPLEMENT ME!");
 			return 0;
@@ -287,4 +293,45 @@ expr_convert::convert_bit_combine(ast::bit_combine_expression const *expr)
 	}
 
 	return c::expression::BitCombine(exprs);
+}
+
+c::expression *
+expr_convert::convert_memory(ast::memory_expression const *expr,
+		c::type *hint_type)
+{
+  c::type       *type;
+  c::expression *location = convert(expr->get_expression());
+
+  if (expr->get_type() == 0)
+	  type = hint_type;
+  else
+	  type = convert_type(expr->get_type());
+
+  if (type == 0 || location == 0)
+    return 0;
+
+  return c::expression::MemoryReference(type, location);
+}
+
+c::expression *
+expr_convert::convert_of_trap(ast::OFTRAP_expression const *expr)
+{
+	c::expression *cexpr = convert(expr->get_expression());
+	c::expression *trap_code = convert(expr->get_trap());
+	if (cexpr == 0 || trap_code == 0)
+		return 0;
+
+	cexpr->overflow_trap(trap_code);
+	return cexpr;
+}
+
+c::expression *
+expr_convert::convert_cc(ast::CC_expression const *expr)
+{
+	c::expression *cexpr = convert(expr->get_expression());
+	if (cexpr == 0)
+		return 0;
+
+	cexpr->update_cc(-1U);//XXX convert flags
+	return cexpr;
 }

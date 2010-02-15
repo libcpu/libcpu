@@ -23,7 +23,7 @@ cast_expression::simplify(bool sign) const
 	expression *expr = m_expr->simplify();
 
 	if (!expr->is_equal(m_expr))
-		expr = (new cast_expression(m_type, expr))->simplify(sign);
+		expr = (new cast_expression(m_type, expr))->simplify(sign || is_signed());
 
 #if 0
 	// If non-signed, and casting a signed expression, make it unsigned!

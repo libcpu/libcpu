@@ -1,5 +1,6 @@
 #include "c/sema_analyzer.h"
 #include "c/expression_dumper.h"
+#include "c/store_statement.h"
 #include "sema/simple_expr_evaluator.h"
 #include "sema/convert.h"
 #include "ast/dumper.h"
@@ -1169,8 +1170,13 @@ sema_analyzer::process_instruction(ast::instruction const *insn)
 	}
 
 	c::instruction *cinsn = new c::instruction(insn->get_name()->get_value());
+	if (!process_instruction_body(cinsn, insn->get_body())) {
+		delete cinsn;
+		return false;
+	}
 
 	m_insns[cinsn->get_name()] = cinsn;
+
 
 	return true;
 }
@@ -1219,6 +1225,8 @@ sema_analyzer::process_jump_instruction(ast::jump_instruction const *jinsn)
 		return false;
 	}
 
+	// XXX conditions should be expanded in their own functions
+	// if too complex to evaluate inline.
 	c::expression *cond = 0;
 	if (jcond != 0) {
 		switch (type) {
@@ -1255,16 +1263,215 @@ sema_analyzer::process_jump_instruction(ast::jump_instruction const *jinsn)
 	}
 
 	insn = new c::jump_instruction(type, name->get_value(), cond);
+	if (!process_instruction_body(insn, jinsn->get_body())) {
+		delete insn;
+		return false;
+	}
+
 	m_insns[insn->get_name()] = insn;
+
 
 	return true;
 }
 
 bool
+sema_analyzer::process_instruction_body(c::instruction *insn,
+		ast::token_list const *body)
+{
+	if (body == 0) {
+		fprintf(stderr, "error: instruction '%s' has no body.\n",
+				insn->get_name().c_str());
+		return false;
+	}
+
+	// we expect statements here.
+	size_t count = body->size();
+
+	for (size_t n = 0; n < count; n++) {
+		ast::statement const *stmt = (ast::statement const *)(*body)[n];
+		if (stmt->get_token_type() != ast::token::STATEMENT) {
+			fprintf(stderr, "error: instruction '%s' contains a non-statement in body.\n",
+					insn->get_name().c_str());
+			return false;
+		}
+
+		switch (stmt->get_statement_type()) {
+			case ast::statement::ASSIGNMENT:
+				if (!process_assignment(insn, (ast::assignment_statement const *)stmt))
+					return false;
+				break;
+			default:
+				break;
+		}
+	}
+
+	return true;
+}
+
+bool
+sema_analyzer::process_assignment(c::instruction *insn,
+		ast::assignment_statement const *stmt)
+{
+
+	// convert first RHS expression.
+	c::expression *rhs;
+
+	rhs = expr_convert(this).convert(stmt->get_value());
+	if (rhs == 0) {
+		fprintf(stderr, "error: cannot convert expression during assignment in "
+				"instruction '%s'.\n",
+				insn->get_name().c_str());
+		return false;
+	}
+
+	printf ("ASSIGNMENT RHS: ");
+	print_expression(rhs);
+
+	// 
+	// the LHS can be a variable, register, a bitslice or
+	// a bitcombine operation.
+	//
+	// A bit combine operator on LHS shall always be composed
+	// of only registers, variables, decoder operands, memory
+	// expressions and/or bit fields, it is also legit to have
+	// bitslice and nested bitcombine operators; no literal
+	// shall be present and no binary nor unary operation.
+	//
+	ast::expression const *operand = stmt->get_operand();
+
+	
+	c::statement_vector stmts; // 
+	switch (operand->get_expression_type()) {
+		case ast::expression::LITERAL:
+			{
+				ast::token const *literal = ((ast::literal_expression const *)operand)->get_literal();
+				if (literal->get_token_type() != ast::token::IDENTIFIER &&
+						literal->get_token_type() != ast::token::QUALIFIED_IDENTIFIER) {
+					fprintf(stderr, "error: only identifier literals can be assigned [type %d].\n",
+							literal->get_token_type());
+					return false;
+				}
+				if (literal->get_token_type() == ast::token::IDENTIFIER) {
+					ast::identifier const *ident = (ast::identifier const *)literal;
+					if (!process_single_assignment(stmts, ident, rhs))
+						return false;
+				} else {
+					ast::qualified_identifier const *qualified_ident = (ast::qualified_identifier const *)literal;
+					
+					if (!process_multiple_assignments(stmts, qualified_ident, rhs))
+						return false;
+				}
+				break;
+			}
+
+		case ast::expression::MEMORY:
+			{
+				ast::memory_expression const *mexpr = (ast::memory_expression const *)operand;
+				c::expression *lhs = expr_convert(this).convert_memory(mexpr, rhs->get_type());
+				if (lhs == 0) {
+					fprintf(stderr, "error: failed converting memory expression\n");
+					return false;
+				}
+
+				stmts.push_back(new c::store_statement(lhs, rhs));
+				break;
+			}
+
+		case ast::expression::UNARY:
+		case ast::expression::BINARY:
+		case ast::expression::CAST:
+		case ast::expression::CC:
+		case ast::expression::OFTRAP:
+		case ast::expression::FLOAT_ORDERING:
+		case ast::expression::SELECT:
+		case ast::expression::CALL:
+			fprintf(stderr, "error: an expression cannot be assigned.");
+			return false;
+
+		case ast::expression::BIT_COMBINE:
+			fprintf(stderr, "warning: bit combine assignment nyi.\n");
+			return true;
+
+		case ast::expression::BIT_SLICE:
+			fprintf(stderr, "warning: bit slice assignment nyi.\n");
+			return true;
+
+		default:
+			assert(0 && "Expression type not handled");
+			break;
+	}
+
+
+	return true;
+}
+
+bool
+sema_analyzer::process_single_assignment(c::statement_vector &stmts,
+		ast::identifier const *ident, c::expression *rhs)
+{
+	c::expression *lhs = lookup_target(ident);
+	if (lhs == 0) {
+		fprintf(stderr, "error: '%s' is an unknown identifier.\n",
+				ident->get_value().c_str());
+		return false;
+	}
+
+	stmts.push_back(new c::store_statement (lhs, rhs));
+	return true;
+}
+
+bool
+sema_analyzer::process_multiple_assignments(c::statement_vector &stmts,
+		ast::qualified_identifier const *qi, c::expression *rhs)
+{
+	ast::token_list const *fields;
+	ast::identifier const *base = qi->get_base_identifier();
+
+	fields = qi->get_identifier_list();
+	if (fields == 0 || fields->size() == 0) {
+		// simple identifier.
+		return process_single_assignment(stmts, base, rhs);
+	}
+
+	size_t count = fields->size();
+	for (size_t n = 0; n < count; n++) {
+		ast::identifier const *ident = (ast::identifier const *)(*fields)[n];
+
+		c::expression *lhs = lookup_target(base, ident);
+		if (lhs == 0) {
+			fprintf(stderr, "error: '%s' is an unknown identifier.\n",
+					ident->get_value().c_str());
+			return false;
+		}
+
+		stmts.push_back(new c::store_statement (lhs, rhs));
+	}
+
+	return true;
+}
+		
+bool
 sema_analyzer::process_macro(ast::macro const *m)
 {
 	printf("MACRO %s\n", m->get_name()->get_value().c_str());
 	return true;
+}
+
+//
+// Create target for store.
+//
+c::expression *
+sema_analyzer::lookup_target(ast::identifier const *identifier) const
+{
+	return expr_convert_lookup_identifier(identifier->get_value());
+}
+
+c::expression *
+sema_analyzer::lookup_target(ast::identifier const *identifier,
+		ast::identifier const *sub_identifier) const
+{
+	return expr_convert_lookup_identifier(identifier->get_value(),
+			sub_identifier->get_value());
 }
 
 //

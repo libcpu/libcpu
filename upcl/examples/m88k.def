@@ -46,7 +46,7 @@ arch "m88k" {
 
 }
 
-decoder_operands [ #i32 dst, #i32 dst2, #i32 src1, #i32 src2, const #i32 wmask,
+decoder_operands [ #i32 dst, #i32 dst2, #f80 xdst, #i32 src1, #i32 src2, const #i32 wmask,
 				 const #i9 vec9 ];
 
 // Perform addition/subtraction with over/underflow check, trap 1 on overflow.
@@ -74,8 +74,8 @@ insn muls     : dst = %S ( src1 * src2 );
 insn mulu     : dst = %U ( src1 * src2 );
 
 // Divisions never fault on div by zero.
-insn divs     : dst = ( src2 == 0 ) ? 0 : %S ( src1 / src2 );
-insn divu     : dst = ( src2 == 0 ) ? 0 : %U ( src1 / src2 );
+//insn divs     : dst = ( src2 == 0 ) ? 0 : %S ( src1 / src2 );
+//insn divu     : dst = ( src2 == 0 ) ? 0 : %U ( src1 / src2 );
 
 insn mask     : dst = src1 & ( 0xffff0000 | src2 );
 insn mask_u   : dst = src1 & ( ( src2 << 16 ) | 0xffff );
@@ -122,22 +122,36 @@ insn st_b     : #i8 %M[ src1 + src2 ] = dst;
 insn st_d     : #i64 %M[ src1 + src2 ] = ( dst : dst2 );
 insn st_x     : #f80 %M[ src1 + src2 ] = xdst;
 
-insn xmem {
-	t = #i32 %M[ src1 + src2 ];
-	#i32 %M[ src1 + src2 ] = dst;
-	dst = t;
-}
+//insn xmem {
+//	t = #i32 %M[ src1 + src2 ];
+//	#i32 %M[ src1 + src2 ] = dst;
+//	dst = t;
+//}
+//
+//insn xmem_bu {
+//	t = #i8 %M[ src1 + src2 ];
+//	#i8 %M[ src1 + src2 ] = dst;
+//	dst = t;
+//}
 
-insn xmem_bu {
-	t = #i8 %M[ src1 + src2 ];
-	#i8 %M[ src1 + src2 ] = dst;
-	dst = t;
-}
+jump insn bb0 : type branch
+				condition (src1 & src2) == 0
+				{ sxip = sxip; }
+jump insn bb0_n : type branch
+				  condition (src1 & src2) == 0
+				  { sxip = sxip; }
 
-jump insn jmp : type call { pc = src1; }
-jump insn jmp_n : type call delay 1 { pc = src1; }
-jump insn jsr : type call { r1 = snip; pc = src1; }
-jump insn jsr_n : type call delay 1 { r1 = snip; pc = src1; }
+jump insn bb1 : type branch
+				condition (src1 & src2) != 0
+				{ sxip = sxip; }
+jump insn bb1_n : type branch
+				  condition (src1 & src2) != 0
+				  { sxip = sxip; }
+
+jump insn jmp : type call { sxip = src1; }
+jump insn jmp_n : type call delay 1 { sxip = src1; }
+jump insn jsr : type call { r1 = snip; sxip = src1; }
+jump insn jsr_n : type call delay 1 { r1 = snip; sxip = src1; }
 
 jump insn tb1 : type trap
 				condition (src1 & src2) != 0

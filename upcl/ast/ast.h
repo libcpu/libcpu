@@ -874,7 +874,7 @@ public:
 
 	inline instruction_type get_instruction_type() const { return m_instruction_type; }
 	inline identifier const *get_name() const { return m_name; }
-	inline token_list const *get_body() const { return m_body; }
+	virtual token_list const *get_body() const { return m_body; }
 };
 
 class jump : public token {
@@ -923,6 +923,7 @@ public:
 
 public:
 	inline jump const *get_info() const { return m_jump; }
+  virtual token_list const *get_body() const { return m_jump->get_action(); }
 };
 
 class macro : public instruction {

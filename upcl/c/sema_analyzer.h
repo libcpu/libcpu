@@ -5,6 +5,7 @@
 #include "c/type.h"
 #include "c/expression.h"
 #include "c/instruction.h"
+#include "c/statement.h"
 #include "c/decoder_operand_def.h"
 #include "sema/register_dep_tracker.h"
 #include "sema/register_file_builder.h"
@@ -65,8 +66,25 @@ private:
 	bool process_macro(ast::macro const *);
 
 private:
+	bool process_instruction_body(c::instruction *insn,
+			ast::token_list const *body);
+	bool process_assignment(c::instruction *insn,
+		ast::assignment_statement const *stmt);
+
+private:
 	static inline std::string destringify(std::string const &s)
 	{ return s.substr(1, s.length()-2); }
+
+private:
+	bool process_single_assignment(statement_vector &stmts,
+			ast::identifier const *ident, expression *rhs);
+	bool process_multiple_assignments(statement_vector &stmts,
+			ast::qualified_identifier const *qi, expression *rhs);
+
+private:
+	expression *lookup_target(ast::identifier const *identifier) const;
+	expression *lookup_target(ast::identifier const *identifier,
+			ast::identifier const *sub_identifier) const;
 
 protected:
 	expression *expr_convert_lookup_identifier(std::string const &name) const;

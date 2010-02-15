@@ -11,6 +11,7 @@
 #include "c/register_expression.h"
 #include "c/decoder_operand_expression.h"
 #include "c/cast_expression.h"
+#include "c/memory_ref_expression.h"
 
 using namespace upcl;
 using namespace upcl::c;
@@ -159,9 +160,30 @@ dump_cast(cast_expression const *e)
 	printf(" ]");
 }
 
+static void
+dump_memory_ref(memory_ref_expression const *e)
+{
+	dump_type(e->get_type());
+	printf(" %%M");
+	printf("[ ");
+	dump_expression(e->sub_expr(0));
+	printf(" ]");
+}
+
 void
 upcl::c::dump_expression(expression const *e)
 {
+	if (e->is_float_ordered())
+		printf("%%ORD ( ");
+	else {
+		if (e->is_signed())
+			printf("%%S ( ");
+		if (e->get_overflow_trap_code() != 0)
+			printf("%%OFTRAP ( ");
+		if (e->get_update_cc() != 0)
+			printf("%%CC ( ");
+	}
+
 	switch (e->get_expression_operation()) {
 		case expression::UNARY:
 			dump_unary((unary_expression const *)e);
@@ -194,14 +216,26 @@ upcl::c::dump_expression(expression const *e)
 		case expression::BIT_COMBINE:
 			dump_bit_combine((bit_combine_expression const *)e);
 			break;
-		case expression::SIGNED:
-			printf("%%S ( ");
-			dump_expression(e->sub_expr(0));
-			printf(" )");
+		case expression::MEMREF:
+			dump_memory_ref((memory_ref_expression const *)e);
 			break;
 		default:
 			assert(0 && "Not implemented yet.");
 			break;
+	}
+
+	if (e->is_float_ordered())
+		printf(" )");
+	else {
+		if (e->get_update_cc() != 0)
+			printf(" )");
+		if (e->get_overflow_trap_code() != 0) {
+			printf(", ");
+			dump_expression(e->get_overflow_trap_code());
+			printf(" )");
+		}
+		if (e->is_signed())
+			printf(" )");
 	}
 }
 
