@@ -12,6 +12,7 @@
 #include "c/decoder_operand_expression.h"
 #include "c/cast_expression.h"
 #include "c/memory_ref_expression.h"
+#include "c/temp_value_expression.h"
 
 using namespace upcl;
 using namespace upcl::c;
@@ -197,6 +198,10 @@ upcl::c::dump_expression(expression const *e)
 			break;
 		case expression::DECOPR:
 			printf("%s", ((decoder_operand_expression const *)e)->get_operand()->get_name().c_str());
+			dump_type(e->get_type());
+			break;
+		case expression::TMPVAL:
+			printf("%s", ((temp_value_expression const *)e)->get_operand()->get_name().c_str());
 			dump_type(e->get_type());
 			break;
 		case expression::INTEGER:

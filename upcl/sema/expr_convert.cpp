@@ -28,6 +28,8 @@ expr_convert::convert(ast::expression const *expr)
 			return convert_binary((ast::binary_expression const *)expr);
 		case ast::expression::CALL: // XXX
 			return CCONST(0);//convert_call((ast::call_expression const *)expr);
+		case ast::expression::BIT_SLICE:// XXX
+			return CCONST(0);
 		case ast::expression::BIT_COMBINE:
 			return convert_bit_combine((ast::bit_combine_expression const *)expr);
 		case ast::expression::OFTRAP:
@@ -306,6 +308,9 @@ expr_convert::convert_memory(ast::memory_expression const *expr,
 	  type = hint_type;
   else
 	  type = convert_type(expr->get_type());
+
+  if (type == 0)
+	  type = m_lookup->expr_convert_get_default_word_type();
 
   if (type == 0 || location == 0)
     return 0;

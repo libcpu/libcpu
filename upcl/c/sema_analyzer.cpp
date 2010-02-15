@@ -1279,10 +1279,13 @@ sema_analyzer::process_instruction_body(c::instruction *insn,
 		ast::token_list const *body)
 {
 	if (body == 0) {
-		fprintf(stderr, "error: instruction '%s' has no body.\n",
+		fprintf(stderr, "warning: instruction '%s' has no body.\n",
 				insn->get_name().c_str());
-		return false;
+		return true;
 	}
+
+	// clear locals
+	m_locals.clear();
 
 	// we expect statements here.
 	size_t count = body->size();
@@ -1307,6 +1310,8 @@ sema_analyzer::process_instruction_body(c::instruction *insn,
 
 	return true;
 }
+
+
 
 bool
 sema_analyzer::process_assignment(c::instruction *insn,
@@ -1339,8 +1344,8 @@ sema_analyzer::process_assignment(c::instruction *insn,
 	//
 	ast::expression const *operand = stmt->get_operand();
 
-	
 	c::statement_vector stmts; // 
+
 	switch (operand->get_expression_type()) {
 		case ast::expression::LITERAL:
 			{
@@ -1353,12 +1358,12 @@ sema_analyzer::process_assignment(c::instruction *insn,
 				}
 				if (literal->get_token_type() == ast::token::IDENTIFIER) {
 					ast::identifier const *ident = (ast::identifier const *)literal;
-					if (!process_single_assignment(stmts, ident, rhs))
+					if (!process_single_assignment(stmt->get_assignment_type(), stmts, ident, rhs))
 						return false;
 				} else {
 					ast::qualified_identifier const *qualified_ident = (ast::qualified_identifier const *)literal;
 					
-					if (!process_multiple_assignments(stmts, qualified_ident, rhs))
+					if (!process_multiple_assignments(stmt->get_assignment_type(), stmts, qualified_ident, rhs))
 						return false;
 				}
 				break;
@@ -1405,24 +1410,84 @@ sema_analyzer::process_assignment(c::instruction *insn,
 	return true;
 }
 
-bool
-sema_analyzer::process_single_assignment(c::statement_vector &stmts,
-		ast::identifier const *ident, c::expression *rhs)
+c::statement *
+sema_analyzer::create_store(ast::assignment_statement::assignment_type const &type,
+		c::expression *target, c::expression *value)
 {
-	c::expression *lhs = lookup_target(ident);
+	switch (type) {
+		case ast::assignment_statement::EQ:
+			break;
+		case ast::assignment_statement::ADDE:
+			value = c::expression::Add(target, value);
+			break;
+		case ast::assignment_statement::SUBE:
+			value = c::expression::Sub(target, value);
+			break;
+		case ast::assignment_statement::MULE:
+			value = c::expression::Mul(target, value);
+			break;
+		case ast::assignment_statement::DIVE:
+			value = c::expression::Div(target, value);
+			break;
+		case ast::assignment_statement::REME:
+			value = c::expression::Rem(target, value);
+			break;
+		case ast::assignment_statement::SHLE:
+			value = c::expression::Shl(target, value);
+			break;
+		case ast::assignment_statement::SHRE:
+			value = c::expression::Shr(target, value);
+			break;
+		case ast::assignment_statement::ROLE:
+			value = c::expression::Rol(target, value);
+			break;
+		case ast::assignment_statement::RORE:
+			value = c::expression::Ror(target, value);
+			break;
+		case ast::assignment_statement::ANDE:
+			value = c::expression::And(target, value);
+			break;
+		case ast::assignment_statement::ANDCOME:
+			value = c::expression::And(target, c::expression::Com(value));
+			break;
+		case ast::assignment_statement::ORE:
+			value = c::expression::Or(target, value);
+			break;
+		case ast::assignment_statement::ORCOME:
+			value = c::expression::Or(target, c::expression::Com(value));
+			break;
+		case ast::assignment_statement::XORE:
+			value = c::expression::Xor(target, value);
+			break;
+		case ast::assignment_statement::XORCOME:
+			value = c::expression::Xor(target, c::expression::Com(value));
+			break;
+		default:
+			assert(0 && "Assignment type not handled.\n");
+			break;
+	}
+
+	return new c::store_statement(target, value->simplify());
+}
+
+bool
+sema_analyzer::process_single_assignment(ast::assignment_statement::assignment_type const &type,
+		c::statement_vector &stmts, ast::identifier const *ident, c::expression *rhs)
+{
+	c::expression *lhs = lookup_target(ident, rhs->get_type());
 	if (lhs == 0) {
 		fprintf(stderr, "error: '%s' is an unknown identifier.\n",
 				ident->get_value().c_str());
 		return false;
 	}
 
-	stmts.push_back(new c::store_statement (lhs, rhs));
+	stmts.push_back(create_store(type, lhs, rhs));
 	return true;
 }
 
 bool
-sema_analyzer::process_multiple_assignments(c::statement_vector &stmts,
-		ast::qualified_identifier const *qi, c::expression *rhs)
+sema_analyzer::process_multiple_assignments(ast::assignment_statement::assignment_type const &type,
+		c::statement_vector &stmts, ast::qualified_identifier const *qi, c::expression *rhs)
 {
 	ast::token_list const *fields;
 	ast::identifier const *base = qi->get_base_identifier();
@@ -1430,21 +1495,22 @@ sema_analyzer::process_multiple_assignments(c::statement_vector &stmts,
 	fields = qi->get_identifier_list();
 	if (fields == 0 || fields->size() == 0) {
 		// simple identifier.
-		return process_single_assignment(stmts, base, rhs);
+		return process_single_assignment(type, stmts, base, rhs);
 	}
 
 	size_t count = fields->size();
 	for (size_t n = 0; n < count; n++) {
 		ast::identifier const *ident = (ast::identifier const *)(*fields)[n];
 
-		c::expression *lhs = lookup_target(base, ident);
+		c::expression *lhs = lookup_target(base, ident, rhs->get_type());
 		if (lhs == 0) {
-			fprintf(stderr, "error: '%s' is an unknown identifier.\n",
+			fprintf(stderr, "error: '%s.%s' is an unknown identifier.\n",
+					base->get_value().c_str(),
 					ident->get_value().c_str());
 			return false;
 		}
 
-		stmts.push_back(new c::store_statement (lhs, rhs));
+		stmts.push_back(create_store(type, lhs, rhs));
 	}
 
 	return true;
@@ -1461,14 +1527,30 @@ sema_analyzer::process_macro(ast::macro const *m)
 // Create target for store.
 //
 c::expression *
-sema_analyzer::lookup_target(ast::identifier const *identifier) const
+sema_analyzer::lookup_target(ast::identifier const *identifier,
+		c::type *hint_type)
 {
-	return expr_convert_lookup_identifier(identifier->get_value());
+	c::expression *expr = expr_convert_lookup_identifier(identifier->get_value());
+	if (expr == 0) {
+		std::string name(identifier->get_value());
+		if (hint_type == 0)
+			return 0;
+
+		std::clog << '\t' << "creating local '" << name << "'" << std::endl;
+		c::temp_value_def *temp_value = new c::temp_value_def(name, hint_type);
+		if (temp_value == 0)
+			return 0;
+
+		m_locals[name] = temp_value;
+		expr = c::expression::fromTempValue(temp_value);
+	}
+
+	return expr;
 }
 
 c::expression *
 sema_analyzer::lookup_target(ast::identifier const *identifier,
-		ast::identifier const *sub_identifier) const
+		ast::identifier const *sub_identifier, c::type *hint_type)
 {
 	return expr_convert_lookup_identifier(identifier->get_value(),
 			sub_identifier->get_value());
@@ -1492,6 +1574,12 @@ sema_analyzer::expr_convert_lookup_identifier(std::string const &name) const
 	if (reg != 0)
 		return c::expression::fromRegister(reg);
 
+	// lookup the local variable...
+	std::clog << '\t' << "looking up local '" << name << "'" << std::endl;
+	c::temp_value_map::const_iterator i2 = m_locals.find(name);
+	if (i2 != m_locals.end())
+		return c::expression::fromTempValue(i2->second);
+
 	std::clog << '\t' << "cannot find identifier '" << name << "'" << std::endl;
 
 	return 0;
@@ -1509,4 +1597,10 @@ sema_analyzer::expr_convert_lookup_identifier(std::string const &base,
 	std::clog << '\t' << "cannot find identifier '" << name << "'" << std::endl;
 
 	return 0;
+}
+
+c::type *
+sema_analyzer::expr_convert_get_default_word_type() const
+{
+	return c::type::get_integer_type(m_arch_tags[ast::architecture::WORD_SIZE]);
 }

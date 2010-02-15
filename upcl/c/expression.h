@@ -13,6 +13,7 @@ typedef std::vector<expression *> expression_vector;
 
 class register_def;
 class decoder_operand_def;
+class temp_value_def;
 class type;
 
 class expression {
@@ -23,7 +24,7 @@ public:
 		STRING,			// String Data Type (used in assertions)
 
 		REGISTER,		// Register
-		LOCAL,			// Local Variable
+		TMPVAL,			// Temporary Value
 		DECOPR,			// Decoder Operand
 		MEMREF,			// Memory Reference
 
@@ -73,6 +74,7 @@ public:
 	static expression *fromInteger(char const *string, unsigned bits);
 	static expression *fromRegister(register_def *reg);
 	static expression *fromDecoderOperand(decoder_operand_def *reg);
+	static expression *fromTempValue(temp_value_def *decopr);
 
 public:
 	static expression *fromInteger(uint32_t x, unsigned bits)

@@ -7,6 +7,7 @@
 #include "c/integer_expression.h"
 #include "c/float_expression.h"
 #include "c/decoder_operand_expression.h"
+#include "c/temp_value_expression.h"
 #include "c/register_expression.h"
 #include "c/bit_slice_expression.h"
 #include "c/bit_combine_expression.h"
@@ -86,6 +87,12 @@ expression *
 expression::fromDecoderOperand(decoder_operand_def *decopr)
 {
 	return new decoder_operand_expression(decopr);
+}
+
+expression *
+expression::fromTempValue(temp_value_def *decopr)
+{
+	return new temp_value_expression(decopr);
 }
 
 expression *

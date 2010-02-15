@@ -122,17 +122,17 @@ insn st_b     : #i8 %M[ src1 + src2 ] = dst;
 insn st_d     : #i64 %M[ src1 + src2 ] = ( dst : dst2 );
 insn st_x     : #f80 %M[ src1 + src2 ] = xdst;
 
-//insn xmem {
-//	t = #i32 %M[ src1 + src2 ];
-//	#i32 %M[ src1 + src2 ] = dst;
-//	dst = t;
-//}
-//
-//insn xmem_bu {
-//	t = #i8 %M[ src1 + src2 ];
-//	#i8 %M[ src1 + src2 ] = dst;
-//	dst = t;
-//}
+insn xmem {
+	t = #i32 %M[ src1 + src2 ];
+	#i32 %M[ src1 + src2 ] = dst;
+	dst = t;
+}
+
+insn xmem_bu {
+	t = #i8 %M[ src1 + src2 ];
+	#i8 %M[ src1 + src2 ] = dst;
+	dst = t;
+}
 
 jump insn bb0 : type branch
 				condition (src1 & src2) == 0

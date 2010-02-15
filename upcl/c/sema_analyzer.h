@@ -7,6 +7,7 @@
 #include "c/instruction.h"
 #include "c/statement.h"
 #include "c/decoder_operand_def.h"
+#include "c/temp_value_def.h"
 #include "sema/register_dep_tracker.h"
 #include "sema/register_file_builder.h"
 #include "sema/register_info.h"
@@ -32,6 +33,8 @@ private:
 	named_instruction_map m_insns;
 
 	named_decoder_operand_map m_operands;
+
+	temp_value_map m_locals; // valid in current instruction
 
 public:
 	sema_analyzer();
@@ -76,21 +79,27 @@ private:
 	{ return s.substr(1, s.length()-2); }
 
 private:
-	bool process_single_assignment(statement_vector &stmts,
-			ast::identifier const *ident, expression *rhs);
-	bool process_multiple_assignments(statement_vector &stmts,
-			ast::qualified_identifier const *qi, expression *rhs);
+	bool process_single_assignment(ast::assignment_statement::assignment_type const &type,
+			c::statement_vector &stmts, ast::identifier const *ident, c::expression *rhs);
+	bool process_multiple_assignments(ast::assignment_statement::assignment_type const &type,
+			c::statement_vector &stmts, ast::qualified_identifier const *qi, expression *rhs);
 
 private:
-	expression *lookup_target(ast::identifier const *identifier) const;
+	c::statement *create_store(ast::assignment_statement::assignment_type const &type,
+		c::expression *target, c::expression *value);
+
+private:
 	expression *lookup_target(ast::identifier const *identifier,
-			ast::identifier const *sub_identifier) const;
+			c::type *hint_type = 0);
+	expression *lookup_target(ast::identifier const *identifier,
+			ast::identifier const *sub_identifier,
+			c::type *hint_type = 0);
 
 protected:
 	expression *expr_convert_lookup_identifier(std::string const &name) const;
 	expression *expr_convert_lookup_identifier(std::string const &base,
 			std::string const &name) const;
-
+	type *expr_convert_get_default_word_type() const;
 };
 
 } }

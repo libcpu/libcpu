@@ -12,7 +12,7 @@ struct expr_convert_lookup {
 	virtual c::expression *expr_convert_lookup_identifier(std::string const &name) const = 0;
 	virtual c::expression *expr_convert_lookup_identifier(std::string const &base,
 			std::string const &name) const = 0;
-
+	virtual c::type *expr_convert_get_default_word_type() const = 0;
 };
 
 class expr_convert { 

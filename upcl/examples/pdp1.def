@@ -60,7 +60,7 @@ insn ior : ac |= Y;
 
 jump insn jda : type branch {
 	t = Y;
-	Y = AC;
+	Y = ac;
 	@pdp1_jsp( t );
 }
 

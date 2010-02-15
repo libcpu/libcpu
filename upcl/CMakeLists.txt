@@ -34,6 +34,7 @@ add_executable(upcc
   c/register_def.cpp
   c/sub_register_def.cpp
   c/decoder_operand_def.cpp
+  c/temp_value_def.cpp
   c/expression.cpp
   c/cast_expression.cpp
   c/unary_expression.cpp
@@ -43,6 +44,7 @@ add_executable(upcc
   c/register_expression.cpp
   c/decoder_operand_expression.cpp
   c/memory_ref_expression.cpp
+  c/temp_value_expression.cpp
   c/expression_dumper.cpp
   c/statement.cpp
   c/store_statement.cpp
