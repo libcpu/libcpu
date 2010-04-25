@@ -8,6 +8,11 @@
 #include "x86_isa.h"
 #include "x86_decode.h"
 
+/*
+ * First byte of an element in 'decode_table' is the instruction type.
+ */
+#define X86_INSTR_TYPE_MASK	0xff
+
 static const uint32_t decode_table[256] = {
 	/*[0x0]*/	INSTR_ADD | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0x1]*/	INSTR_ADD | ADDMODE_REG_RM | WIDTH_FULL,
@@ -201,7 +206,7 @@ static const uint32_t decode_table[256] = {
 	/*[0xBD]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
 	/*[0xBE]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
 	/*[0xBF]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
-	/*[0xC0]*/	0,
+	/*[0xC0]*/	INSTR_SHIFT_GRP2 | ADDMODE_IMM_RM | WIDTH_BYTE,
 	/*[0xC1]*/	0,
 	/*[0xC2]*/	0,
 	/*[0xC3]*/	INSTR_RET | ADDMODE_IMPLIED,
@@ -265,6 +270,17 @@ static const uint32_t decode_table[256] = {
 	/*[0xFD]*/	INSTR_STD | ADDMODE_IMPLIED,
 	/*[0xFE]*/	0,
 	/*[0xFF]*/	0,
+};
+
+static const uint32_t shift_grp2_decode_table[8] = {
+	/*[0x00]*/	INSTR_ROL,
+	/*[0x01]*/	INSTR_ROR,
+	/*[0x02]*/	INSTR_RCL,
+	/*[0x03]*/	INSTR_RCR,
+	/*[0x04]*/	INSTR_SHL,
+	/*[0x05]*/	INSTR_SHR,
+	/*[0x06]*/	0,
+	/*[0x07]*/	INSTR_SAR,
 };
 
 static uint8_t
@@ -432,6 +448,7 @@ decode_modrm_byte(struct x86_instr *instr, uint8_t modrm)
 int
 arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 {
+	uint32_t decode;
 	uint8_t opcode;
 
 	instr->nr_bytes = 1;
@@ -468,15 +485,26 @@ arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 done_prefixes:
 
 	/* Opcode byte */
-	instr->opcode	= opcode;
+	decode		= decode_table[opcode];
 
-	instr->flags	= decode_table[opcode];
+	instr->opcode	= opcode;
+	instr->type	= decode & X86_INSTR_TYPE_MASK;
+	instr->flags	= decode & ~X86_INSTR_TYPE_MASK;
 
 	if (instr->flags == 0)	/* Unrecognized? */
 		return -1;
 
 	if (instr->flags & MOD_RM)
 		decode_modrm_byte(instr, RAM[pc++]);
+
+	/* Opcode groups */
+	switch (instr->type) {
+	case INSTR_SHIFT_GRP2:
+		instr->type	= shift_grp2_decode_table[instr->reg_opc];
+		break;
+	default:
+		break;
+	}
 
 	if (instr->flags & MEM_DISP_MASK)
 		decode_disp(instr, RAM, &pc);

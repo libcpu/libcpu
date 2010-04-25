@@ -364,5 +364,28 @@ _start:
 	xchgw %si, %ax
 	xchgw %di, %ax
 
+	# 0xc0
+	rolb $0x00, %al
+	rolb $0xff, %bh
+
+	rorb $0x00, %al
+	rorb $0xff, %bh
+
+	rclb $0x00, %al
+	rclb $0xff, %bh
+
+	rcrb $0x00, %al
+	rcrb $0xff, %bh
+
+	sarb $0x00, %al
+	sarb $0xff, %bh
+
+	# The sal and shl instructions perform the same operation.
+	shlb $0x00, %al
+	shlb $0xff, %bh
+
+	shrb $0x00, %al
+	shrb $0xff, %bh
+
 	# 0xd7
 	xlat

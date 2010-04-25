@@ -12,7 +12,7 @@
 
  * http://www.emu8086.com/assembly_language_tutorial_assembler_reference/8086_instruction_set.html
  */
-enum {
+enum x86_instr_types {
 	INSTR_AAA,
 	INSTR_AAD,
 	INSTR_AAM,
@@ -117,6 +117,7 @@ enum {
 	INSTR_SBB,
 	INSTR_SCASB,
 	INSTR_SCASW,
+	INSTR_SHIFT_GRP2,
 	INSTR_SHL,
 	INSTR_SHR,
 	INSTR_STC,

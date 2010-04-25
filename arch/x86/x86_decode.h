@@ -74,16 +74,17 @@ enum x86_instr_flags {
  *	Addressing modes.
  */
 enum x86_addmode {
-	ADDMODE_REG		= SRC_REG|DST_NONE,		/* register */
+	ADDMODE_ACC_MEM		= SRC_ACC|DST_MEM|DIR_REVERSED,	/* AL/AX -> memory */
+	ADDMODE_ACC_REG		= SRC_ACC|DST_REG,		/* AL/AX -> reg */
+	ADDMODE_IMM		= SRC_IMM|DST_NONE,		/* immediate operand */
+	ADDMODE_IMM_ACC		= SRC_IMM|DST_ACC,		/* immediate -> AL/AX */
 	ADDMODE_IMM_REG		= SRC_IMM|DST_REG,		/* immediate -> register */
+	ADDMODE_IMM_RM		= SRC_IMM|MOD_RM|DIR_REVERSED,	/* immediate -> register/memory */
 	ADDMODE_IMPLIED		= SRC_NONE|DST_NONE,		/* no operands */
+	ADDMODE_MEM_ACC		= SRC_ACC|DST_MEM,		/* memory -> AL/AX */
+	ADDMODE_REG		= SRC_REG|DST_NONE,		/* register */
 	ADDMODE_REG_RM		= SRC_REG|MOD_RM|DIR_REVERSED,	/* register -> register/memory */
 	ADDMODE_RM_REG		= DST_REG|MOD_RM,		/* register/memory -> register */
-	ADDMODE_IMM_ACC		= SRC_IMM|DST_ACC,		/* immediate -> AL/AX */
-	ADDMODE_ACC_REG		= SRC_ACC|DST_REG,		/* AL/AX -> reg */
-	ADDMODE_ACC_MEM		= SRC_ACC|DST_MEM|DIR_REVERSED,	/* AL/AX -> memory */
-	ADDMODE_MEM_ACC		= SRC_ACC|DST_MEM,		/* memory -> AL/AX */
-	ADDMODE_IMM		= SRC_IMM|DST_NONE,		/* immediate operand */
 };
 
 struct x86_instr {
@@ -97,17 +98,13 @@ struct x86_instr {
 	uint32_t		disp;		/* Address displacement */
 	uint32_t		imm_data;	/* Immediate data */
 
+	unsigned long		type;		/* See enum x86_instr_types */
 	unsigned long		flags;		/* See enum x86_instr_flags */
 	enum x86_seg_override	seg_override;
 	enum x86_rep_prefix	rep_prefix;
 	struct x86_operand	src;
 	struct x86_operand	dst;
 };
-
-static uint8_t x86_instr_type(struct x86_instr *instr)
-{
-	return instr->flags & 0xff;
-}
 
 int
 arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc);
