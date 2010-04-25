@@ -206,8 +206,8 @@ static const uint32_t decode_table[256] = {
 	/*[0xBD]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
 	/*[0xBE]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
 	/*[0xBF]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
-	/*[0xC0]*/	INSTR_SHIFT_GRP2 | ADDMODE_IMM8_RM | WIDTH_BYTE,
-	/*[0xC0]*/	INSTR_SHIFT_GRP2 | ADDMODE_IMM8_RM | WIDTH_FULL,
+	/*[0xC0]*/	GROUP_2 | ADDMODE_IMM8_RM | WIDTH_BYTE,
+	/*[0xC1]*/	GROUP_2 | ADDMODE_IMM8_RM | WIDTH_FULL,
 	/*[0xC2]*/	0,
 	/*[0xC3]*/	INSTR_RET | ADDMODE_IMPLIED,
 	/*[0xC4]*/	0,
@@ -540,15 +540,15 @@ done_prefixes:
 	instr->type	= decode & X86_INSTR_TYPE_MASK;
 	instr->flags	= decode & ~X86_INSTR_TYPE_MASK;
 
-	if (instr->flags == 0)	/* Unrecognized? */
+	if (instr->flags == 0) /* Unrecognized? */
 		return -1;
 
 	if (instr->flags & MOD_RM)
 		decode_modrm_byte(instr, RAM[pc++]);
 
 	/* Opcode groups */
-	switch (instr->type) {
-	case INSTR_SHIFT_GRP2:
+	switch (instr->flags) {
+	case GROUP_2:
 		instr->type	= shift_grp2_decode_table[instr->reg_opc];
 		break;
 	default:

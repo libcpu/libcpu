@@ -116,7 +116,6 @@ static const char* mnemo[] = {
 	/* [INSTR_SBB] */	 "sbb",
 	/* [INSTR_SCASB] */	 "scasb",
 	/* [INSTR_SCASW] */	 "scasw",
-	/* [INSTR_SHIFT_GRP2] */ "<grp2>",
 	/* [INSTR_SHL] */	 "shl",
 	/* [INSTR_SHR] */	 "shr",
 	/* [INSTR_STC] */	 "stc",
