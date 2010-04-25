@@ -364,7 +364,7 @@ _start:
 	xchgw %si, %ax
 	xchgw %di, %ax
 
-	# 0xc0
+	# 0xc0 /digit ("shift group 2")
 	rolb $0x00, %al
 	rolb $0xff, %bh
 
@@ -386,6 +386,29 @@ _start:
 
 	shrb $0x00, %al
 	shrb $0xff, %bh
+
+	# 0xc1 /digit ("shift group 2")
+	rolw $0x00, %ax
+	rolw $0xff, %bx
+
+	rorw $0x00, %ax
+	rorw $0xff, %bx
+
+	rclw $0x00, %ax
+	rclw $0xff, %bx
+
+	rcrw $0x00, %ax
+	rcrw $0xff, %bx
+
+	sarw $0x00, %ax
+	sarw $0xff, %bx
+
+	# The sal and shl instructions perform the same operation.
+	shlw $0x00, %ax
+	shlw $0xff, %bx
+
+	shrw $0x00, %ax
+	shrw $0xff, %bx
 
 	# 0xd7
 	xlat

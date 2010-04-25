@@ -206,8 +206,8 @@ static const uint32_t decode_table[256] = {
 	/*[0xBD]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
 	/*[0xBE]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
 	/*[0xBF]*/	INSTR_MOV | ADDMODE_IMM_REG | WIDTH_FULL,
-	/*[0xC0]*/	INSTR_SHIFT_GRP2 | ADDMODE_IMM_RM | WIDTH_BYTE,
-	/*[0xC1]*/	0,
+	/*[0xC0]*/	INSTR_SHIFT_GRP2 | ADDMODE_IMM8_RM | WIDTH_BYTE,
+	/*[0xC0]*/	INSTR_SHIFT_GRP2 | ADDMODE_IMM8_RM | WIDTH_FULL,
 	/*[0xC2]*/	0,
 	/*[0xC3]*/	INSTR_RET | ADDMODE_IMPLIED,
 	/*[0xC4]*/	0,
@@ -347,6 +347,7 @@ decode_src_operand(struct x86_instr *instr)
 	case SRC_NONE:
 		break;
 	case SRC_IMM:
+	case SRC_IMM8:
 		operand->type	= OP_IMM;
 		operand->imm	= instr->imm_data;
 		break;
@@ -371,25 +372,46 @@ decode_src_operand(struct x86_instr *instr)
 }
 
 static void
-decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+decode_imm_full(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
 	addr_t new_pc = *pc;
 
-	switch (instr->flags & WIDTH_MASK) {
-	case WIDTH_FULL: {
-		uint8_t imm_lo = RAM[new_pc++];
-		uint8_t imm_hi = RAM[new_pc++];
+	uint8_t imm_lo = RAM[new_pc++];
+	uint8_t imm_hi = RAM[new_pc++];
 
-		instr->imm_data	= (uint16_t)((imm_hi << 8) | imm_lo);
-		instr->nr_bytes	+= 2;
-		break;
-	}
-	case WIDTH_BYTE:
-		instr->imm_data	= (uint8_t)RAM[new_pc++];
-		instr->nr_bytes	+= 1;
-		break;
-	}
+	instr->imm_data	= (uint16_t)((imm_hi << 8) | imm_lo);
+	instr->nr_bytes	+= 2;
+
 	*pc = new_pc;
+}
+
+static void
+decode_imm_byte(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+{
+	addr_t new_pc = *pc;
+
+	instr->imm_data	= (uint8_t)RAM[new_pc++];
+	instr->nr_bytes	+= 1;
+
+	*pc = new_pc;
+}
+
+static void
+decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+{
+	if (instr->flags & SRC_IMM8) {
+		decode_imm_byte(instr, RAM, pc);
+		return;
+	}
+
+	switch (instr->flags & WIDTH_MASK) {
+	case WIDTH_FULL:
+		decode_imm_full(instr, RAM, pc);
+		break;
+	case WIDTH_BYTE:
+		decode_imm_byte(instr, RAM, pc);
+		break;
+	}
 }
 
 static void
@@ -509,7 +531,7 @@ done_prefixes:
 	if (instr->flags & MEM_DISP_MASK)
 		decode_disp(instr, RAM, &pc);
 
-	if (instr->flags & SRC_IMM)
+	if (instr->flags & IMM_MASK)
 		decode_imm(instr, RAM, &pc);
 
 	decode_src_operand(instr);
