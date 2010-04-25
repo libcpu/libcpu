@@ -159,10 +159,10 @@ static const char *word_reg_names[] = {
 };
 
 static const char *mem_byte_reg_names[] = {
-	"%bx+si",
-	"%bx+di",
-	"%bp+si",
-	"%bp+di",
+	"%bx,%si",
+	"%bx,%di",
+	"%bp,%si",
+	"%bp,%di",
 	"%si",
 	"%di",
 	NULL,
