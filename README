@@ -1,0 +1,27 @@
+BUILD INSTRUCTIONS
+==================
+
+Ubuntu Linux
+------------
+
+CMake version 2.8 or higher is required. Unfortunately (as of January 3, 2010)
+Ubuntu's default CMake is still at 2.6.x, so you'll have to build it yourself.
+
+You can install other build dependencies with:
+
+  sudo apt-get install flex bison libreadline-dev
+
+To build libcpu:
+
+  make
+
+
+RUNNING SOME TESTS
+==================
+
+x86 front-end
+-------------
+
+To run the x86 front-end tests:
+
+  ./test/scripts/8086.sh
