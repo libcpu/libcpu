@@ -200,13 +200,16 @@ static const char *to_reg_name(struct x86_instr *instr, int reg_num)
 }
 
 static int
-print_operand(char *operands, size_t size, struct x86_instr *instr, struct x86_operand *operand)
+print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, struct x86_operand *operand)
 {
 	int ret = 0;
 
 	switch (operand->type) {
 	case OP_IMM:
 		ret = snprintf(operands, size, "$0x%x", operand->imm);
+		break;
+	case OP_REL:
+		ret = snprintf(operands, size, "%x", (unsigned int)((long)pc + instr->nr_bytes + operand->rel));
 		break;
 	case OP_REG:
 		ret = snprintf(operands, size, "%s", to_reg_name(instr, operand->reg));
@@ -237,13 +240,13 @@ arch_8086_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 
 	/* AT&T syntax operands */
 	if (!(instr.flags & SRC_NONE))
-		len += print_operand(operands+len, sizeof(operands)-len, &instr, &instr.src);
+		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.src);
 
 	if (!(instr.flags & SRC_NONE) && !(instr.flags & DST_NONE))
 		len += snprintf(operands+len, sizeof(operands)-len, ",");
 
 	if (!(instr.flags & DST_NONE))
-		len += print_operand(operands+len, sizeof(operands)-len, &instr, &instr.dst);
+		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.dst);
 
         snprintf(line, max_line, "%s%s\t%s", prefix_names[instr.rep_prefix], to_mnemonic(&instr), operands);
 

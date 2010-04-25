@@ -246,7 +246,7 @@ static const uint32_t decode_table[256] = {
 	/*[0xE5]*/	0,
 	/*[0xE6]*/	0,
 	/*[0xE7]*/	0,
-	/*[0xE8]*/	0,
+	/*[0xE8]*/	INSTR_CALL | ADDMODE_REL | WIDTH_FULL,
 	/*[0xE9]*/	0,
 	/*[0xEA]*/	0,
 	/*[0xEB]*/	0,
@@ -346,6 +346,10 @@ decode_src_operand(struct x86_instr *instr)
 	switch (instr->flags & SRC_MASK) {
 	case SRC_NONE:
 		break;
+	case SRC_REL:
+		operand->type	= OP_REL;
+		operand->rel	= instr->rel_data;
+		break;
 	case SRC_IMM:
 	case SRC_IMM8:
 		operand->type	= OP_IMM;
@@ -369,6 +373,20 @@ decode_src_operand(struct x86_instr *instr)
 		operand->reg	= instr->rm;
 		operand->disp	= instr->disp;
 	}
+}
+
+static void
+decode_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+{
+	addr_t new_pc = *pc;
+
+	uint8_t imm_lo = RAM[new_pc++];
+	uint8_t imm_hi = RAM[new_pc++];
+
+	instr->imm_data	= (int16_t)((imm_hi << 8) | imm_lo);
+	instr->nr_bytes	+= 2;
+
+	*pc = new_pc;
 }
 
 static void
@@ -412,6 +430,15 @@ decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 		decode_imm_byte(instr, RAM, pc);
 		break;
 	}
+}
+
+static void
+decode_imm_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+{
+	if (instr->flags & IMM_MASK)
+		decode_imm(instr, RAM, pc);
+	else
+		decode_rel(instr, RAM, pc);
 }
 
 static void
@@ -531,8 +558,8 @@ done_prefixes:
 	if (instr->flags & MEM_DISP_MASK)
 		decode_disp(instr, RAM, &pc);
 
-	if (instr->flags & IMM_MASK)
-		decode_imm(instr, RAM, &pc);
+	if (instr->flags & (IMM_MASK|REL_MASK))
+		decode_imm_rel(instr, RAM, &pc);
 
 	decode_src_operand(instr);
 

@@ -1,5 +1,13 @@
+# This test case is not runnable, it simply attempts to cover as much of the
+# x86 instruction set encoding as possible.
 	.code16gcc
 	.text
+
+	.globl function_0
+	.type  function_0, @function
+function_0:
+	retw
+
 	.globl  _start
 	.type   _start, @function
 _start:
@@ -412,3 +420,15 @@ _start:
 
 	# 0xd7
 	xlat
+
+	# 0xe8
+	callw function_0
+	callw function_1
+
+	nop
+	nop
+
+	.globl function_1
+	.type  function_1, @function
+function_1:
+	retw
