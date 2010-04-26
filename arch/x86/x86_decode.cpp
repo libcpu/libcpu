@@ -547,7 +547,7 @@ done_prefixes:
 		decode_modrm_byte(instr, RAM[pc++]);
 
 	/* Opcode groups */
-	switch (instr->flags) {
+	switch (instr->flags & GROUP_MASK) {
 	case GROUP_2:
 		instr->type	= shift_grp2_decode_table[instr->reg_opc];
 		break;
