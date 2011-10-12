@@ -6,6 +6,7 @@
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ModuleProvider.h"
+#include "llvm/Module.h"
 #include "llvm/PassManager.h"
 #include "llvm/Support/StandardPasses.h"
 #include "llvm/Target/TargetData.h"
@@ -15,7 +16,7 @@
 void
 optimize(cpu_t *cpu)
 {
-	FunctionPassManager pm = FunctionPassManager(cpu->mp);
+	FunctionPassManager pm = FunctionPassManager(cpu->mod);
 
 	std::string data_layout = cpu->exec_engine->getTargetData()->getStringRepresentation();
 	TargetData *TD = new TargetData(data_layout);

@@ -76,11 +76,11 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 				if (new_pc == NEW_PC_NONE) /* translate_instr() will set PC */
 					bb_target = bb_dispatch;
 				else
-					bb_target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, new_pc, bb_ret, BB_TYPE_NORMAL);
+					bb_target = const_cast<BasicBlock*>(lookup_basicblock(cpu, cpu->cur_func, new_pc, bb_ret, BB_TYPE_NORMAL));
 			}
 			/* get not-taken basic block */
 			if (tag & TAG_CONDITIONAL)
- 				bb_next = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, next_pc, bb_ret, BB_TYPE_NORMAL);
+ 				bb_next = const_cast<BasicBlock*>(lookup_basicblock(cpu, cpu->cur_func, next_pc, bb_ret, BB_TYPE_NORMAL));
 
 			bb_cont = translate_instr(cpu, pc, tag, bb_target, bb_trap, bb_next, cur_bb);
 
@@ -97,7 +97,7 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 
 		/* link with next basic block if there isn't a control flow instr. already */
 		if (bb_cont) {
-			BasicBlock *target = (BasicBlock*)lookup_basicblock(cpu, cpu->cur_func, pc, bb_ret, BB_TYPE_NORMAL);
+			BasicBlock *target = const_cast<BasicBlock*>(lookup_basicblock(cpu, cpu->cur_func, pc, bb_ret, BB_TYPE_NORMAL));
 			LOG("info: linking continue $%04llx!\n", (unsigned long long)pc);
 			BranchInst::Create(target, bb_cont);
 		}

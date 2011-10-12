@@ -5,6 +5,7 @@
  */
 
 #include "llvm/Constants.h"
+#include "llvm/BasicBlock.h"
 #include "llvm/Instructions.h"
 
 #include "libcpu.h"

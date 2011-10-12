@@ -13,6 +13,7 @@
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/Target/TargetData.h"
+#include "llvm/Function.h"
 
 #include "libcpu.h"
 #include "libcpu_llvm.h"

@@ -12,7 +12,6 @@
 namespace llvm {
 class BasicBlock;
 class ExecutionEngine;
-struct ExistingModuleProvider;
 class Function;
 class Module;
 class PointerType;
@@ -226,7 +225,6 @@ typedef struct cpu {
 	tag_t *tag;
 	bool tags_dirty;
 	Module *mod;
-	ExistingModuleProvider *mp;
 	void *fp[1024];
 	Function *func[1024];
 	Function *cur_func;

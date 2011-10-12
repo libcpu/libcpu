@@ -217,7 +217,7 @@ Value *
 arch_cast_fp32(cpu_t *cpu, Value *v, BasicBlock *bb)
 {
 	Type const *type = v->getType();
-	if (type->isInteger()) {
+	if (type->isIntegerTy()) {
 		if (type->getPrimitiveSizeInBits() < 32)
 			v = FP_BITCAST32(ZEXT32(v));
 		if (type->getPrimitiveSizeInBits() > 32)
@@ -227,7 +227,7 @@ arch_cast_fp32(cpu_t *cpu, Value *v, BasicBlock *bb)
 
 		type = v->getType();
 	}
-	if (type->isFloatingPoint()) {
+	if (type->isFloatingPointTy()) {
 		if (type->getPrimitiveSizeInBits() > 32)
 			v = FPTRUNC(32, v);
 	} else {
@@ -241,7 +241,7 @@ Value *
 arch_cast_fp64(cpu_t *cpu, Value *v, BasicBlock *bb)
 {
 	Type const *type = v->getType();
-	if (type->isInteger()) {
+	if (type->isIntegerTy()) {
 		if (type->getPrimitiveSizeInBits() < 32)
 			v = FPEXT(64, FP_BITCAST32(ZEXT32(v)));
 		else if (type->getPrimitiveSizeInBits() < 64)
@@ -251,7 +251,7 @@ arch_cast_fp64(cpu_t *cpu, Value *v, BasicBlock *bb)
 
 		type = v->getType();
 	}
-	if (type->isFloatingPoint()) {
+	if (type->isFloatingPointTy()) {
 		if (type->getPrimitiveSizeInBits() < 64)
 			v = FPEXT(64, v);
 		else if (type->getPrimitiveSizeInBits() > 64)
@@ -271,7 +271,7 @@ arch_cast_fp80(cpu_t *cpu, Value *v, BasicBlock *bb)
 {
 	if (cpu->flags & CPU_FLAG_FP80) {
 		Type const *type = v->getType();
-		if (type->isInteger()) {
+		if (type->isIntegerTy()) {
 			if (type->getPrimitiveSizeInBits() < 32)
 				v = FPEXT(80, FP_BITCAST32(ZEXT32(v)));
 			else if (type->getPrimitiveSizeInBits() < 64)
@@ -281,7 +281,7 @@ arch_cast_fp80(cpu_t *cpu, Value *v, BasicBlock *bb)
 
 			type = v->getType();
 		}
-		if (type->isFloatingPoint()) {
+		if (type->isFloatingPointTy()) {
 			if (type->getPrimitiveSizeInBits() < 80)
 				v = FPEXT(80, v);
 			else if (type->getPrimitiveSizeInBits() > 80)
@@ -306,7 +306,7 @@ arch_cast_fp128(cpu_t *cpu, Value *v, BasicBlock *bb)
 {
 	if (cpu->flags & CPU_FLAG_FP128) {
 		Type const *type = v->getType();
-		if (type->isInteger()) {
+		if (type->isIntegerTy()) {
 			if (type->getPrimitiveSizeInBits() < 32)
 				v = FPEXT(128, FP_BITCAST32(ZEXT32(v)));
 			else if (type->getPrimitiveSizeInBits() < 64)
@@ -316,7 +316,7 @@ arch_cast_fp128(cpu_t *cpu, Value *v, BasicBlock *bb)
 
 			type = v->getType();
 		}
-		if (type->isFloatingPoint()) {
+		if (type->isFloatingPointTy()) {
 			if (type->getPrimitiveSizeInBits() < 128)
 				v = FPEXT(128, v);
 		} else {
