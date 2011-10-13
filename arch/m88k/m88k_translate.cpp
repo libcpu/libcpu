@@ -6,6 +6,8 @@
 #include "m88k_internal.h"
 #include "m88k_insn.h"
 
+#include <inttypes.h>
+
 using namespace llvm;
 
 #define ptr_PSR		ptr_xr[0]
@@ -737,7 +739,7 @@ arch_m88k_xmem(cpu_t *cpu, bool byte, m88k_reg_t rd, Value *src1, Value *src2, B
 int
 arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
-#define BAD do { printf("%s:%u: BAD INSTRUCTION AT PC %llx\n", __func__, __LINE__, pc); exit(1); } while(0)
+#define BAD do { printf("%s:%u: BAD INSTRUCTION AT PC %" PRIu64 "\n", __func__, __LINE__, pc); exit(1); } while(0)
 #define LOGX LOG("%s:%d PC=%llx\n", __func__, __LINE__, pc);
 	m88k_insn instr = INSTR(pc);
 	m88k_opcode_t opc = instr.opcode();

@@ -7,6 +7,8 @@
 #include "frontend.h"
 #include "mips_internal.h"
 
+#include <inttypes.h>
+
 using namespace llvm;
 
 //////////////////////////////////////////////////////////////////////
@@ -288,7 +290,7 @@ arch_mips_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 	uint32_t instr = INSTR(pc);
 
-	LOG("cond (%08llx) %08x\n", pc, instr);
+	LOG("cond (%08" PRIx64 ") %08x\n", pc, instr);
 
 	switch(instr >> 26) {
 	case 0x01: /* INCPU_REGIMM */
@@ -328,7 +330,7 @@ arch_mips_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 
 	uint32_t instr = INSTR(pc);
 
-	LOG("translating (%08llx) %08x\n", pc, instr);
+	LOG("translating (%08" PRIx64 ") %08x\n", pc, instr);
 
 	switch(instr >> 26) {
 	case 0x00: /* INCPU_SPECIAL */

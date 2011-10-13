@@ -49,6 +49,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stddef.h>
+#include <inttypes.h>
 
 #ifdef USE_READLINE
 #define Function FunctionX // XXX clash in readline.
@@ -143,11 +144,11 @@ idbg_print_int_value(uint64_t v, unsigned bits, int align, unsigned mode)
 		case M_SIGNED:
 			if (bits != 64 && (v & (1ULL << (bits - 1))) != 0)
 				v |= -1ULL << bits;
-			fprintf(stdout, "%lld", (int64_t)v);
+			fprintf(stdout, "%" PRId64 , (int64_t)v);
 			break;
 
 		case M_UNSIGNED:
-			fprintf(stdout, "%llu", v);
+			fprintf(stdout, "%" PRIu64, v);
 			break;
 
 		case M_BIN:
@@ -158,18 +159,18 @@ idbg_print_int_value(uint64_t v, unsigned bits, int align, unsigned mode)
 			if (align < 0)
 				align = ALIGN8(bits) / 3;
 			if (align == 0)
-				fprintf(stdout, "0%llo", v);
+				fprintf(stdout, "0%" PRIo64, v);
 			else
-				fprintf(stdout, "0%.*llo", align, v);
+				fprintf(stdout, "0%.*" PRIo64, align, v);
 			break;
 
 		case M_HEX:
 			if (align < 0)
 				align = ALIGN8(bits) >> 2;
 			if (align == 0)
-				fprintf(stdout, "0x%llx", v);
+				fprintf(stdout, "0x%" PRIx64, v);
 			else
-				fprintf(stdout, "0x%.*llx", align, v);
+				fprintf(stdout, "0x%.*" PRIx64, align, v);
 			break;
 	} 
 }
@@ -186,7 +187,7 @@ idbg_print_qword(uint64_t const *v, unsigned mode, int)
 		idbg_print_bits(v[0], 64);
 		idbg_print_bits(v[1], 64);
 	} else
-		fprintf(stdout, "0x%016llx%016llx", v[0], v[1]);
+		fprintf(stdout, "0x%016" PRIx64 "%016" PRIx64 "", v[0], v[1]);
 }
 
 static void
@@ -252,7 +253,7 @@ static inline void
 idbg_print_float64(uint64_t v, bool hex)
 {
 	if (hex)
-		fprintf(stdout, "%f [%016llx]", *(double *)&v, v);
+		fprintf(stdout, "%f [%016" PRIx64 "]", *(double *)&v, v);
 	else
 		fprintf(stdout, "%f", *(double *)&v);
 }
@@ -260,13 +261,13 @@ idbg_print_float64(uint64_t v, bool hex)
 static inline void
 idbg_print_float80(uint64_t const *v, bool hex)
 {
-	fprintf(stdout, "[%04llx%016llx]", v[0], v[1]);
+	fprintf(stdout, "[%04" PRIx64 "%016" PRIx64 "]", v[0], v[1]);
 }
 
 static inline void
 idbg_print_float128(uint64_t const *v, bool hex)
 {
-	fprintf(stdout, "[%016llx%016llx]", v[0], v[1]);
+	fprintf(stdout, "[%016" PRIx64 "%016" PRIx64 "]", v[0], v[1]);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -719,7 +720,7 @@ idbg_diff_registers(idbg_t *ctx)
 			idbg_print_address(ctx, ctx->saved_regs[n]);
 			fprintf(stdout, " -> ");
 			idbg_print_address(ctx, v);
-			fprintf(stdout, " (delta %lld)\n",
+			fprintf(stdout, " (delta %" PRId64 ")\n",
 				v - ctx->saved_regs[n]);
 		}
 	}
@@ -833,7 +834,7 @@ idbg_examine(idbg_t *ctx, addr_t address, size_t count,
 
 		ptrdiff_t bytes = idbg_examine_one(ctx, address, format, mode);
 		if (bytes < 0) {
-			fprintf(stderr, "\nIDBG ERROR: Cannot access address %llx.\n",
+			fprintf(stderr, "\nIDBG ERROR: Cannot access address %" PRIx64 ".\n",
 				address);
 			break;
 		}

@@ -13,6 +13,8 @@
 #include "arm_types.h"
 #include "tag.h"
 
+#include <inttypes.h>
+
 using namespace llvm;
 
 #define ptr_N			((ccarm_t*)cpu->feptr)->ptr_N
@@ -186,7 +188,7 @@ setsub(cpu_t *cpu, Value *op1, Value *op2, BasicBlock *bb)
 #define LINK LET32(14, CONST((uint64_t)(sint64_t)(sint32_t)pc+8))
 
 int arch_arm_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
-LOG("%s:%d pc=%llx\n", __func__, __LINE__, pc);
+LOG("%s:%d pc=%" PRIx64 "\n", __func__, __LINE__, pc);
 	uint32_t instr = *(uint32_t*)&cpu->RAM[pc];
 
 //	int cond = instr >> 28;

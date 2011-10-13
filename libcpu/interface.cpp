@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/ExecutionEngine/JIT.h"
@@ -376,7 +377,7 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 			}
 		}
 		if (!success) {
-			LOG("{%llx}", pc);
+			LOG("{%" PRIx64 "}", pc);
 			cpu_tag(cpu, pc);
 			do_translate = true;
 		}
@@ -402,9 +403,9 @@ cpu_flush(cpu_t *cpu)
 void
 cpu_print_statistics(cpu_t *cpu)
 {
-	printf("tag = %8lld\n", cpu->timer_total[TIMER_TAG]);
-	printf("fe  = %8lld\n", cpu->timer_total[TIMER_FE]);
-	printf("be  = %8lld\n", cpu->timer_total[TIMER_BE]);
-	printf("run = %8lld\n", cpu->timer_total[TIMER_RUN]);
+	printf("tag = %8" PRId64 "\n", cpu->timer_total[TIMER_TAG]);
+	printf("fe  = %8" PRId64 "\n", cpu->timer_total[TIMER_FE]);
+	printf("be  = %8" PRId64 "\n", cpu->timer_total[TIMER_BE]);
+	printf("run = %8" PRId64 "\n", cpu->timer_total[TIMER_RUN]);
 }
 //printf("%s:%d\n", __func__, __LINE__);

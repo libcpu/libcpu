@@ -11,6 +11,8 @@
 #include "6502_isa.h"
 #include "frontend.h"
 
+#include <inttypes.h>
+
 #define A 0
 #define X 1
 #define Y 2
@@ -105,7 +107,7 @@ arch_6502_trap(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 Value *
 arch_6502_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 	uint8_t opcode = cpu->RAM[pc];
-LOG("%s:%d pc=%llx opcode=%x\n", __func__, __LINE__, pc, opcode);
+LOG("%s:%d pc=%" PRIx64 " opcode=%x\n", __func__, __LINE__, pc, opcode);
 
 	switch (get_instr(opcode)) {
 		case INSTR_BEQ: /* Z */		return CC_EQ;

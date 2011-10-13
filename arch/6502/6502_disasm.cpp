@@ -10,6 +10,8 @@
 #include "libcpu.h"
 #include "6502_isa.h"
 
+#include <inttypes.h>
+
 static const char *addmode_template[] = {
 	/*[ADDMODE_ABS]*/	"$%04X",
 	/*[ADDMODE_ABSX]*/	"$%04X,X",
@@ -98,7 +100,7 @@ arch_6502_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 	int addmode = get_addmode(opcode);
 
 	if (addmode == ADDMODE_BRA) {
-			snprintf(line2, sizeof(line2), "$%02llX", pc+2 + (int8_t)cpu->RAM[pc+1]);
+			snprintf(line2, sizeof(line2), "$%02" PRIX64, pc+2 + (int8_t)cpu->RAM[pc+1]);
 	} else {
 		switch (get_length(addmode)) {
 			case 1:

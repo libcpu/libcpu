@@ -7,6 +7,8 @@
 #include "frontend.h"
 #include "fapra_internal.h"
 
+#include <inttypes.h>
+
 using namespace llvm;
 
 //////////////////////////////////////////////////////////////////////
@@ -155,7 +157,7 @@ arch_fapra_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 	uint32_t instr = INSTR(pc);
 
-	LOG("cond (%08llx) %08x\n", pc, instr);
+	LOG("cond (%08" PRIx64 ") %08x\n", pc, instr);
 
 	switch (opc(instr)) {
 	default:
@@ -179,7 +181,7 @@ arch_fapra_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 
 	uint32_t instr = INSTR(pc);
 
-	LOG("translating (%08llx) %08x\n", pc, instr);
+	LOG("translating (%08" PRIx64 ") %08x\n", pc, instr);
 
 	switch (opc(instr)) {
 	case PERM:

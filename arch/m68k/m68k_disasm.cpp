@@ -4,6 +4,8 @@
 #include "libcpu.h"
 #include "m68k_isa.h"
 
+#include <inttypes.h>
+
 enum {
 	TASK_DIS,
 	TASK_REC,
@@ -132,7 +134,7 @@ decodeimm(cpu_t *cpu, addr_t pc, int size) {
 		case SIZE_L:
 			return RAM32(pc+2);
 	}
-	printf("decodeimm  pc=%llx", pc);
+	printf("decodeimm  pc=%" PRIx64, pc);
 	exit(1);
 	return 0;
 }
@@ -200,8 +202,8 @@ decodemodreg(int task, cpu_t *cpu, addr_t pc, int size, int mod, int reg, char *
 				return;
 			}
 			if (reg == 2) {
-				DIS snprintf(op1, maxop, "0x%08llx", RAM16(pc+2)+pc+2);
-				REC snprintf(op1, maxop, "RAM%d,0x%llx", sizenum[size], RAM16(pc+2)+pc+2);
+				DIS snprintf(op1, maxop, "0x%08" PRIx64, RAM16(pc+2)+pc+2);
+				REC snprintf(op1, maxop, "RAM%d,0x%" PRIx64, sizenum[size], RAM16(pc+2)+pc+2);
 				REC *rm=IS_MEM;
 				return;
 			}
@@ -343,19 +345,19 @@ disreclen(int task, cpu_t *cpu, addr_t pc, char *line, unsigned int max_line, ad
 						decodemodreg(task, cpu, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 						DIS snprintf(line, max_line, "jsr %s", op1);
 						len = 2+lengthmodreg(MOD0, REG0, 0);
-						REC snprintf(line, max_line, "call (READ_%s,0x%08llx);", op1, pc+len);
+						REC snprintf(line, max_line, "call (READ_%s,0x%08" PRIx64 ");", op1, pc+len);
 						break;
 					} else if (bits(opcode,0,7) == 0x56) {	/* LINKW */ // 68030?
 						decodemodreg(task, cpu, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 						DIS snprintf(line, max_line, "linkw %s, %04x", op1, decodeimm(cpu, pc, SIZE_W));
 						len = 4+lengthmodreg(MOD0, REG0, 0);
-						REC snprintf(line, max_line, "linkw (READ_%s,0x%08llx);", op1, pc+len);
+						REC snprintf(line, max_line, "linkw (READ_%s,0x%08" PRIx64 ");", op1, pc+len);
 						break;
 					} else if (bits(opcode,0,7) == 0x5e) {	/* UNLK */ // 68030?
 						decodemodreg(task, cpu, pc, SIZE_L, MOD0, REG0, op1, sizeof(op1), &attr, &rm);
 						DIS snprintf(line, max_line, "unlk %s", op1);
 						len = 2+lengthmodreg(MOD0, REG0, 0);
-						REC snprintf(line, max_line, "linkw (READ_%s,0x%08llx);", op1, pc+len);
+						REC snprintf(line, max_line, "linkw (READ_%s,0x%08" PRIx64 ");", op1, pc+len);
 						break;
 					} else {
 						// DIS snprintf(line, max_line, "??? opcode %04x (%x)", opcode, bits(opcode,12,15));
@@ -394,13 +396,13 @@ disreclen(int task, cpu_t *cpu, addr_t pc, char *line, unsigned int max_line, ad
 		case 5:
 			if (bits(opcode,6,7)==3) {
 				if (MOD0==1) { /* DBcc */
-					DIS snprintf(line, max_line, "db%s d%d, 0x%08llx", condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
-					REC snprintf(line, max_line, "db%s (d[%d], l%llX);", condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
+					DIS snprintf(line, max_line, "db%s d%d, 0x%08" PRIx64, condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
+					REC snprintf(line, max_line, "db%s (d[%d], l%" PRIX64 ");", condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
 					len = 4;
 				}
 				else if (MOD0==7) { /* TRAPcc */
-					DIS snprintf(line, max_line, "trap%s d%d, 0x%08llx", condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
-					REC snprintf(line, max_line, "trap%s (d[%d], l%llX);", condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
+					DIS snprintf(line, max_line, "trap%s d%d, 0x%08" PRIx64, condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
+					REC snprintf(line, max_line, "trap%s (d[%d], l%" PRIX64 ");", condstr_db[CONDITION], REG0, pc+2+RAM16(pc+2));
 					// TODO: decode OPMODE etc.! (p. 8.16 68kPM), optional word or long word
 					len = 2;
 				}
@@ -418,8 +420,8 @@ disreclen(int task, cpu_t *cpu, addr_t pc, char *line, unsigned int max_line, ad
 			break;
 		case 6:	/* Bcc */
 			disp = arch_disasm_get_disp(cpu, pc, opcode);
-			DIS snprintf(line, max_line, "b%s 0x%08llx", condstr[CONDITION], pc+2+disp);
-			DIS snprintf(line, max_line, "b%s (l%llX);", condstr[CONDITION], pc+2+disp);
+			DIS snprintf(line, max_line, "b%s 0x%08" PRIx64, condstr[CONDITION], pc+2+disp);
+			DIS snprintf(line, max_line, "b%s (l%" PRIX64 ");", condstr[CONDITION], pc+2+disp);
 			len = lengthdisp(cpu, pc, opcode);
 			break;
 		case 7:
