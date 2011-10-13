@@ -12,7 +12,6 @@
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/LinkAllPasses.h"
 #include "llvm/Module.h"
-#include "llvm/ModuleProvider.h"
 #include "llvm/Target/TargetData.h"
 #include "llvm/Target/TargetSelect.h"
 

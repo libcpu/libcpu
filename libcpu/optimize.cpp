@@ -5,7 +5,6 @@
  */
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ModuleProvider.h"
 #include "llvm/Module.h"
 #include "llvm/PassManager.h"
 #include "llvm/Support/StandardPasses.h"
