@@ -5,6 +5,7 @@
 #include "sema/convert.h"
 #include "ast/dumper.h"
 
+#include <cstddef>
 #include <cassert>
 #include <sstream>
 #include <iostream>
