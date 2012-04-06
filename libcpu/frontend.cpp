@@ -19,6 +19,8 @@
 #include "libcpu_llvm.h"
 #include "frontend.h"
 
+#include "llvm/Function.h"
+
 //////////////////////////////////////////////////////////////////////
 // GENERIC: register access
 //////////////////////////////////////////////////////////////////////
@@ -273,20 +275,20 @@ arch_store(Value *v, Value *a, BasicBlock *bb)
 
 Value *
 arch_bswap(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
-	Type const *ty = getIntegerType(width);
-	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::bswap, &ty, 1), v, "", bb);
+	Type *ty = getIntegerType(width);
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::bswap, TYPEARRAY(ty)), VALUEARRAY(v), "", bb);
 }
 
 Value *
 arch_ctlz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
-	Type const *ty = getIntegerType(width);
-	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::ctlz, &ty, 1), v, "", bb);
+	Type *ty = getIntegerType(width);
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::ctlz, TYPEARRAY(ty)), VALUEARRAY(v), "", bb);
 }
 
 Value *
 arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
-	Type const *ty = getIntegerType(width);
-	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::cttz, &ty, 1), v, "", bb);
+	Type *ty = getIntegerType(width);
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::cttz, TYPEARRAY(ty)), VALUEARRAY(v), "", bb);
 }
 
 // complex operations
@@ -425,8 +427,8 @@ arch_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
 
 Value *
 arch_sqrt(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
-	Type const *ty = getFloatType(width);
-	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::sqrt, &ty, 1), v, "", bb);
+	Type *ty = getFloatType(width);
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::sqrt, TYPEARRAY(ty)), VALUEARRAY(v), "", bb);
 }
 
 // Invoke debug_function
@@ -437,7 +439,7 @@ arch_debug_me(cpu_t *cpu, BasicBlock *bb)
 	if (cpu->ptr_func_debug == NULL)
 		return;
 
-	Type const *intptr_type = cpu->exec_engine->getTargetData()->getIntPtrType(_CTX());
+	Type *intptr_type = cpu->exec_engine->getTargetData()->getIntPtrType(_CTX());
 	Constant *v_cpu = ConstantInt::get(intptr_type, (uintptr_t)cpu);
 	Value *v_cpu_ptr = ConstantExpr::getIntToPtr(v_cpu, PointerType::getUnqual(intptr_type));
 
