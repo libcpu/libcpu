@@ -31,6 +31,7 @@ Value *arch_adc(cpu_t *cpu, Value *dst, Value *src, Value *v, bool plus_carry, b
 /* FPU */
 Value *arch_cast_fp32(cpu_t *cpu, Value *v, BasicBlock *bb);
 Value *arch_cast_fp64(cpu_t *cpu, Value *v, BasicBlock *bb);
+
 Value *arch_cast_fp80(cpu_t *cpu, Value *v, BasicBlock *bb);
 Value *arch_cast_fp128(cpu_t *cpu, Value *v, BasicBlock *bb);
 
@@ -49,6 +50,10 @@ uint32_t RAM32LE(uint8_t *RAM, addr_t a);
  * a collection of preprocessor macros
  * that make the LLVM interface nicer
  */
+
+// FIXME. Use of typedefs might be nicer here
+#define VALUEARRAY llvm::ArrayRef<llvm::Value*>
+#define TYPEARRAY llvm::ArrayRef<llvm::Type*>
 
 #define SIZE(x) (x->getType()->getPrimitiveSizeInBits())
 

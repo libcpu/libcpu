@@ -693,7 +693,7 @@ sema_analyzer::process_register_dep(ast::register_declaration const *rd,
 			if (ri != 0 && complex_alias_index_expr != 0) {
 
 				ast::expression *index_expr =
-					(ast::expression *)complex_alias_index_expr;
+					const_cast<ast::expression*>(complex_alias_index_expr);
 
 				if (relative_aliasing_index) {
 					// make the expression relative
@@ -794,12 +794,12 @@ bound_value_name_from_expression(ast::token const *binding,
 	if (binding->get_token_type() == ast::token::EXPRESSION &&
 			((ast::expression const *)binding)->get_expression_type() 
 			== ast::expression::LITERAL) {
-		ast::token const *t = ((ast::literal_expression *)binding)->get_literal();
+		ast::token const *t = ((const ast::literal_expression*)binding)->get_literal();
 		if (t->get_token_type() == ast::token::IDENTIFIER)
 			name = (ast::identifier const *)t;
 		else if (t->get_token_type() == ast::token::QUALIFIED_IDENTIFIER) {
 			// this shall have always the identifiers count to zro.
-			ast::qualified_identifier *qi = (ast::qualified_identifier *)t;
+			ast::qualified_identifier *qi = const_cast<ast::qualified_identifier*>(static_cast<const ast::qualified_identifier*>(t));
 			name = qi->get_base_identifier();
 
 			ast::token_list const *idlist = qi->get_identifier_list();
@@ -938,7 +938,7 @@ sema_analyzer::process_bound_value_dep(register_info *bri, size_t &offset,
 						fprintf(stderr, "info: bitfield aliasing indexing expression depends on other registers.\n");
 						if (!e.is_used("_")) {
 							// make the expression relative
-							index_expr = make_index_expr_relative((upcl::ast::expression*)index_expr,
+							index_expr = make_index_expr_relative((upcl::ast::expression*) const_cast<ast::expression*>(index_expr),
 									bri->repeat_index);
 						}
 						ri->complex_index = index_expr;
