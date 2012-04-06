@@ -13,7 +13,7 @@
 #include "llvm/LinkAllPasses.h"
 #include "llvm/Module.h"
 #include "llvm/Target/TargetData.h"
-#include "llvm/Target/TargetSelect.h"
+#include "llvm/Support/TargetSelect.h"
 
 /* project global headers */
 #include "libcpu.h"
