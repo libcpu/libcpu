@@ -44,7 +44,7 @@ else (LLVM_INCLUDE_DIR)
     )
 
   find_program(LLVM_GCC_EXECUTABLE
-    NAMES llvm-gcc llvmgcc
+    NAMES clang
     PATHS
     /opt/local/bin
     /opt/llvm/2.6/bin
@@ -54,7 +54,7 @@ else (LLVM_INCLUDE_DIR)
     )
 
   find_program(LLVM_GXX_EXECUTABLE
-    NAMES llvm-g++ llvmg++
+    NAMES clang++
     PATHS
     /opt/local/bin
     /opt/llvm/2.6/bin
