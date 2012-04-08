@@ -29,19 +29,25 @@ arch_i386_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *n
 	{
 		*tag = TAG_CALL;
 		*new_pc = analyzer.evaluateBranch(insn, pc, size);
+		if (*new_pc == (addr_t)~0)
+			assert(0 && "Not a PC-relative branch!");
 	}
 	else if (desc.isBranch())
 	{
 		*tag = TAG_BRANCH;
 		*new_pc = analyzer.evaluateBranch(insn, pc, size);
-	}
-	if (desc.isCompare())
-	{
-		*tag = TAG_CONDITIONAL;
+		if (*new_pc == (addr_t)~0)
+			assert(0 && "Not a PC-relative branch!");
 	}
 	else
 	{
 		*tag = TAG_CONTINUE;
+	}
+	
+	// TODO: How to tell if other conditional opcode?
+	if (desc.isConditionalBranch())
+	{
+		*tag |= TAG_CONDITIONAL;
 	}
 	
 	*next_pc = pc + size;
