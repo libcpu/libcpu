@@ -34,6 +34,7 @@ extern arch_func_t arch_func_m88k;
 extern arch_func_t arch_func_arm;
 extern arch_func_t arch_func_8086;
 extern arch_func_t arch_func_fapra;
+extern arch_func_t arch_func_i386;
 
 #define IS_LITTLE_ENDIAN(cpu) (((cpu)->info.common_flags & CPU_FLAG_ENDIAN_MASK) == CPU_FLAG_ENDIAN_LITTLE)
 
@@ -112,6 +113,9 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 			break;
 		case CPU_ARCH_FAPRA:
 			cpu->f = arch_func_fapra;
+			break;
+		case CPU_ARCH_I386:
+			cpu->f = arch_func_i386;
 			break;
 		default:
 			printf("illegal arch: %d\n", arch);
