@@ -101,7 +101,7 @@ arch_func_t const arch_func_i386 = {
 	arch_i386_tag_instr,
 	arch_i386_disasm_instr,
 	arch_i386_translate_cond,
-	/*arch_i386_translate_instr*/ NULL,
+	*arch_i386_translate_instr,
 	/* idbg support */
 	NULL, /* get_psr */
 	NULL, /* get_reg */

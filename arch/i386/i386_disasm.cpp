@@ -6,7 +6,6 @@
 #include <llvm/MC/MCDisassembler.h>
 #include <llvm/MC/MCInst.h>
 #include <llvm/MC/MCInstPrinter.h>
-#include <llvm/MC/MCInstrInfo.h>
 #include <llvm/MC/MCRegisterInfo.h>
 #include <llvm/MC/MCSubtargetInfo.h>
 #include <llvm/ADT/OwningPtr.h>
@@ -22,6 +21,7 @@
 
 static const MCDisassembler *DisAsm = NULL;
 static MCInstPrinter *InstPrinter = NULL;
+static const MCInstrInfo *InstInfo = NULL;
 
 
 /*
@@ -95,8 +95,8 @@ static void InitializeGlobals()
 		abort();
 	}
 	
-	OwningPtr<const MCInstrInfo> MII(T->createMCInstrInfo());
-	if (!MII) {
+	InstInfo = (T->createMCInstrInfo());
+	if (!InstInfo) {
 		errs() << "Failed to get instruction info for target\n";
 		abort();
 	}
@@ -104,7 +104,7 @@ static void InitializeGlobals()
 	
 	int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
 	InstPrinter = T->createMCInstPrinter(AsmPrinterVariant, *AsmInfo,
-		                                 *MII, *MRI, *STI);
+		                                 *InstInfo, *MRI, *STI);
 	if (!InstPrinter) {
 		errs() << "Failed to get instruction printer for target\n";
 		abort();
@@ -173,6 +173,31 @@ MCInst DecodeInstruction(cpu_t *cpu, addr_t pc, uint64_t *_size)
 	
 	return insn;
 }
+
+
+/*
+// Returns an MCInstrDesc for the given opcode.
+*/
+const MCInstrDesc &DescForInst(const MCInst &insn)
+{
+	if (!InstInfo)
+		InitializeGlobals();
+	
+	return InstInfo->get(insn.getOpcode());
+} 
+
+
+/*
+// Returns an MCInstInfo instance.
+*/
+const MCInstrInfo *GetInstInfo()
+{
+	if (!InstInfo)
+		InitializeGlobals();
+	
+	return InstInfo;
+} 
+
 
 
 /*
