@@ -24,7 +24,7 @@ typedef uint16_t tag_t;
 #include <arch/m68k/m68k_types.h>
 #include <arch/mips/mips_types.h>
 #include <arch/x86/x86_types.h>
-#include <arch/i386/i386_types.h>
+#include <arch/i386/i386_regfile.h>
 #include <arch/fapra/fapra_types.h>
 
 #endif
