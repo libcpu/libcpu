@@ -330,9 +330,9 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	{
 		SmallVector<AttributeWithIndex, 4> Attrs;
 		AttributeWithIndex PAWI;
-		PAWI.Index = 1U; PAWI.Attrs = 0  | Attribute::NoCapture;
+		PAWI = AttributeWithIndex::get(1, Attribute::NoCapture);
 		Attrs.push_back(PAWI);
-		PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind;
+		PAWI = AttributeWithIndex::get(~0u, Attribute::NoUnwind);
 		Attrs.push_back(PAWI);
 		func_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
 	}
