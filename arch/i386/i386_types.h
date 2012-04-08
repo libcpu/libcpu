@@ -4,41 +4,52 @@
  * the register file
  */
 
-/* XXX: high and low byte endianess! */
-#define DEFINE_SPLIT_REG(_reg, _high, _low) \
+#define DEFINE_REG_32_SPLIT(_extended, _reg, _high, _low) \
 	union {					\
-		uint16_t		_reg;	\
-		struct {			\
-			uint8_t		_high;	\
-			uint8_t		_low;	\
+		uint32_t		_extended; \
+		struct {					\
+			uint16_t		_reg;	\
+			struct {			\
+				uint8_t		_high;	\
+				uint8_t		_low;	\
+			};				\
 		};				\
 	};
 
-#define DEFINE_REG(_reg)			\
-	struct {				\
+#define DEFINE_REG_32(_extended, _reg)			\
+	union {				\
+		uint32_t		_extended; \
 		uint16_t		_reg;	\
-	}
+	};
+	
+#define DEFINE_REG_16(_reg)			\
+	struct {				\
+		uint16_t		_reg; \
+	};
+
 
 PACKED(struct reg_i386_s {
 	/*General registers */
-	DEFINE_SPLIT_REG(ax, ah, al);
-	DEFINE_SPLIT_REG(bx, bh, bl);
-	DEFINE_SPLIT_REG(cx, ch, cl);
-	DEFINE_SPLIT_REG(dx, dh, dl);
+	DEFINE_REG_32_SPLIT(eax, ax, ah, al);
+	DEFINE_REG_32_SPLIT(ebx, bx, bh, bl);
+	DEFINE_REG_32_SPLIT(ecx, cx, ch, cl);
+	DEFINE_REG_32_SPLIT(edx, dx, dh, dl);
 	/* Index registers */
-	DEFINE_REG(si);
-	DEFINE_REG(di);
+	DEFINE_REG_32(esi, si);
+	DEFINE_REG_32(edi, di);
 	/* Pointer registers */
-	DEFINE_REG(bp);
-	DEFINE_REG(sp);
+	DEFINE_REG_32(ebp, bp);
+	DEFINE_REG_32(esp, sp);
 	/* Special purpose registers */
-	DEFINE_REG(ip);
+	DEFINE_REG_32(eip, ip);
 	/* Flags register */
-	DEFINE_REG(flags);
+	DEFINE_REG_32(eflags, flags);
 	/* Segment registers */
-	DEFINE_REG(cs);
-	DEFINE_REG(ds);
-	DEFINE_REG(ss);
-	DEFINE_REG(es);
+	DEFINE_REG_16(cs);
+	DEFINE_REG_16(ds);
+	DEFINE_REG_16(ss);
+	DEFINE_REG_16(es);
+	DEFINE_REG_16(fs);
+	DEFINE_REG_16(gs);
 });
 typedef struct reg_i386_s reg_i386_t;
