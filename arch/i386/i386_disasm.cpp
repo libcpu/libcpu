@@ -1,140 +1,202 @@
 /*
- * libcpu: i386_disasm.cpp
- *
- * disassembler
+ * libcpu: i386_decoder.cpp
  */
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <llvm/MC/MCAsmInfo.h>
+#include <llvm/MC/MCDisassembler.h>
+#include <llvm/MC/MCInst.h>
+#include <llvm/MC/MCInstPrinter.h>
+#include <llvm/MC/MCInstrInfo.h>
+#include <llvm/MC/MCRegisterInfo.h>
+#include <llvm/MC/MCSubtargetInfo.h>
+#include <llvm/ADT/OwningPtr.h>
+#include <llvm/ADT/Triple.h>
+#include <llvm/Support/MemoryObject.h>
+#include <llvm/Support/Host.h>
+#include <llvm/Support/TargetRegistry.h>
+#include <llvm/Support/raw_ostream.h>
 
-#include "libcpu.h"
-#include "i386_isa.h"
-#include "i386_decode.h"
+#include "i386_arch.h"
 
-static const char* mnemo[] = {
-#define DECLARE_INSTR(name,str) str,
-#include "i386_instr.h"
-#undef DECLARE_INSTR
-};
 
-static const char *to_mnemonic(struct i386_instr *instr)
+
+extern "C"
 {
-	return mnemo[instr->type];
+	 void LLVMInitializeX86Disassembler();
 }
 
-static const char *byte_reg_names[] = {
-	"%al",
-	"%cl",
-	"%dl",
-	"%bl",
-	"%ah",
-	"%ch",
-	"%dh",
-	"%bh",
-};
 
-static const char *word_reg_names[] = {
-	"%ax",
-	"%cx",
-	"%dx",
-	"%bx",
-	"%sp",
-	"%bp",
-	"%si",
-	"%di",
-};
+static const MCDisassembler *DisAsm = NULL;
+static MCInstPrinter *InstPrinter = NULL;
 
-static const char *mem_byte_reg_names[] = {
-	"%bx,%si",
-	"%bx,%di",
-	"%bp,%si",
-	"%bp,%di",
-	"%si",
-	"%di",
-	NULL,
-	"%bx",
-};
 
-static const char *seg_override_names[] = {
-	"",
-	"%es:",
-	"%cs:",
-	"%ss:",
-	"%ds:",
-};
+/*
+// A subclass of LLVM's MemoryObject that wraps a pointer as an unbounded array
+// of bytes.
+// 
+// When we have an MCDisassembler object, we'll point it into this MemoryObject
+// to decode an instruction. 
+*/	 
+namespace {
+	class DirectMemoryObject : public MemoryObject {
+	private:
+		const uint8_t *Bytes;
+	public:
+		DirectMemoryObject(const uint8_t *bytes) : Bytes(bytes) {}
 
-static const char *prefix_names[] = {
-	"",
-	"repnz ",
-	"rep ",
-};
+		uint64_t getBase() const { return 0; }
+		uint64_t getExtent() const { return 0; }
 
-static const char *sign_to_str(int n)
-{
-	if (n >= 0)
-		return "";
-
-	return "-";
+		int readByte(uint64_t Addr, uint8_t *Byte) const {
+			*Byte = Bytes[Addr];
+			return 0;
+		}
+	};
 }
 
-static const char *to_reg_name(struct i386_instr *instr, int reg_num)
+
+/*
+// Initializes our global disassembler and printer.
+// Largely ripped out of llvm-mc.
+*/
+static void InitializeGlobals()
 {
-	if (instr->flags & WIDTH_BYTE)
-		return byte_reg_names[reg_num];
-
-	return word_reg_names[reg_num];
-}
-
-static int
-print_operand(addr_t pc, char *operands, size_t size, struct i386_instr *instr, struct i386_operand *operand)
-{
-	int ret = 0;
-
-	switch (operand->type) {
-	case OP_IMM:
-		ret = snprintf(operands, size, "$0x%x", operand->imm);
-		break;
-	case OP_REL:
-		ret = snprintf(operands, size, "%x", (unsigned int)((long)pc + instr->nr_bytes + operand->rel));
-		break;
-	case OP_REG:
-		ret = snprintf(operands, size, "%s", to_reg_name(instr, operand->reg));
-		break;
-	case OP_MEM:
-		ret = snprintf(operands, size, "%s(%s)", seg_override_names[instr->seg_override], mem_byte_reg_names[operand->reg]);
-		break;
-	case OP_MEM_DISP:
-		ret = snprintf(operands, size, "%s%s0x%x(%s)", seg_override_names[instr->seg_override], sign_to_str(operand->disp), abs(operand->disp), mem_byte_reg_names[operand->reg]);
-		break;
+	// Initialize the X86 disassembler
+	LLVMInitializeX86Disassembler();
+	
+	// We need to make a target triple for i386
+	Triple triple(sys::getDefaultTargetTriple());
+	triple.setArch(Triple::getArchTypeForLLVMName("x86"));
+	
+	// Look up this target in LLVM's registry
+	std::string Err;
+	const Target *T = TargetRegistry::lookupTarget(triple.getTriple(), Err);
+	if (!T)
+	{
+		errs() << "Failed to get target for " << triple.getTriple() << "\n";
+		abort();
 	}
-	return ret;
+	
+	OwningPtr<const MCAsmInfo> AsmInfo(T->createMCAsmInfo(triple.getTriple()));
+	if (!AsmInfo) {
+		errs() << "Failed to get target for target\n";
+		abort();
+	}
+	
+	OwningPtr<const MCSubtargetInfo> STI(T->createMCSubtargetInfo(triple.getTriple(), "", ""));
+	if (!STI) {
+		errs() << "Failed to get subtarget for target\n";
+		abort();
+	}
+	
+	DisAsm = T->createMCDisassembler(*STI);
+	if (!DisAsm) {
+		errs() << "Failed to get disassembler for target\n";
+		abort();
+	}
+	
+	OwningPtr<const MCRegisterInfo> MRI(T->createMCRegInfo(triple.getTriple()));
+	if (!MRI) {
+		errs() << "Failed to get register info for target\n";
+		abort();
+	}
+	
+	OwningPtr<const MCInstrInfo> MII(T->createMCInstrInfo());
+	if (!MII) {
+		errs() << "Failed to get instruction info for target\n";
+		abort();
+	}
+	
+	
+	int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
+	InstPrinter = T->createMCInstPrinter(AsmPrinterVariant, *AsmInfo,
+		                                 *MII, *MRI, *STI);
+	if (!InstPrinter) {
+		errs() << "Failed to get instruction printer for target\n";
+		abort();
+	}
 }
 
-int
-arch_i386_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
+
+/*
+// Vends a shared MCDisassembler object.
+*/
+static const MCDisassembler *GetDisassembler()
 {
-	struct i386_instr instr;
-	char operands[32];
-	int len = 0;
+	if (!DisAsm)
+		InitializeGlobals();
+	
+	return DisAsm;
+}
 
-	if (arch_i386_decode_instr(&instr, cpu->RAM, pc) != 0) {
-		fprintf(stderr, "error: unable to decode opcode %x\n", instr.opcode);
-		exit(1);
+
+/*
+// Vends a shared MCInstPrinter object.
+*/
+static MCInstPrinter *GetInstPrinter()
+{
+	if (!InstPrinter)
+		InitializeGlobals();
+	
+	return InstPrinter;
+}
+
+
+/*
+// Decodes one instruction from the buffer.
+*/
+MCInst DecodeInstruction(cpu_t *cpu, addr_t pc, uint64_t *_size)
+{
+	uint64_t size = 0;
+	uint64_t index = pc;
+	MCInst insn;
+	
+	// Decode the instruction
+	DirectMemoryObject memoryObject(cpu->RAM);
+	
+	MCDisassembler::DecodeStatus S;
+    S = GetDisassembler()->getInstruction(insn, size, memoryObject, index,
+                                          nulls(), nulls());
+	
+	switch (S)
+	{
+		case MCDisassembler::Fail:
+			errs() << "Warning: Invalid instruction encoding\n";
+			if (size == 0)
+				size = 1;
+			break;
+		
+		case MCDisassembler::SoftFail:
+			errs() << "Warning: Potentially undefined instruction encoding\n";
+			// Fall through
+		
+		case MCDisassembler::Success:
+			break;
 	}
+	
+	if (_size)
+		*_size = size;
+	
+	return insn;
+}
 
-	operands[0] = '\0';
 
-	/* AT&T syntax operands */
-	if (!(instr.flags & SRC_NONE))
-		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.src);
+/*
+// Returns a human-readable version of the instruction.
+*/
+std::string DisasmInstruction(MCInst insn)
+{
+	std::string output;
+	raw_string_ostream sos(output);
+	GetInstPrinter()->printInst(&insn, sos, "");
+	return sos.str();
+}
 
-	if (!(instr.flags & SRC_NONE) && !(instr.flags & DST_NONE))
-		len += snprintf(operands+len, sizeof(operands)-len, ",");
 
-	if (!(instr.flags & DST_NONE))
-		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.dst);
-
-        snprintf(line, max_line, "%s%s\t%s", prefix_names[instr.rep_prefix], to_mnemonic(&instr), operands);
-
-        return arch_i386_instr_length(&instr);
+int arch_i386_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
+{
+	uint64_t size;
+	MCInst insn = DecodeInstruction(cpu, pc, &size);
+	strlcpy(line, DisasmInstruction(insn).c_str(), max_line);
+	return size;
 }
