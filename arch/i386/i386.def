@@ -1,0 +1,74 @@
+arch "i386" {
+
+	name "Intel 80386";
+
+	endian little;
+
+	byte_size 8;
+	word_size 16;
+	address_size 24;
+	psr_size 32;
+
+	register_file {
+
+		group R {
+
+			[ #i16 bx -> #i8 ( bh : bl ) ],
+			[ #i16 ax -> #i8 ( ah : al ) ],
+			[ #i16 cx -> #i8 ( ch : cl ) ],
+	 		[ #i16 dx -> #i8 ( dh : dl ) ],
+			[ #i16 sp ],
+			[ #i16 bp ],
+			[ #i16 si ],
+			[ #i16 di ],
+
+			[ #i32 ebx -> #i16 ( _ : _ <-> bx ) ],
+			[ #i32 eax -> #i16 ( _ : _ <-> ax ) ],
+			[ #i32 ecx -> #i16 ( _ : _ <-> cx ) ],
+			[ #i32 edx -> #i16 ( _ : _ <-> dx ) ],
+			[ #i32 esp -> #i16 ( _ : _ <-> sp ) ],
+			[ #i32 ebp -> #i16 ( _ : _ <-> bp ) ],
+			[ #i32 esi -> #i16 ( _ : _ <-> si ) ],
+			[ #i32 edi -> #i16 ( _ : _ <-> di ) ]
+		}
+
+		group SEG {
+
+			[ #i16 cs ],
+			[ #i16 ds ],
+			[ #i16 ss ],
+			[ #i16 es ]
+
+		}
+
+		group S {
+
+			[ #i16 ip ],
+			[ #i32 eip -> #i16 ( _ : _ <-> ip ) ],
+			[ #i48 pc -> %PC explicit evaluate ( @ea ( seg, off ) ) [ #i16 seg <- cs, #i32 off <-> eip ] ],
+			[ #i16 flags -> #i1 explicit ( 0:0:0:0:O->%V:D:I:T:S->%N:Z->%Z:0:A<-C:0:P->%P:0:C->%C ) ],
+			[ #i32 eflags -> %PSR #i16 explicit ( _ : _ <-> flags ) ]
+
+		}
+
+		group F {
+			[ 8 ** #i64 mm? ],
+			[ 8 ** #i80 st_mmx? -> [ #i16 _, #i64 _ <-> mm? ] ],
+			[ 8 ** #f80 st? -> st_mmx? ],
+
+			[ #i16 sw -> explicit [ #i1 [ B, C3 ],
+									#i3 TOP,
+						   			#i1 [ C2, C1, C0, ES, SF, PE, UE, OE, ZE, DE, IE ] ] ],
+
+			[ #i16 cw -> explicit [ #i3 0,
+						   			#i1 X,
+						   			#i2 RC,
+						   			#i2 PC,
+						   			#i2 0,
+						   			#i1 [ PM, UM, OM, ZM, DM, IM ] ] ]
+		}
+
+		group INT : [ #i8 intno ];
+
+	}
+}
