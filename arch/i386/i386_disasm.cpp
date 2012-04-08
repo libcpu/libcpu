@@ -14,16 +14,10 @@
 #include <llvm/Support/MemoryObject.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/TargetRegistry.h>
+#include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
 
 #include "i386_arch.h"
-
-
-
-extern "C"
-{
-	 void LLVMInitializeX86Disassembler();
-}
 
 
 static const MCDisassembler *DisAsm = NULL;
