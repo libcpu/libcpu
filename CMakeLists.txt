@@ -12,7 +12,7 @@ SET(CMAKE_BUILD_TYPE "Debug")
 #
 # Add here the architecture you want to support.
 # 
-SET(GUEST_ARCHITECTURES 6502 m68k m88k mips arm x86 fapra)
+SET(GUEST_ARCHITECTURES 6502 m68k m88k mips arm x86 i386 fapra)
 SET(GUEST_EXTRA_TESTS multi)
 IF(APPLE)
   SET(GUEST_EXTRA_TESTS ${GUEST_EXTRA_TESTS} next68k)
@@ -35,7 +35,12 @@ ENDIF()
 SET(LLVM_FIND_REQUIRED TRUE)
 INCLUDE(CMake/FindLLVM.cmake)
 
+SET(PREVIOUS_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+#SET(CMAKE_REQUIRED_FLAGS "-Wall -Wextra -Werror -Wno-unused")
+SET(CMAKE_REQUIRED_FLAGS "-Wall -Werror -Wno-unused")
 INCLUDE(CMake/BuildConfigH.cmake)
+SET(CMAKE_REQUIRED_FLAGS "${PREVIOUS_CMAKE_REQUIRED_FLAGS}")
+
 IF(MSVC)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -Dinline=__inline)
 	# disable warnings for LLVM
@@ -44,6 +49,7 @@ IF(MSVC)
 	add_definitions(-wd4355) # 'this' : used in base member initializer list
 	include_directories(libcpu/win32/msvc)
 ENDIF()
+
 
 #
 # Find Python.
@@ -72,7 +78,7 @@ ENDMACRO(TARGET_LINK_LLVM)
 # Add extra warnings for gcc/g++.
 #
 IF(CMAKE_COMPILER_IS_GNUCXX)
-  ADD_DEFINITIONS(-W -Wall -Wextra -Wno-unused -Werror -D__STDC_FORMAT_MACROS=1)
+  ADD_DEFINITIONS(-Wall -Wextra -Wno-unused -Wno-unused-parameter -Werror -D__STDC_FORMAT_MACROS=1)
 ENDIF()
 
 FOREACH(ARCHITECTURE ${GUEST_ARCHITECTURES})

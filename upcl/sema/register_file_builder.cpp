@@ -269,7 +269,7 @@ register_file_builder::create_top(register_info const *ri)
 			else {
 				fprintf(stderr, "error: register '%s' binds pseudo register '%s' which is not recognized.\n",
 						ri->name.c_str(), pseudo_name.c_str());
-				return false;
+				return 0;
 			}
 		} else {
 			assert(0 && "Binding to a register is not yet implemented.");

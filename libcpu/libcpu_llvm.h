@@ -5,6 +5,11 @@
 #include "llvm/DerivedTypes.h"
 #include "llvm/LLVMContext.h"
 
+// FIXME: Used to include proper files. However did not come across the use of
+//        IRBuilder, though there may be some. Verify that this is include is
+//        the "proper" way to go. GMV
+#include "llvm/Support/IRBuilder.h"
+
 //////////////////////////////////////////////////////////////////////
 // LLVM Helpers
 //////////////////////////////////////////////////////////////////////
@@ -14,6 +19,8 @@
 #define getIntegerType(x) (IntegerType::get(_CTX(), x))
 #define getStructType(x, ...) (StructType::get(_CTX(), x,    \
 					       #__VA_ARGS__))
+#define getNamedStructType(x, name, ...) (StructType::create(_CTX(), x, name, \
+                                                             #__VA_ARGS__))
 
 static inline fltSemantics const *getFltSemantics(unsigned bits)
 {
@@ -26,7 +33,7 @@ static inline fltSemantics const *getFltSemantics(unsigned bits)
 	}
 }
 
-static inline Type const *getFloatType(unsigned bits)
+static inline Type *getFloatType(unsigned bits)
 {
 	switch(bits) {
 		case 32: return Type::getFloatTy(_CTX());

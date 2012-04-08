@@ -23,8 +23,8 @@
 //////////////////////////////////////////////////////////////////////
 
 static StructType *
-get_struct_reg(cpu_t *cpu) {
-	std::vector<const Type*>type_struct_reg_t_fields;
+get_struct_reg(cpu_t *cpu, const char* name = NULL) {
+	std::vector<Type*>type_struct_reg_t_fields;
 
 	uint32_t count, size;
 	
@@ -42,12 +42,13 @@ get_struct_reg(cpu_t *cpu) {
 
 //	type_struct_reg_t_fields.push_back(getIntegerType(cpu->info.address_size)); /* PC */
 
-	return getStructType(type_struct_reg_t_fields, /*isPacked=*/true);
+	return (name ? getNamedStructType(type_struct_reg_t_fields, name, /*isPacked=*/true)
+                     : getStructType(type_struct_reg_t_fields, /*isPacked=*/true));
 }
 
 static StructType *
-get_struct_fp_reg(cpu_t *cpu) {
-	std::vector<const Type*>type_struct_fp_reg_t_fields;
+get_struct_fp_reg(cpu_t *cpu, const char* name = NULL) {
+	std::vector<Type*>type_struct_fp_reg_t_fields;
 
 	uint32_t count, size;
 
@@ -76,7 +77,8 @@ get_struct_fp_reg(cpu_t *cpu) {
 		}
 	}
 
-	return getStructType(type_struct_fp_reg_t_fields, /*isPacked=*/true);
+	return (name ? getNamedStructType(type_struct_fp_reg_t_fields, name, /*isPacked=*/true)
+                     : getStructType(type_struct_fp_reg_t_fields, /*isPacked=*/true));
 }
 
 static Value *
@@ -87,7 +89,7 @@ get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
 	SmallVector<Value*, 2> ptr_11_indices;
 	ptr_11_indices.push_back(const_0);
 	ptr_11_indices.push_back(const_index);
-	return (Value*) GetElementPtrInst::Create(s, ptr_11_indices.begin(), ptr_11_indices.end(), "", bb);
+	return (Value*) GetElementPtrInst::Create(s, ptr_11_indices, "", bb);
 }
 
 static void
@@ -176,7 +178,7 @@ emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 		cpu->ptr_fpr, bb);
 
 	// PC pointer.
-	Type const *intptr_type = cpu->exec_engine->getTargetData()->getIntPtrType(_CTX());
+	Type *intptr_type = cpu->exec_engine->getTargetData()->getIntPtrType(_CTX());
 	Constant *v_pc = ConstantInt::get(intptr_type, (uintptr_t)cpu->rf.pc);
 	cpu->ptr_PC = ConstantExpr::getIntToPtr(v_pc, PointerType::getUnqual(getIntegerType(cpu->info.address_size)));
 	cpu->ptr_PC->setName("pc");
@@ -287,13 +289,11 @@ cpu_create_function(cpu_t *cpu, const char *name,
 
 	// Type Definitions
 	// - struct reg
-	StructType *type_struct_reg_t = get_struct_reg(cpu);
-	cpu->mod->addTypeName("struct.reg_t", type_struct_reg_t);
+	StructType *type_struct_reg_t = get_struct_reg(cpu, "struct.reg_t");
 	// - struct reg *
 	PointerType *type_pstruct_reg_t = PointerType::get(type_struct_reg_t, 0);
 	// - struct fp_reg
-	StructType *type_struct_fp_reg_t = get_struct_fp_reg(cpu);
-	cpu->mod->addTypeName("struct.fp_reg_t", type_struct_fp_reg_t);
+	StructType *type_struct_fp_reg_t = get_struct_fp_reg(cpu, "struct.fp_reg_t");
 	// - struct fp_reg *
 	PointerType *type_pstruct_fp_reg_t = PointerType::get(type_struct_fp_reg_t, 0);
 	// - uint8_t *
@@ -301,7 +301,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	// - intptr *
 	PointerType *type_intptr = PointerType::get(cpu->exec_engine->getTargetData()->getIntPtrType(_CTX()), 0);
 	// - (*f)(cpu_t *) [debug_function() function pointer]
-	std::vector<const Type*>type_func_callout_args;
+	std::vector<Type*>type_func_callout_args;
 	type_func_callout_args.push_back(type_intptr);	/* intptr *cpu */
 	FunctionType *type_func_callout = FunctionType::get(
 		XgetType(VoidTy),	/* Result */
@@ -310,7 +310,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	cpu->type_pfunc_callout = PointerType::get(type_func_callout, 0);
 
 	// - (*f)(uint8_t *, reg_t *, fp_reg_t *, (*)(...)) [jitmain() function pointer)
-	std::vector<const Type*>type_func_args;
+	std::vector<Type*>type_func_args;
 	type_func_args.push_back(type_pi8);				/* uint8_t *RAM */
 	type_func_args.push_back(type_pstruct_reg_t);	/* reg_t *reg */
 	type_func_args.push_back(type_pstruct_fp_reg_t);	/* fp_reg_t *fp_reg */
@@ -330,9 +330,9 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	{
 		SmallVector<AttributeWithIndex, 4> Attrs;
 		AttributeWithIndex PAWI;
-		PAWI.Index = 1U; PAWI.Attrs = 0  | Attribute::NoCapture;
+		PAWI = AttributeWithIndex::get(1, Attribute::NoCapture);
 		Attrs.push_back(PAWI);
-		PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind;
+		PAWI = AttributeWithIndex::get(~0u, Attribute::NoUnwind);
 		Attrs.push_back(PAWI);
 		func_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
 	}

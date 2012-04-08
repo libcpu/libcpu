@@ -17,6 +17,8 @@ public:
 		: m_name(name)
 	{ }
 
+	virtual ~instruction() {}
+
 	inline std::string get_name() const { return m_name; }
 	virtual bool is_jump() const { return false; }
 };
