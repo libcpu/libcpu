@@ -65,7 +65,7 @@ lookup_basicblock(cpu_t *cpu, Function* f, addr_t pc, BasicBlock *bb_ret, uint8_
 	if (i != bb_addr.end())
 		return i->second;
 
-	LOG("basic block %c%08" PRIx64 " not found in function %p - creating return basic block!\n", bb_type, pc, f);
+	LOG("basic block %c%08" PRIx64 " not found in function %p - creating return basic block!\n", bb_type, pc, (void *)f);
 	BasicBlock *new_bb = create_basicblock(cpu, pc, cpu->cur_func, BB_TYPE_EXTERNAL);
 	emit_store_pc_return(cpu, new_bb, pc, bb_ret);
 

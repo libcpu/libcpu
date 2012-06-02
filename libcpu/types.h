@@ -9,7 +9,8 @@ typedef signed short sint16_t;
 typedef signed int sint32_t;
 typedef signed long long sint64_t;
 
-#if !defined(sun) && !defined(linux)
+#if !defined(sun) && !defined(linux) && 0
+// TODO: Fix this in CMake.
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
@@ -23,7 +24,6 @@ typedef uint16_t tag_t;
 #include <arch/6502/6502_types.h>
 #include <arch/m68k/m68k_types.h>
 #include <arch/mips/mips_types.h>
-#include <arch/x86/x86_types.h>
 #include <arch/fapra/fapra_types.h>
 
 #endif

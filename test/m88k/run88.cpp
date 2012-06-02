@@ -1,5 +1,8 @@
 #include <sys/types.h>
 #include <sys/mman.h>
+#if defined(__NetBSD__)
+#include <unistd.h> /* getpagesize() */
+#endif
 #include <libcpu.h>
 #include "arch/m88k/m88k_isa.h"
 
@@ -17,8 +20,8 @@
 #define STACK_TOP ((long long)(RAM+RAM_SIZE-4))
 
 #define PC (((m88k_grf_t*)cpu->rf.grf)->sxip)
-#define TRAPNO (((m88k_grf_t*)cpu->rf.grf)->trapno)
-#define PSR (((m88k_grf_t*)cpu->rf.grf)->psr)
+#define TRAPNO (((m88k_grf_t*)cpu->rf.grf)->_n.trapno)
+#define PSR (((m88k_grf_t*)cpu->rf.grf)->_n.psr)
 #define R (((m88k_grf_t*)cpu->rf.grf)->r)
 
 static size_t host_page_size;
@@ -57,7 +60,7 @@ run88_mem_gmap(xec_mem_if_t *self, xec_haddr_t addr, size_t len, unsigned flags)
 
 	dist = addr - (xec_haddr_t)RAM;
 	//fprintf(stderr, "GMAP: %llx || %p -> %llx\n",
-	//	(unsigned long long)addr, RAM, (unsigned long long)dist);
+	//	(unsigned long long)addr, (void *)RAM, (unsigned long long)dist);
 
 	if (sizeof(dist) == sizeof(uint64_t)) {
 		if (dist >= RAM_SIZE && dist <= (uintptr_t)(4ULL * 1024 * 1024 * 1024 - 1))
@@ -235,11 +238,11 @@ dump_state(uint8_t *RAM, m88k_grf_t *reg)
 void
 aspace_lock(void)
 {
-#if defined(__x86_64__)
-	static size_t const four_gigs = 4ULL*1024*1024*1024;
-
 	if (host_page_size == 0)
 		host_page_size = getpagesize();
+
+#if defined(__x86_64__)
+	static size_t const four_gigs = 4ULL*1024*1024*1024;
 
 	/* Unmap the low 4G by the kernel, it may be mapped using a single 4G page! */
 	munmap(NULL, four_gigs);

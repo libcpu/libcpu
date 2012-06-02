@@ -12,7 +12,7 @@ SET(CMAKE_BUILD_TYPE "Debug")
 #
 # Add here the architecture you want to support.
 # 
-SET(GUEST_ARCHITECTURES 6502 m68k m88k mips arm x86 fapra)
+SET(GUEST_ARCHITECTURES 6502 m68k m88k mips arm fapra)
 SET(GUEST_EXTRA_TESTS multi)
 IF(APPLE)
   SET(GUEST_EXTRA_TESTS ${GUEST_EXTRA_TESTS} next68k)
@@ -73,6 +73,8 @@ ENDMACRO(TARGET_LINK_LLVM)
 #
 IF(CMAKE_COMPILER_IS_GNUCXX)
   ADD_DEFINITIONS(-W -Wall -Wextra -Wno-unused -Werror -D__STDC_FORMAT_MACROS=1)
+  # Set standard to C++11 or whatever
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 ENDIF()
 
 FOREACH(ARCHITECTURE ${GUEST_ARCHITECTURES})

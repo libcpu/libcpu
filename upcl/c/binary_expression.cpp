@@ -423,7 +423,7 @@ namespace {
 			case binary_expression::ROR:
 				// If LHS is zero, return zero.
 				if (expr1->evaluate(value, sign) && value == 0)
-					return expression::fromInteger(0ULL,
+					return expression::fromInteger((uint64_t)0,
 							expr->get_type()->get_bits());
 				// If shifting by zero, return only the expr.
 				else if (expr2->evaluate(value, sign) && value == 0)
@@ -439,7 +439,7 @@ namespace {
 					return expr1;
 				// If subtracting the same expression, return zero!
 				else if (expr1->is_equal(expr2))
-					return expression::fromInteger(0ULL,
+					return expression::fromInteger((uint64_t)0,
 							expr->get_type()->get_bits());
 				break;
 
@@ -447,7 +447,7 @@ namespace {
 				// If AND zero, return zero.
 				if ((expr1->evaluate(value, sign) && value == 0) ||
 						(expr2->evaluate(value, sign) && value == 0))
-					return expression::fromInteger(0ULL, 
+					return expression::fromInteger((uint64_t)0, 
 							expr->get_type()->get_bits());
 				// If ANDing same expr, return the first.
 				else if (expr1->is_equal(expr2))
@@ -472,7 +472,7 @@ namespace {
 					return expr2;
 				// If XORing the same expression, return zero.
 				else if (expr2->is_equal(expr1))
-					return expression::fromInteger(0ULL,
+					return expression::fromInteger((uint64_t)0,
 							expr->get_type()->get_bits());
 				break;
 
@@ -481,7 +481,7 @@ namespace {
 			case binary_expression::GE:
 				// If EQ/LE/GE the same expression, it's true.
 				if (expr2->is_equal(expr1))
-					return expression::fromInteger(1ULL, 1);
+					return expression::fromInteger((uint64_t)1, 1);
 				break;
 
 			default:

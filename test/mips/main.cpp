@@ -14,6 +14,7 @@
 #define TIMES 100
 
 #include <libcpu.h>
+#include <inttypes.h>
 #include "arch/mips/mips_interface.h"
 //////////////////////////////////////////////////////////////////////
 // command line parsing helpers
@@ -309,7 +310,7 @@ double_break:
 	printf("done!\n");
 
 	printf("%d -- %d\n", r1, r2);
-	printf("%lld -- %lld\n", t2-t1, t4-t3);
+	printf("%" PRId64 " -- %"PRId64"\n", t2-t1, t4-t3);
 	printf("%f%%\n",  (float)(t2-t1)/(float)(t4-t3));
 #endif
 #endif

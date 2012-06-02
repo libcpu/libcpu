@@ -81,9 +81,9 @@ enum {
 	CPU_FLAG_ENDIAN_BIG    = (0 << 1),
 	CPU_FLAG_ENDIAN_LITTLE = (1 << 1),
 	CPU_FLAG_ENDIAN_MIDDLE = (2 << 1), // Middle endian (ie. PDP-11) NYI.
-	CPU_FLAG_ENDIAN_NONE   = (3 << 1), // Mainly word oriented machines, where 
-									   // word size is not a power of two.
-									   // (ie. PDP-10)
+	CPU_FLAG_ENDIAN_NONE   = (3 << 1), // Mainly word oriented machines, 
+					   // where word size is not a power of
+					   // two. (ie. PDP-10)
 
 	// @@@BEGIN_DEPRECATION
 	CPU_FLAG_HARDWIRE_GPR0 = (1 << 4),
@@ -95,7 +95,7 @@ enum {
 	// internal flags.
 	CPU_FLAG_FP80          = (1 << 15), // FP80 is natively supported.
 	CPU_FLAG_FP128         = (1 << 16), // FP128 is natively supported.
-	CPU_FLAG_SWAPMEM       = (1 << 17), // Swap load/store
+	CPU_FLAG_SWAPMEM       = (1 << 17)  // Swap load/store
 };
 
 // @@@BEGIN_DEPRECATION
@@ -105,9 +105,9 @@ enum {
 	CPU_REG_FPR, // Floating Point
 	CPU_REG_VR,  // Vector
 	CPU_REG_XR   // Extra Registers, the core expects these to follow
-	 			 // GPRs in the memory layout, they are kept separate
-				 // to avoid confusing the client about the number of
-				 // registers available.
+	 	     // GPRs in the memory layout, they are kept separate
+		     // to avoid confusing the client about the number of
+		     // registers available.
 };
 // @@@END_DEPRECATION
 
@@ -128,9 +128,9 @@ enum {
 };
 
 typedef struct cpu_flags_layout {
-	int shift;	/* bit position */
-	char type;	/* 'N', 'V', 'Z', 'C' or 0 (some other flag unknown to the generic code) */
-	const char *name; /* symbolic name */
+	int shift;	  // bit position
+	char type;	  // 'N','V','Z','C'. 0 indicates non-generic flags
+	const char *name; // symbolic name
 } cpu_flags_layout_t;
 
 // register layout types
@@ -246,8 +246,8 @@ typedef struct cpu {
 	Value **ptr_fpr; // FPRs
 	Value **in_ptr_fpr;
 
-	Value **ptr_FLAG; /* exploded version of flags */
-	/* pointers to negative, overflow, zero and carry */
+	Value **ptr_FLAG; // exploded version of flags
+	// Pointers to negative, overflow, zero and carry
 	Value *ptr_N;
 	Value *ptr_V;
 	Value *ptr_Z;
@@ -256,7 +256,7 @@ typedef struct cpu {
 	uint64_t timer_total[TIMER_COUNT];
 	uint64_t timer_start[TIMER_COUNT];
 
-	void *feptr; /* This pointer can be used freely by the frontend. */
+	void *feptr; // This pointer can be used freely by the frontend.
 } cpu_t;
 
 enum {
@@ -306,17 +306,12 @@ enum {
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
-
 #define LOGGING (cpu->flags_debug & CPU_DEBUG_LOG)
 #define LOG(...) do { if (LOGGING) printf(__VA_ARGS__); } while(0)
-
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
-/*
- * type of the debug callback; second parameter is
- * pointer to CPU specific register struct
- */
+// debug callback type
 typedef void (*debug_function_t)(cpu_t*);
 
 //////////////////////////////////////////////////////////////////////
@@ -333,7 +328,7 @@ API_FUNC void cpu_set_ram(cpu_t *cpu, uint8_t *RAM);
 API_FUNC void cpu_flush(cpu_t *cpu);
 API_FUNC void cpu_print_statistics(cpu_t *cpu);
 
-/* runs the interactive debugger */
+// runs the interactive debugger
 API_FUNC int cpu_debugger(cpu_t *cpu, debug_function_t debug_function);
 
 #endif

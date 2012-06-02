@@ -7,7 +7,7 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/Module.h"
 #include "llvm/PassManager.h"
-#include "llvm/Support/StandardPasses.h"
+#include "llvm/LinkAllPasses.h"
 #include "llvm/Target/TargetData.h"
 
 #include "libcpu.h"

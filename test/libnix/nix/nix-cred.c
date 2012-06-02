@@ -166,7 +166,13 @@ nix_setregid(nix_gid_t gid, nix_gid_t egid, nix_env_t *env)
 int
 nix_reboot(int howto, nix_env_t *env)
 {
-	if (reboot(howto) != 0) {
+	if (
+#if defined(__NetBSD__)
+	    reboot(howto, "NIX")
+#else
+	    reboot(howto)
+#endif
+	     		   != 0) {
 		nix_env_set_errno(env, errno);
 		return (-1);
 	}

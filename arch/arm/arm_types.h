@@ -24,7 +24,7 @@ typedef struct {
 			uint32_t r14;
 			uint32_t r15; /* would be PC, but we store PC externally, so this is unused */
 			uint32_t cpsr;
-		};
+		} _n;
 		uint32_t r[17];
 	};
 	uint32_t pc;

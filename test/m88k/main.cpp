@@ -1,5 +1,5 @@
 #define BENCHMARK_FIB
-//#define SINGLESTEP
+#define SINGLESTEP
 
 #ifdef BENCHMARK_FIB
 # define START 0
@@ -300,7 +300,7 @@ main(int argc, char **argv)
 
 		cpu_run(cpu, debug_function);
 
-		dump_state(RAM, (m88k_grf_t*)cpu->reg);
+		dump_state(RAM, (m88k_grf_t*)cpu->rf.grf, (m88k_xrf_t*)cpu->rf.frf);
 		printf ("NPC=%08x\n", PC);
 
 		if (PC == -1)

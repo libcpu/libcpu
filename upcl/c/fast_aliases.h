@@ -23,8 +23,8 @@
 #define CCOM expression::Com
 #define CNOT expression::Not
 #define CCONSTn(x,n) c::expression::fromInteger(x, n)
-#define CCONST(x) (((x) == 0 ? CCONSTn(0ULL, sizeof(x)*8) : \
-			CCONSTn((x), sizeof(x)*8)))
+#define CCONST(x) (((x) == 0 ? CCONSTn((uint64_t)0, (unsigned int)sizeof(x)*8) : \
+			CCONSTn((x), (unsigned int)sizeof(x)*8)))
 #define CREG expression::fromRegister
 #define CASSIGN expression::Assign
 #define CBITSLICE c::expression::BitSlice

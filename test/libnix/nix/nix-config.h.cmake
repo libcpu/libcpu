@@ -9,7 +9,6 @@
 #cmakedefine HAVE_SYS_MOUNT_H 1
 #cmakedefine HAVE_SYS_VFS_H 1
 #cmakedefine HAVE_SYS_STATVFS_H 1
-#cmakedefine HAVE_SYS_STATFS_H 1
 #cmakedefine HAVE_BITSTRING_H 1
 #cmakedefine HAVE_SCHED_H 1
 #cmakedefine HAVE_PTHREAD_H 1
@@ -33,12 +32,14 @@
 #cmakedefine HAVE_SETFSUID 1
 #cmakedefine HAVE_SETHOSTID 1
 
+#if !defined(__NetBSD__)
 #cmakedefine HAVE_GETFSSTAT 1
+#endif
 
 /*
  * For Solaris hide statfs/fstatfs.
  */
-#if !defined(sun)
+#if !defined(sun)&&!defined(__NetBSD__)
 #cmakedefine HAVE_STATFS 1
 #cmakedefine HAVE_FSTATFS 1
 #endif

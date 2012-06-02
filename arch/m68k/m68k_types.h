@@ -18,7 +18,7 @@ typedef struct {
 			uint32_t r14;
 			uint32_t r15;
 			uint32_t psr;
-		};
+		} _n;
 		uint32_t r[17];
 	};
 	uint32_t pc;

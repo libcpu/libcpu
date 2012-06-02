@@ -221,7 +221,7 @@ idbg_print_char(char c)
 		  fprintf(stdout, "\\%c", c);
 		  break;
 		default:
-			if (iscntrl(c) || !isprint(c))
+			if (iscntrl((int)c) || !isprint((int)c))
 				fprintf(stdout, "\\%04o", (uint8_t)c);
 			else
 				fprintf(stdout, "%c", c);
@@ -893,10 +893,10 @@ idbg_address_operand(idbg_t *ctx, char const *token, addr_t *address)
 			return (-1);
 		if (strncmp(token, "pc", 2) == 0)
 			value = cpu->f.get_pc((cpu_t *)cpu, cpu->rf.grf);
-		else if (*token == 'r' || isdigit(*token)) {
-			if (!isdigit(*token))
+		else if (*token == 'r' || isdigit((int)*token)) {
+			if (!isdigit((int)*token))
 				token++;
-			if (!isdigit(*token))
+			if (!isdigit((int)*token))
 				return (-1);
 			if (cpu->f.get_reg((cpu_t *)cpu, cpu->rf.grf, atoi(token), &value))
 				return (-1);
@@ -933,10 +933,10 @@ idbg_register_operand(idbg_t *ctx, char const *token, unsigned *type, int *index
 			*index = -2;
 			*(uint64_t *)value = cpu->f.get_psr((cpu_t *)cpu, cpu->rf.grf);
 			*type = R_GPR;
-		} else if (*token == 'r' || isdigit(*token)) {
-			if (!isdigit(*token))
+		} else if (*token == 'r' || isdigit((int)*token)) {
+			if (!isdigit((int)*token))
 				token++;
-			if (!isdigit(*token))
+			if (!isdigit((int)*token))
 				return (-1);
 			*index = atoi(token);
 			if (cpu->f.get_reg(cpu, cpu->rf.grf, *index, (uint64_t *)value))
@@ -944,7 +944,7 @@ idbg_register_operand(idbg_t *ctx, char const *token, unsigned *type, int *index
 			*type = R_GPR;
 		} else if (*token == 'f') {
 			token++;
-			if (!isdigit(*token))
+			if (!isdigit((int)*token))
 				return (-1);
 			*index = atoi(token);
 			if (cpu->f.get_fp_reg(cpu, cpu->rf.frf, *index,
@@ -964,7 +964,7 @@ idbg_help(char const *cmd)
 {
 	fprintf(stderr, "libcpu - interactive debugger\n");
 
-	while (isspace(*cmd))
+	while (isspace((int)*cmd))
 		cmd++;
 
 	switch (*cmd) {
@@ -1135,7 +1135,7 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 						break;
 					default:
 						p--;
-						if (!isspace (*p)) {
+						if (!isspace((int)*p)) {
 							fprintf(stderr, "IDBG ERROR: "
 								"Unrecognized modifier '%c'.\n", *p);
 							continue;
@@ -1144,13 +1144,13 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 				}
 			}
 
-			if (!isspace(*p)) {
+			if (!isspace((int)*p)) {
 				fprintf(stderr, "IDBG ERROR: Invalid syntax.\n");
 				continue;
 			}
 
 			// skip space
-			while (isspace (*p))
+			while (isspace((int)*p))
 			  p++;
 
 			if (idbg_register_operand(&ctx, p, &type, &index, &rv)) {
@@ -1177,7 +1177,7 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 				p++;
 				if (*p == '/') {
 					p++;
-					if (isdigit(*p)) {
+					if (isdigit((int)*p)) {
 						char *e;
 						count = strtol(p, &e, 10);
 						p = e;
@@ -1242,7 +1242,7 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 							break;
 						default:
 							p--;
-							if (!isspace (*p)) {
+							if (!isspace((int)*p)) {
 								fprintf(stderr, "IDBG ERROR: "
 									"Unrecognized modifier '%c'.\n", *p);
 								continue;
@@ -1250,13 +1250,13 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 							break;
 					}
 				}
-				if (!isspace(*p)) {
+				if (!isspace((int)*p)) {
 					fprintf(stderr, "IDBG ERROR: Invalid syntax.\n");
 					continue;
 				}
 
 				// skip space
-				while (isspace (*p))
+				while (isspace((int)*p))
 					p++;
 
 				if (idbg_address_operand(&ctx, p, &address)) {

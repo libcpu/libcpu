@@ -13,7 +13,7 @@
 #include "llvm/LinkAllPasses.h"
 #include "llvm/Module.h"
 #include "llvm/Target/TargetData.h"
-#include "llvm/Target/TargetSelect.h"
+#include "llvm/Support/TargetSelect.h"
 
 /* project global headers */
 #include "libcpu.h"
@@ -32,7 +32,6 @@ extern arch_func_t arch_func_m68k;
 extern arch_func_t arch_func_mips;
 extern arch_func_t arch_func_m88k;
 extern arch_func_t arch_func_arm;
-extern arch_func_t arch_func_8086;
 extern arch_func_t arch_func_fapra;
 
 #define IS_LITTLE_ENDIAN(cpu) (((cpu)->info.common_flags & CPU_FLAG_ENDIAN_MASK) == CPU_FLAG_ENDIAN_LITTLE)
@@ -106,9 +105,6 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 			break;
 		case CPU_ARCH_ARM:
 			cpu->f = arch_func_arm;
-			break;
-		case CPU_ARCH_8086:
-			cpu->f = arch_func_8086;
 			break;
 		case CPU_ARCH_FAPRA:
 			cpu->f = arch_func_fapra;
@@ -360,7 +356,7 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 		orig_pc = pc;
 		success = false;
 		for (i = 0; i < cpu->functions; i++) {
-			fp_t FP = (fp_t)cpu->fp[i];
+			fp_t FP = (fp_t)(intptr_t)cpu->fp[i];
 			update_timing(cpu, TIMER_RUN, true);
 			breakpoint();
 			ret = FP(cpu->RAM, cpu->rf.grf, cpu->rf.frf, debug_function);

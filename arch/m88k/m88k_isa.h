@@ -230,7 +230,7 @@ typedef struct _m88k_grf {
 
 			uint32_t psr;
 			uint32_t trapno;
-		};
+		} _n;
 		uint32_t r[32 + 2];
 	};
 	uint32_t sxip; /* Execution IP */
@@ -270,7 +270,7 @@ typedef union _m88k_xrf_t {
 		fp80_reg_t x29;
 		fp80_reg_t x30;
 		fp80_reg_t x31;
-	};
+	} _n;
 	fp80_reg_t x[32];
 } m88k_xrf_t;
 

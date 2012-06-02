@@ -55,7 +55,7 @@ bit_slice_expression::simplify(bool) const
 			fprintf(stderr, "warning: first bit is past the expression "
 					"size.\n");
 
-			return expression::fromInteger(0ULL, get_type()->get_bits());
+			return expression::fromInteger((uint64_t)0, get_type()->get_bits());
 		}
 	}
 

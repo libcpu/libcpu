@@ -12,7 +12,7 @@
 #include <sys/vfs.h>
 #endif
 #ifdef HAVE_SYS_STATFS_H
-#include <sys/statvfs.h>
+#include <sys/statfs.h>
 #endif
 #ifdef HAVE_SYS_STATVFS_H
 #include <sys/statvfs.h>
@@ -202,7 +202,11 @@ cvt_statfs(struct statvfs const *native,
 	dest->f_owner = 0;
 	dest->f_ctime.tv_sec  = 0;
 	dest->f_ctime.tv_nsec = 0;
+#if defined(__NetBSD__)
+	strcpy(dest->f_fstypename, native->f_fstypename);
+#else
 	strcpy(dest->f_fstypename, native->f_basetype);
+#endif
 	/* XXX Fill in mount paths! */
 }
 #endif

@@ -33,7 +33,7 @@ typedef struct {
 			uint64_t r29;
 			uint64_t r30;
 			uint64_t r31;
-		};
+		} _n;
 		uint64_t r[32];
 	};
 	uint64_t pc;
@@ -74,7 +74,7 @@ typedef struct {
 			uint32_t r29;
 			uint32_t r30;
 			uint32_t r31;
-		};
+		} _n;
 		uint32_t r[32];
 	};
 	uint32_t pc;

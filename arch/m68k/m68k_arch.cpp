@@ -48,7 +48,7 @@ arch_m68k_get_pc(cpu_t *, void *reg)
 static uint64_t
 arch_m68k_get_psr(cpu_t *, void *reg)
 {
-	return ((reg_m68k_t*)reg)->psr;
+	return ((reg_m68k_t*)reg)->_n.psr;
 }
 
 static int

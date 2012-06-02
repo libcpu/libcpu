@@ -67,7 +67,7 @@ arch_arm_get_pc(cpu_t *, void *reg)
 static uint64_t
 arch_arm_get_psr(cpu_t *, void *reg)
 {
-	return ((reg_arm_t *)reg)->cpsr;
+	return ((reg_arm_t *)reg)->_n.cpsr;
 }
 
 static int

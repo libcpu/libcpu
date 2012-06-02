@@ -55,7 +55,7 @@ typedef union {
 		u32 TagHi;
 		u32 ErrorEPC;
 		u32 Res6;
-	};
+	} _n;
 } TCOP0Registers;
 
 typedef union {

@@ -32,8 +32,10 @@ def gen_opcode(line):
 
 def make_op_enum(opcodes):
     out = (['enum OpcodeID {'] +
-           sorted('  %s,' % x[0] for x in opcodes) +
-           ['};'])
+           sorted('  %s,' % x[0] for x in opcodes))
+    # Remove last comma. Python LOL #2 
+    out[-1] = out[-1][:-1]
+    out.append('};')
     return '\n'.join(out)
 
 def make_decoder_table(opcodes):
@@ -42,9 +44,19 @@ def make_decoder_table(opcodes):
            '  uint16_t value;',
            '  uint16_t mask;',
            '} decoder_table[] = {']
+
+    prev_name = ''
+    prev_val = 0
+    prev_mask = 0;
     for name, val_n_mask in opcodes:
         val, mask = val_n_mask
-        out.append('  { %s, 0x%x, 0x%x },' % (name, val, mask))
+        # LOL, python.
+	if len(prev_name) != 0:  
+            out.append('  { %s, 0x%x, 0x%x },' % (prev_name,prev_val,prev_mask))
+        prev_name = name
+	prev_val = val
+	prev_mask = mask
+    out.append('  { %s, 0x%x, 0x%x }' % (prev_name,prev_val,prev_mask))
     out.append('};')
     return '\n'.join(out)
 

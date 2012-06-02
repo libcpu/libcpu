@@ -62,8 +62,8 @@ arch_m88k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	}
 
 	reg->sxip = 0;
-	reg->psr = 0;
-	reg->trapno = 0;
+	reg->_n.psr = 0;
+	reg->_n.trapno = 0;
 
 	// Architecture Register File
 	rf->pc = &reg->sxip;
@@ -126,7 +126,7 @@ arch_m88k_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 static uint64_t
 arch_m88k_get_psr(cpu_t *, void *regs)
 {
-	return ((m88k_grf_t *)regs)->psr;
+	return ((m88k_grf_t *)regs)->_n.psr;
 }
 
 static int
