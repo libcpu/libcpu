@@ -77,6 +77,11 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 ENDIF()
 
+#
+# llvm-config may set up -pedantic. Remove for the sake of sanity.
+#
+string(REPLACE "-pedantic" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+
 FOREACH(ARCHITECTURE ${GUEST_ARCHITECTURES})
 	IF(EXISTS ${PROJECT_SOURCE_DIR}/arch/${ARCHITECTURE})
 		MESSAGE("** Building Guest Architecture: ${ARCHITECTURE}")
