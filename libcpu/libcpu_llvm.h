@@ -3,7 +3,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/LLVMContext.h"
+#include "llvm/IR/LLVMContext.h"
 
 //////////////////////////////////////////////////////////////////////
 // LLVM Helpers
