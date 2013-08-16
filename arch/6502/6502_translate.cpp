@@ -4,7 +4,7 @@
  * main translation code
  */
 
-#include "llvm/Instructions.h"
+#include "llvm/IR/Instructions.h"
 
 #include "libcpu.h"
 #include "libcpu_llvm.h"
