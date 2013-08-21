@@ -13,7 +13,7 @@
 #  endif /* defined(_MSC_VER) */
 #endif /* defined(_WIN32) */
 
-#if HAVE_DECLSPEC_DLLEXPORT
+#if HAVE_DECLSPEC_DLLEXPORT && 0
 #  ifdef LIBCPU_BUILD_CORE
 #    define API_FUNC __declspec(dllexport)
 #  else
