@@ -12,3 +12,11 @@ build/*
 *.rej
 
 .clang_complete
+
+libcpu/config.h
+test/libloader/elf32.c
+test/libloader/elf64.c
+test/libloader/loader_config.h
+test/libnix/nix/nix-config.h
+test/libnix/obsd41/nix-obsd41-config.h
+test/libnix/xec-compat/xec-base.h
