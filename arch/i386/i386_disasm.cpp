@@ -70,8 +70,14 @@ static void InitializeGlobals()
 		errs() << "Failed to get target for " << triple.getTriple() << "\n";
 		abort();
 	}
-	
-	OwningPtr<const MCAsmInfo> AsmInfo(T->createMCAsmInfo(triple.getTriple()));
+
+	OwningPtr<const MCRegisterInfo> MRI(T->createMCRegInfo(triple.getTriple()));
+	if (!MRI) {
+		errs() << "Failed to get register info for target\n";
+		abort();
+	}
+
+	OwningPtr<const MCAsmInfo> AsmInfo(T->createMCAsmInfo(*T->createMCRegInfo(triple.getTriple()), triple.getTriple()));
 	if (!AsmInfo) {
 		errs() << "Failed to get target for target\n";
 		abort();
@@ -86,12 +92,6 @@ static void InitializeGlobals()
 	DisAsm = T->createMCDisassembler(*STI);
 	if (!DisAsm) {
 		errs() << "Failed to get disassembler for target\n";
-		abort();
-	}
-	
-	OwningPtr<const MCRegisterInfo> MRI(T->createMCRegInfo(triple.getTriple()));
-	if (!MRI) {
-		errs() << "Failed to get register info for target\n";
 		abort();
 	}
 	
