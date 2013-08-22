@@ -10,7 +10,7 @@
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/Support/IRBuilder.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/Target/TargetData.h"
 #include "llvm/Function.h"
