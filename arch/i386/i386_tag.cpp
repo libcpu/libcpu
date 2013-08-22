@@ -17,6 +17,7 @@ arch_i386_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *n
 	uint64_t size;
 	MCInst insn;
 	insn = DecodeInstruction(cpu, pc, &size);
+	uint64_t branch_target; // XXX
 	
 	const MCInstrDesc &desc = DescForInst(insn);
 	const MCInstrAnalysis analyzer = MCInstrAnalysis(GetInstInfo());
@@ -28,14 +29,14 @@ arch_i386_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *n
 	else if (desc.isCall())
 	{
 		*tag = TAG_CALL;
-		*new_pc = analyzer.evaluateBranch(insn, pc, size);
+		*new_pc = analyzer.evaluateBranch(insn, pc, size, branch_target);
 		if (*new_pc == (addr_t)~0)
 			assert(0 && "Not a PC-relative branch!");
 	}
 	else if (desc.isBranch())
 	{
 		*tag = TAG_BRANCH;
-		*new_pc = analyzer.evaluateBranch(insn, pc, size);
+		*new_pc = analyzer.evaluateBranch(insn, pc, size, branch_target);
 		if (*new_pc == (addr_t)~0)
 			assert(0 && "Not a PC-relative branch!");
 	}
