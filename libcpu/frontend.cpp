@@ -8,8 +8,8 @@
 
 #include <assert.h>
 
-#include "llvm/Constants.h"
-#include "llvm/Intrinsics.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/Target/TargetData.h"
