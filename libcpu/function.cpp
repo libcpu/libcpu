@@ -319,8 +319,8 @@ cpu_create_function(cpu_t *cpu, const char *name,
 		GlobalValue::ExternalLinkage,	/* Linkage */
 		name, cpu->mod);				/* Name */
 	func->setCallingConv(CallingConv::C);
-	func->setDoesNotCapture(1, true);
-	func->setDoesNotThrow(true);
+	func->setDoesNotCapture(1);
+	func->setDoesNotThrow();
 
 	// args
 	Function::arg_iterator args = func->arg_begin();
