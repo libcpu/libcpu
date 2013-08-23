@@ -12,7 +12,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/IR/DataLayout.h"
 
 #include "libcpu.h"
 #include "libcpu_llvm.h"
@@ -171,7 +171,7 @@ emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 		cpu->ptr_fpr, bb);
 
 	// PC pointer.
-	Type *intptr_type = cpu->exec_engine->getTargetData()->getIntPtrType(_CTX());
+	Type *intptr_type = cpu->exec_engine->getDataLayout()->getIntPtrType(_CTX());
 	Constant *v_pc = ConstantInt::get(intptr_type, (uintptr_t)cpu->rf.pc);
 	cpu->ptr_PC = ConstantExpr::getIntToPtr(v_pc, PointerType::getUnqual(getIntegerType(cpu->info.address_size)));
 	cpu->ptr_PC->setName("pc");
@@ -292,7 +292,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	// - uint8_t *
 	PointerType *type_pi8 = PointerType::get(getIntegerType(8), 0);
 	// - intptr *
-	PointerType *type_intptr = PointerType::get(cpu->exec_engine->getTargetData()->getIntPtrType(_CTX()), 0);
+	PointerType *type_intptr = PointerType::get(cpu->exec_engine->getDataLayout()->getIntPtrType(_CTX()), 0);
 	// - (*f)(cpu_t *) [debug_function() function pointer]
 	std::vector<Type*>type_func_callout_args;
 	type_func_callout_args.push_back(type_intptr);	/* intptr *cpu */
