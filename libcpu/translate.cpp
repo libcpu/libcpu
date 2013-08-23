@@ -6,7 +6,7 @@
  * create internal basic blocks if necessary.
  */
 
-#include "llvm/Instructions.h"
+#include "llvm/IR/Instructions.h"
 
 #include "libcpu.h"
 #include "tag.h"
