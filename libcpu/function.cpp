@@ -9,7 +9,7 @@
 
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/Instructions.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/Module.h"
 #include "llvm/Target/TargetData.h"
