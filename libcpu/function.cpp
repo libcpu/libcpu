@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "llvm/CallingConv.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/Constants.h"
 #include "llvm/Instructions.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
