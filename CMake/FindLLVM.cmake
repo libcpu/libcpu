@@ -38,6 +38,8 @@ else (LLVM_INCLUDE_DIR)
   find_program(LLVM_CONFIG_EXECUTABLE
     NAMES llvm-config
     PATHS
+    /usr/local/bin
+    /usr/bin
     /opt/local/bin
     /opt/llvm/2.6/bin
     /opt/llvm/bin
@@ -46,6 +48,8 @@ else (LLVM_INCLUDE_DIR)
   find_program(LLVM_GCC_EXECUTABLE
     NAMES llvm-gcc llvmgcc
     PATHS
+    /usr/local/bin
+    /usr/bin
     /opt/local/bin
     /opt/llvm/2.6/bin
     /opt/llvm/bin
@@ -56,6 +60,8 @@ else (LLVM_INCLUDE_DIR)
   find_program(LLVM_GXX_EXECUTABLE
     NAMES llvm-g++ llvmg++
     PATHS
+    /usr/local/bin
+    /usr/bin
     /opt/local/bin
     /opt/llvm/2.6/bin
     /opt/llvm/bin

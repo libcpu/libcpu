@@ -76,7 +76,7 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
 ENDIF()
 
 # Set standard to C++11 or whatever
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -stdlib=libc++")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -stdlib=libc++ -v")
 
 #
 # llvm-config may set up -pedantic. Remove for the sake of sanity.
