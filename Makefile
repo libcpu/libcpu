@@ -348,58 +348,6 @@ libloader/fast:
 	$(MAKE) -f test/libloader/CMakeFiles/libloader.dir/build.make test/libloader/CMakeFiles/libloader.dir/build
 .PHONY : libloader/fast
 
-#=============================================================================
-# Target rules for targets named xec-compat
-
-# Build rule for target.
-xec-compat: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 xec-compat
-.PHONY : xec-compat
-
-# fast build rule for target.
-xec-compat/fast:
-	$(MAKE) -f test/libnix/xec-compat/CMakeFiles/xec-compat.dir/build.make test/libnix/xec-compat/CMakeFiles/xec-compat.dir/build
-.PHONY : xec-compat/fast
-
-#=============================================================================
-# Target rules for targets named sc2int
-
-# Build rule for target.
-sc2int: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 sc2int
-.PHONY : sc2int
-
-# fast build rule for target.
-sc2int/fast:
-	$(MAKE) -f test/libnix/tools/sc2int/CMakeFiles/sc2int.dir/build.make test/libnix/tools/sc2int/CMakeFiles/sc2int.dir/build
-.PHONY : sc2int/fast
-
-#=============================================================================
-# Target rules for targets named nix
-
-# Build rule for target.
-nix: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 nix
-.PHONY : nix
-
-# fast build rule for target.
-nix/fast:
-	$(MAKE) -f test/libnix/nix/CMakeFiles/nix.dir/build.make test/libnix/nix/CMakeFiles/nix.dir/build
-.PHONY : nix/fast
-
-#=============================================================================
-# Target rules for targets named obsd41
-
-# Build rule for target.
-obsd41: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 obsd41
-.PHONY : obsd41
-
-# fast build rule for target.
-obsd41/fast:
-	$(MAKE) -f test/libnix/obsd41/CMakeFiles/obsd41.dir/build.make test/libnix/obsd41/CMakeFiles/obsd41.dir/build
-.PHONY : obsd41/fast
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -427,10 +375,6 @@ help:
 	@echo "... cpu"
 	@echo "... upcc"
 	@echo "... libloader"
-	@echo "... xec-compat"
-	@echo "... sc2int"
-	@echo "... nix"
-	@echo "... obsd41"
 .PHONY : help
 
 

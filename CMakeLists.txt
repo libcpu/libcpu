@@ -114,6 +114,6 @@ ADD_SUBDIRECTORY(libcpu)
 ADD_SUBDIRECTORY(upcl)
 IF(NOT MSVC)
   ADD_SUBDIRECTORY(test/libloader)
-  ADD_SUBDIRECTORY(test/libnix)
+  #  ADD_SUBDIRECTORY(test/libnix)
 ENDIF()
 
