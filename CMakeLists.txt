@@ -2,6 +2,14 @@ PROJECT(libcpu)
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
+
+IF(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+  SET(CMAKE_CXX_COMPILER	"clang++")
+  SET(CMAKE_C_COMPILER		"clang")
+  SET(CMAKE_CXX_COMPILER	"true")
+ENDIF(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+
+
 INCLUDE(FindThreads)
 
 #
@@ -73,10 +81,10 @@ ENDMACRO(TARGET_LINK_LLVM)
 #
 IF(CMAKE_COMPILER_IS_GNUCXX)
   ADD_DEFINITIONS(-W -Wall -Wextra -Wno-unused -Werror -D__STDC_FORMAT_MACROS=1)
+  # Set standard to C++11 or whatever
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -stdlib=libc++ -v")
 ENDIF()
 
-# Set standard to C++11 or whatever
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -stdlib=libc++ -v")
 
 #
 # llvm-config may set up -pedantic. Remove for the sake of sanity.
