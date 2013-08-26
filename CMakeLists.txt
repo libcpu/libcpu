@@ -77,7 +77,6 @@ ENDIF()
 
 # Set standard to C++11 or whatever
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -stdlib=libc++")
-SET(CMAKE_CC_FLAGS "${CMAKE_CC_FLAGS} -std=c++0x -stdlib=libc++")
 
 #
 # llvm-config may set up -pedantic. Remove for the sake of sanity.
