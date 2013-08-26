@@ -3,7 +3,6 @@
 
 #include "timings.h"
 #include <inttypes.h>
-#include <cinttypes>
 
 #define START_NO 1000000000
 
