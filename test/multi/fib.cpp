@@ -3,6 +3,7 @@
 
 #include "timings.h"
 #include <inttypes.h>
+#include <cinttypes>
 
 #define START_NO 1000000000
 
@@ -166,8 +167,8 @@ main(int argc, char **argv)
 
   cpu_free(cpu);
 
-	printf("Time GUEST: %"PRId64"\n", t2-t1);
-	printf("Time HOST:  %"PRId64"\n", t4-t3);
+	printf("Time GUEST: %" PRId64 "\n", t2-t1);
+	printf("Time HOST:  %" PRId64 "\n", t4-t3);
 	printf("Result HOST:  %d\n", r2);
 	printf("Result GUEST: %d\n", r1);
 	printf("GUEST required \033[1m%.2f%%\033[22m of HOST time.\n",  (float)(t2-t1)/(float)(t4-t3)*100);
