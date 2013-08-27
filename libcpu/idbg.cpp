@@ -294,7 +294,7 @@ idbg_read_hword(idbg_t *ctx, addr_t address, uint16_t *half)
 static inline int
 idbg_read_word(idbg_t *ctx, addr_t address, uint32_t *word)
 {
-	uint8_t b[2];
+	uint8_t b[4];
 	cpu_t *cpu = ctx->cpu;
 
 	if (IS_LITTLE_ENDIAN(cpu)) {
