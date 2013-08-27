@@ -109,9 +109,21 @@ stat_to_nix_stat(struct stat const *in,
 	timespec_to_nix_timespec(&in->st_mtim, &out->st_mtimespec);
 	timespec_to_nix_timespec(&in->st_ctim, &out->st_ctimespec);
 #else
-	timespec_to_nix_timespec(&in->st_atimespec, &out->st_atimespec);
-	timespec_to_nix_timespec(&in->st_mtimespec, &out->st_mtimespec);
-	timespec_to_nix_timespec(&in->st_ctimespec, &out->st_ctimespec);
+	timespec_to_nix_timespec(&in->st_atimespec,
+#if defined (__FreeBSD__)
+#undef	st_atimespec
+#endif
+						&out->st_atimespec);
+	timespec_to_nix_timespec(&in->st_mtimespec,
+#if defined (__FreeBSD__)
+#undef	st_mtimespec
+#endif
+						&out->st_mtimespec);
+	timespec_to_nix_timespec(&in->st_ctimespec,
+#if defined (__FreeBSD__)
+#undef	st_ctimespec
+#endif
+						&out->st_ctimespec);
 #endif
 #if defined (__OpenBSD__)
 	timespec_to_nix_timespec(&in->__st_birthtimespec, &out->st_btimespec);
