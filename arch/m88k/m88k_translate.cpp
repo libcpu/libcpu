@@ -322,8 +322,8 @@ arch_m88k_fp_op(cpu_t *cpu, unsigned op, Value *a, Value *b,
 	BasicBlock *bb)
 {
 	Type::TypeID typeid_a, typeid_b;
-	Type const *type_a = a->getType();
-	Type const *type_b = b->getType();
+	Type *type_a = a->getType();
+	Type *type_b = b->getType();
 
 	typeid_a = type_a->getTypeID();
 	typeid_b = type_b->getTypeID();
