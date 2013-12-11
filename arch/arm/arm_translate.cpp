@@ -185,7 +185,7 @@ setsub(cpu_t *cpu, Value *op1, Value *op2, BasicBlock *bb)
 #define COMPUTE_CARRY(src1, src2, result) \
 	(AND(ICMP_NE(src2, CONST(0)), ICMP_ULT(result, src1)))
 
-#define LINK LET32(14, CONST((uint64_t)(sint64_t)(sint32_t)pc+8))
+#define LINK LET32(14, CONST((uint64_t)(int64_t)(int32_t)pc+8))
 
 int arch_arm_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 LOG("%s:%d pc=%" PRIx64 "\n", __func__, __LINE__, pc);

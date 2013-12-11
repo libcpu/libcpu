@@ -31,7 +31,7 @@ using namespace llvm;
 //#define GetCacheInstr ((RT>>2)&BitM3)
 #define GetCOP1FloatInstruction GetFunction
 
-#define MIPS_BRANCH_TARGET ((uint32_t)(pc + 4 + (uint32_t)(((sint32_t)(sint16_t)GetImmediate<<2))))
+#define MIPS_BRANCH_TARGET ((uint32_t)(pc + 4 + (uint32_t)(((int32_t)(int16_t)GetImmediate<<2))))
 
 //////////////////////////////////////////////////////////////////////
 // tagging
@@ -252,7 +252,7 @@ arch_mips_get_imm(cpu_t *cpu, uint32_t instr, uint32_t bits, bool sext,
   BasicBlock *bb) {
 	uint64_t imm;
 	if (sext)
-		imm = (uint64_t)(sint16_t)GetImmediate;
+		imm = (uint64_t)(int16_t)GetImmediate;
 	else
 		imm = (uint64_t)(uint16_t)GetImmediate;
 
@@ -278,7 +278,7 @@ arch_mips_get_sa(cpu_t *cpu, uint32_t instr, uint32_t bits, BasicBlock *bb) {
 
 #define LET_PC(v) new StoreInst(v, cpu->ptr_PC, bb)
 
-#define LINKr(i) LET32(i, CONST((uint64_t)(sint64_t)(sint32_t)pc+8))
+#define LINKr(i) LET32(i, CONST((uint64_t)(int64_t)(int32_t)pc+8))
 
 #define LINK LINKr(31)
 

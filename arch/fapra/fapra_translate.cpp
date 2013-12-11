@@ -32,7 +32,7 @@ static inline uint32_t rb(uint32_t ins) {
   return (ins >> 11) & 0x1F;
 }
 
-static inline sint32_t simm(uint32_t ins) {
+static inline int32_t simm(uint32_t ins) {
   return ((int32_t) ((ins & 0xFFFF) << 16)) >> 16;
 }
 
@@ -134,7 +134,7 @@ arch_fapra_get_imm(cpu_t *cpu, uint32_t instr, uint32_t bits, bool sext,
   BasicBlock *bb) {
 	uint64_t imm;
 	if (sext)
-		imm = (uint64_t)(sint16_t)GetImmediate;
+		imm = (uint64_t)(int16_t)GetImmediate;
 	else
 		imm = (uint64_t)(uint16_t)GetImmediate;
 

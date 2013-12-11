@@ -183,7 +183,7 @@ arch_m88k_get_imm(cpu_t *cpu, m88k_insn const &instr, uint32_t bits,
 
 #define JMP_BB(b) 		BranchInst::Create(b, bb)
 
-#define LINKr(i, d)		LET(i, CONST((uint64_t)(sint64_t)(sint32_t)pc+(4<<(d))))
+#define LINKr(i, d)		LET(i, CONST((uint64_t)(int64_t)(int32_t)pc+(4<<(d))))
 
 #define LINK(d)			LINKr(1, d)
 
