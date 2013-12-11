@@ -26,7 +26,7 @@ static inline fltSemantics const *getFltSemantics(unsigned bits)
 	}
 }
 
-static inline Type const *getFloatType(unsigned bits)
+static inline Type *getFloatType(unsigned bits)
 {
 	switch(bits) {
 		case 32: return Type::getFloatTy(_CTX());
