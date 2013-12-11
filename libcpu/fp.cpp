@@ -5,8 +5,8 @@
  */
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/Instructions.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/DataLayout.h"
 
 #include "libcpu.h"
 #include "libcpu_llvm.h"

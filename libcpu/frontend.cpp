@@ -8,12 +8,12 @@
 
 #include <assert.h>
 
-#include "llvm/Constants.h"
-#include "llvm/Intrinsics.h"
-#include "llvm/Support/IRBuilder.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/Target/TargetData.h"
-#include "llvm/Function.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
 
 #include "libcpu.h"
 #include "libcpu_llvm.h"

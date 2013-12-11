@@ -4,9 +4,9 @@
  * Basic block handling (create, lookup)
  */
 
-#include "llvm/Constants.h"
-#include "llvm/BasicBlock.h"
-#include "llvm/Instructions.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Instructions.h"
 
 #include "libcpu.h"
 #include "libcpu_llvm.h"

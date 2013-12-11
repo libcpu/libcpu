@@ -6,7 +6,7 @@
  * so that execution will always exit after the instruction.
  */
 
-#include "llvm/BasicBlock.h"
+#include "llvm/IR/BasicBlock.h"
 
 #include "libcpu.h"
 #include "libcpu_llvm.h"

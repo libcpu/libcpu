@@ -2,8 +2,8 @@
 #define _LIBCPU_LLVM_H_
 
 #include "llvm/ADT/APFloat.h"
-#include "llvm/DerivedTypes.h"
-#include "llvm/LLVMContext.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/LLVMContext.h"
 
 //////////////////////////////////////////////////////////////////////
 // LLVM Helpers

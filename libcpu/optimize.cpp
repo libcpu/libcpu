@@ -5,10 +5,9 @@
  */
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/Module.h"
+#include "llvm/IR/Module.h"
 #include "llvm/PassManager.h"
-#include "llvm/Support/StandardPasses.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/IR/DataLayout.h"
 
 #include "libcpu.h"
 

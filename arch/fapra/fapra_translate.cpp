@@ -1,4 +1,4 @@
-#include "llvm/Instructions.h"
+#include "llvm/IR/Instructions.h"
 
 #define OPT_LOCAL_REGISTERS //XXX
 
