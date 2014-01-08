@@ -84,10 +84,10 @@ get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
 	ConstantInt* const_0 = ConstantInt::get(XgetType(Int32Ty), 0);
 	ConstantInt* const_index = ConstantInt::get(XgetType(Int32Ty), index);
 
-	SmallVector<Value*, 2> ptr_11_indices;
+	std::vector<Value*> ptr_11_indices;
 	ptr_11_indices.push_back(const_0);
 	ptr_11_indices.push_back(const_index);
-	return (Value*) GetElementPtrInst::Create(s, ptr_11_indices.begin(), ptr_11_indices.end(), "", bb);
+	return (Value*) GetElementPtrInst::Create(s, ptr_11_indices, "", bb);
 }
 
 static void
