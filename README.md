@@ -2,6 +2,8 @@
 
 [![Build Status](https://secure.travis-ci.org/libcpu/libcpu.png?branch=master)](http://travis-ci.org/libcpu/libcpu)
 
+<img src="https://raw.github.com/libcpu/libcpu/master/images/libcpu.png" alt="Libcpu logo" align="right" />
+
 ## Building
 
 CMake version 2.8 or higher is required.
