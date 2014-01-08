@@ -43,36 +43,6 @@ else (LLVM_INCLUDE_DIR)
     /opt/llvm/bin
     )
 
-  find_program(LLVM_GCC_EXECUTABLE
-    NAMES llvm-gcc llvmgcc
-    PATHS
-    /opt/local/bin
-    /opt/llvm/2.6/bin
-    /opt/llvm/bin
-    /Developer/usr/bin
-    /usr/lib/llvm/llvm/gcc-4.2/bin
-    )
-
-  find_program(LLVM_GXX_EXECUTABLE
-    NAMES llvm-g++ llvmg++
-    PATHS
-    /opt/local/bin
-    /opt/llvm/2.6/bin
-    /opt/llvm/bin
-    /Developer/usr/bin
-    /usr/lib/llvm/llvm/gcc-4.2/bin
-    )
-
-  if(LLVM_GCC_EXECUTABLE)
-    MESSAGE(STATUS "LLVM llvm-gcc found at: ${LLVM_GCC_EXECUTABLE}")
-    #CMAKE_FORCE_C_COMPILER(${LLVM_GCC_EXECUTABLE} GNU)
-  endif(LLVM_GCC_EXECUTABLE)
-
-  if(LLVM_GXX_EXECUTABLE)
-    MESSAGE(STATUS "LLVM llvm-g++ found at: ${LLVM_GXX_EXECUTABLE}")
-    #CMAKE_FORCE_CXX_COMPILER(${LLVM_GXX_EXECUTABLE} GNU)
-  endif(LLVM_GXX_EXECUTABLE)
-  
   if(LLVM_CONFIG_EXECUTABLE)
     MESSAGE(STATUS "LLVM llvm-config found at: ${LLVM_CONFIG_EXECUTABLE}")
   else(LLVM_CONFIG_EXECUTABLE)
