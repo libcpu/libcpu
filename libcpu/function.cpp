@@ -324,8 +324,8 @@ cpu_create_function(cpu_t *cpu, const char *name,
 		GlobalValue::ExternalLinkage,	/* Linkage */
 		name, cpu->mod);				/* Name */
 	func->setCallingConv(CallingConv::C);
-	func->addFnAttr(Attribute::NoCapture);
-	func->addFnAttr(Attribute::NoUnwind);
+	func->addAttribute(1U, Attribute::NoCapture);
+	func->addAttribute(4294967295U, Attribute::NoUnwind);
 
 	// args
 	Function::arg_iterator args = func->arg_begin();
