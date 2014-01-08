@@ -188,7 +188,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 
 	// check if FP80 and FP128 are supported by this architecture.
 	// XXX there is a better way to do this?
-	std::string data_layout = cpu->exec_engine->getTargetData()->getStringRepresentation();
+	std::string data_layout = cpu->exec_engine->getDataLayout()->getStringRepresentation();
 	if (data_layout.find("f80") != std::string::npos) {
 		LOG("INFO: FP80 supported.\n");
 		cpu->flags |= CPU_FLAG_FP80;
@@ -199,7 +199,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	}
 
 	// check if we need to swap guest memory.
-	if (cpu->exec_engine->getTargetData()->isLittleEndian()
+	if (cpu->exec_engine->getDataLayout()->isLittleEndian()
 			^ IS_LITTLE_ENDIAN(cpu))
 		cpu->flags |= CPU_FLAG_SWAPMEM;
 

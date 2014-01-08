@@ -16,7 +16,7 @@ optimize(cpu_t *cpu)
 {
 	FunctionPassManager pm = FunctionPassManager(cpu->mod);
 
-	std::string data_layout = cpu->exec_engine->getTargetData()->getStringRepresentation();
+	std::string data_layout = cpu->exec_engine->getDataLayout()->getStringRepresentation();
 	TargetData *TD = new TargetData(data_layout);
 	pm.add(TD);
 	pm.add(createPromoteMemoryToRegisterPass());

@@ -103,7 +103,7 @@ arch_synthesize_fp80_store(cpu_t *cpu, uint32_t index, Value *v, BasicBlock *bb)
 	Value *lo = mantissa;
 
 	// store
-	if (cpu->exec_engine->getTargetData()->isLittleEndian()) {
+	if (cpu->exec_engine->getDataLayout()->isLittleEndian()) {
 		arch_put_fp_reg(cpu, index + 0, lo, 64, bb);
 		arch_put_fp_reg(cpu, index + 1, hi, 64, bb);
 	} else {
@@ -122,7 +122,7 @@ arch_synthesize_fp80_load(cpu_t *cpu, uint32_t index, BasicBlock *bb)
 		return FPCONST64(0);
 
 	// load
-	if (cpu->exec_engine->getTargetData()->isLittleEndian()) {
+	if (cpu->exec_engine->getDataLayout()->isLittleEndian()) {
 		lo = arch_get_fp_reg(cpu, index + 0, 64, bb);
 		hi = arch_get_fp_reg(cpu, index + 1, 64, bb);
 	} else {
