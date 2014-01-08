@@ -12,7 +12,7 @@
 #define _CTX() getGlobalContext()
 #define XgetType(x) (Type::get##x(_CTX()))
 #define getIntegerType(x) (IntegerType::get(_CTX(), x))
-#define getStructType(x, ...) (StructType::get(_CTX(), x,    \
+#define getNamedStructType(x, ...) (StructType::create(_CTX(), x, name,    \
 					       #__VA_ARGS__))
 
 static inline fltSemantics const *getFltSemantics(unsigned bits)

@@ -23,7 +23,7 @@
 //////////////////////////////////////////////////////////////////////
 
 static StructType *
-get_struct_reg(cpu_t *cpu) {
+get_struct_reg(cpu_t *cpu, const char* name) {
 	std::vector<Type*>type_struct_reg_t_fields;
 
 	uint32_t count, size;
@@ -42,11 +42,11 @@ get_struct_reg(cpu_t *cpu) {
 
 //	type_struct_reg_t_fields.push_back(getIntegerType(cpu->info.address_size)); /* PC */
 
-	return getStructType(type_struct_reg_t_fields, /*isPacked=*/true);
+	return getNamedStructType(type_struct_reg_t_fields, name, /*isPacked=*/true);
 }
 
 static StructType *
-get_struct_fp_reg(cpu_t *cpu) {
+get_struct_fp_reg(cpu_t *cpu, const char* name) {
 	std::vector<Type*>type_struct_fp_reg_t_fields;
 
 	uint32_t count, size;
@@ -76,7 +76,7 @@ get_struct_fp_reg(cpu_t *cpu) {
 		}
 	}
 
-	return getStructType(type_struct_fp_reg_t_fields, /*isPacked=*/true);
+	return getNamedStructType(type_struct_fp_reg_t_fields, name, /*isPacked=*/true);
 }
 
 static Value *
@@ -287,13 +287,11 @@ cpu_create_function(cpu_t *cpu, const char *name,
 
 	// Type Definitions
 	// - struct reg
-	StructType *type_struct_reg_t = get_struct_reg(cpu);
-	cpu->mod->addTypeName("struct.reg_t", type_struct_reg_t);
+	StructType *type_struct_reg_t = get_struct_reg(cpu, "struct.reg_t");
 	// - struct reg *
 	PointerType *type_pstruct_reg_t = PointerType::get(type_struct_reg_t, 0);
 	// - struct fp_reg
-	StructType *type_struct_fp_reg_t = get_struct_fp_reg(cpu);
-	cpu->mod->addTypeName("struct.fp_reg_t", type_struct_fp_reg_t);
+	StructType *type_struct_fp_reg_t = get_struct_fp_reg(cpu, "struct.fp_reg_t");
 	// - struct fp_reg *
 	PointerType *type_pstruct_fp_reg_t = PointerType::get(type_struct_fp_reg_t, 0);
 	// - uint8_t *
