@@ -16,6 +16,7 @@
 
 #include <libcpu.h>
 #include "arch/m88k/m88k_isa.h"
+#include <inttypes.h>
 
 //////////////////////////////////////////////////////////////////////
 // command line parsing helpers
@@ -136,7 +137,7 @@ dump_state(uint8_t *RAM, m88k_grf_t *reg, m88k_xrf_t *xrf)
 	for (int i=0; xrf != NULL && i<32; i++) {
 		if (!(i%2))
 			printf("\n");
-		printf("X%02d=%04x%016llx (%.8f) ", i,
+		printf("X%02d=%04x%016" PRIx64 " (%.8f) ", i,
 			xrf->x[i].i.hi, xrf->x[i].i.lo,
 			ieee754_fp80_to_double(xrf->x[i]));
 	}
@@ -191,7 +192,7 @@ main(int argc, char **argv)
 	cpu_t *cpu;
 	uint8_t *RAM;
 	FILE *f;
-	int ramsize;
+	unsigned long ramsize;
 	char *stack;
 	int i;
 #ifdef BENCHMARK_FIB
@@ -370,7 +371,7 @@ double_break:
 	printf("done!\n");
 
 	printf("%d -- %d\n", r1, r2);
-	printf("%lld -- %lld\n", t2-t1, t4-t3);
+	printf("%" PRIu64 " -- %" PRIu64 "\n", t2-t1, t4-t3);
 	printf("%f%%\n",  (float)(t2-t1)/(float)(t4-t3));
 #endif
 #endif
