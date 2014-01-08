@@ -8,12 +8,11 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include "llvm/IR/Analysis/Verifier.h"
-#include "llvm/IR/ExecutionEngine/JIT.h"
-#include "llvm/IR/LinkAllPasses.h"
+#include "llvm/Analysis/Verifier.h"
+#include "llvm/ExecutionEngine/JIT.h"
+#include "llvm/LinkAllPasses.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Target/TargetData.h"
-#include "llvm/IR/Target/TargetSelect.h"
+#include "llvm/Support/TargetSelect.h"
 
 /* project global headers */
 #include "libcpu.h"
