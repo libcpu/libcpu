@@ -1,5 +1,7 @@
 # Libcpu
 
+[![Build Status](https://secure.travis-ci.org/libcpu/libcpu.png?branch=master)](http://travis-ci.org/libcpu/libcpu)
+
 ## Building
 
 CMake version 2.8 or higher is required.
