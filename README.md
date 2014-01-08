@@ -4,6 +4,12 @@
 
 <img src="https://raw.github.com/libcpu/libcpu/master/images/libcpu.png" alt="Libcpu logo" align="right" />
 
+"libcpu" is an open source library that emulates several CPU architectures,
+allowing itself to be used as the CPU core for different kinds of emulator
+projects. It uses its own frontends for the different CPU types, and uses LLVM
+for the backend. libcpu is supposed to be able to do user mode and system
+emulation, and dynamic as well as static recompilation.
+
 ## Building
 
 CMake version 2.8 or higher is required.
