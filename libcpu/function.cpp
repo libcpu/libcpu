@@ -324,17 +324,8 @@ cpu_create_function(cpu_t *cpu, const char *name,
 		GlobalValue::ExternalLinkage,	/* Linkage */
 		name, cpu->mod);				/* Name */
 	func->setCallingConv(CallingConv::C);
-	AttrListPtr func_PAL;
-	{
-		SmallVector<AttributeWithIndex, 4> Attrs;
-		AttributeWithIndex PAWI;
-		PAWI.Index = 1U; PAWI.Attrs = 0  | Attribute::NoCapture;
-		Attrs.push_back(PAWI);
-		PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind;
-		Attrs.push_back(PAWI);
-		func_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-	}
-	func->setAttributes(func_PAL);
+	func->addFnAttr(Attribute::NoCapture);
+	func->addFnAttr(Attribute::NoUnwind);
 
 	// args
 	Function::arg_iterator args = func->arg_begin();
