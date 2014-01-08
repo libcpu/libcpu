@@ -441,7 +441,7 @@ arch_debug_me(cpu_t *cpu, BasicBlock *bb)
 	if (cpu->ptr_func_debug == NULL)
 		return;
 
-	Type const *intptr_type = cpu->exec_engine->getDataLayout()->getIntPtrType(_CTX());
+	IntegerType *intptr_type = cpu->exec_engine->getDataLayout()->getIntPtrType(_CTX());
 	Constant *v_cpu = ConstantInt::get(intptr_type, (uintptr_t)cpu);
 	Value *v_cpu_ptr = ConstantExpr::getIntToPtr(v_cpu, PointerType::getUnqual(intptr_type));
 
