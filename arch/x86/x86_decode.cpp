@@ -20,7 +20,7 @@ static const uint32_t decode_table[256] = {
 	/*[0x3]*/	INSTR_ADD | ADDMODE_RM_REG | WIDTH_FULL,
 	/*[0x4]*/	INSTR_ADD | ADDMODE_IMM_ACC | WIDTH_BYTE,
 	/*[0x5]*/	INSTR_ADD | ADDMODE_IMM_ACC | WIDTH_FULL,
-	/*[0x6]*/	0,
+	/*[0x6]*/	INSTR_PUSH | ADDMODE_SEG_REG /* ES */ | WIDTH_FULL,
 	/*[0x7]*/	0,
 	/*[0x8]*/	INSTR_OR | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0x9]*/	INSTR_OR | ADDMODE_REG_RM | WIDTH_FULL,
@@ -28,7 +28,7 @@ static const uint32_t decode_table[256] = {
 	/*[0xB]*/	INSTR_OR | ADDMODE_RM_REG | WIDTH_FULL,
 	/*[0xC]*/	INSTR_OR | ADDMODE_IMM_ACC | WIDTH_BYTE,
 	/*[0xD]*/	INSTR_OR | ADDMODE_IMM_ACC | WIDTH_FULL,
-	/*[0xE]*/	0,
+	/*[0xE]*/	INSTR_PUSH | ADDMODE_SEG_REG /* CS */ | WIDTH_FULL,
 	/*[0xF]*/	0,
 	/*[0x10]*/	INSTR_ADC | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0x11]*/	INSTR_ADC | ADDMODE_REG_RM | WIDTH_FULL,
@@ -36,7 +36,7 @@ static const uint32_t decode_table[256] = {
 	/*[0x13]*/	INSTR_ADC | ADDMODE_RM_REG | WIDTH_FULL,
 	/*[0x14]*/	INSTR_ADC | ADDMODE_IMM_ACC | WIDTH_BYTE,
 	/*[0x15]*/	INSTR_ADC | ADDMODE_IMM_ACC | WIDTH_FULL,
-	/*[0x16]*/	0,
+	/*[0x16]*/	INSTR_PUSH | ADDMODE_SEG_REG /* SS */ | WIDTH_FULL,
 	/*[0x17]*/	0,
 	/*[0x18]*/	INSTR_SBB | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0x19]*/	INSTR_SBB | ADDMODE_REG_RM | WIDTH_FULL,
@@ -44,7 +44,7 @@ static const uint32_t decode_table[256] = {
 	/*[0x1B]*/	INSTR_SBB | ADDMODE_RM_REG | WIDTH_FULL,
 	/*[0x1C]*/	INSTR_SBB | ADDMODE_IMM_ACC | WIDTH_BYTE,
 	/*[0x1D]*/	INSTR_SBB | ADDMODE_IMM_ACC | WIDTH_FULL,
-	/*[0x1E]*/	0,
+	/*[0x1E]*/	INSTR_PUSH | ADDMODE_SEG_REG /* DS */ | WIDTH_FULL,
 	/*[0x1F]*/	0,
 	/*[0x20]*/	INSTR_AND | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0x21]*/	INSTR_AND | ADDMODE_REG_RM | WIDTH_FULL,
@@ -94,14 +94,14 @@ static const uint32_t decode_table[256] = {
 	/*[0x4D]*/	INSTR_DEC | ADDMODE_REG | WIDTH_FULL,
 	/*[0x4E]*/	INSTR_DEC | ADDMODE_REG | WIDTH_FULL,
 	/*[0x4F]*/	INSTR_DEC | ADDMODE_REG | WIDTH_FULL,
-	/*[0x50]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
-	/*[0x51]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
-	/*[0x52]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
-	/*[0x53]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
-	/*[0x54]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
-	/*[0x55]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
-	/*[0x56]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
-	/*[0x57]*/	INSTR_PUSH | ADDMODE_REG | WIDTH_FULL,
+	/*[0x50]*/	INSTR_PUSH | ADDMODE_REG /* AX */ | WIDTH_FULL,
+	/*[0x51]*/	INSTR_PUSH | ADDMODE_REG /* CX */ | WIDTH_FULL,
+	/*[0x52]*/	INSTR_PUSH | ADDMODE_REG /* DX */ | WIDTH_FULL,
+	/*[0x53]*/	INSTR_PUSH | ADDMODE_REG /* BX */ | WIDTH_FULL,
+	/*[0x54]*/	INSTR_PUSH | ADDMODE_REG /* SP */ | WIDTH_FULL,
+	/*[0x55]*/	INSTR_PUSH | ADDMODE_REG /* BP */ | WIDTH_FULL,
+	/*[0x56]*/	INSTR_PUSH | ADDMODE_REG /* SI */ | WIDTH_FULL,
+	/*[0x57]*/	INSTR_PUSH | ADDMODE_REG /* DI */ | WIDTH_FULL,
 	/*[0x58]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
 	/*[0x59]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
 	/*[0x5A]*/	INSTR_POP | ADDMODE_REG | WIDTH_FULL,
@@ -358,6 +358,10 @@ decode_src_operand(struct x86_instr *instr)
 	case SRC_REG:
 		operand->type	= OP_REG;
 		operand->reg	= decode_src_reg(instr);
+		break;
+	case SRC_SEG_REG:
+		operand->type	= OP_SEG_REG;
+		operand->reg	= instr->opcode >> 3;
 		break;
 	case SRC_ACC:
 		operand->type	= OP_REG;

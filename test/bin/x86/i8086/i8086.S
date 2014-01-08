@@ -279,6 +279,10 @@ _start:
 	pushw %bp
 	pushw %si
 	pushw %di
+	pushw %es
+	pushw %cs
+	pushw %ss
+	pushw %ds
 
 	# 0x58+rw ("pop")
 	popw %ax

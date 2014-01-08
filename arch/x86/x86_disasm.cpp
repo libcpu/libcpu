@@ -44,6 +44,13 @@ static const char *word_reg_names[] = {
 	"%di",
 };
 
+static const char *seg_reg_names[] = {
+	"%es",
+	"%cs",
+	"%ss",
+	"%ds",
+};
+
 static const char *mem_byte_reg_names[] = {
 	"%bx,%si",
 	"%bx,%di",
@@ -85,6 +92,12 @@ static const char *to_reg_name(struct x86_instr *instr, int reg_num)
 	return word_reg_names[reg_num];
 }
 
+
+static const char *to_seg_reg_name(struct x86_instr *instr, int reg_num)
+{
+	return seg_reg_names[reg_num];
+}
+
 static int
 print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, struct x86_operand *operand)
 {
@@ -99,6 +112,9 @@ print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, s
 		break;
 	case OP_REG:
 		ret = snprintf(operands, size, "%s", to_reg_name(instr, operand->reg));
+		break;
+	case OP_SEG_REG:
+		ret = snprintf(operands, size, "%s", to_seg_reg_name(instr, operand->reg));
 		break;
 	case OP_MEM:
 		ret = snprintf(operands, size, "%s(%s)", seg_override_names[instr->seg_override], mem_byte_reg_names[operand->reg]);
