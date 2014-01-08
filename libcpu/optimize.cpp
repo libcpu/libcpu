@@ -5,6 +5,7 @@
  */
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/IR/Module.h"
 #include "llvm/PassManager.h"
 #include "llvm/IR/DataLayout.h"
@@ -16,9 +17,6 @@ optimize(cpu_t *cpu)
 {
 	FunctionPassManager pm = FunctionPassManager(cpu->mod);
 
-	std::string data_layout = cpu->exec_engine->getDataLayout()->getStringRepresentation();
-	TargetData *TD = new TargetData(data_layout);
-	pm.add(TD);
 	pm.add(createPromoteMemoryToRegisterPass());
 	pm.add(createInstructionCombiningPass());
 	pm.add(createConstantPropagationPass());
