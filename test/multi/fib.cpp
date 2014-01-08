@@ -8,6 +8,7 @@
 #include <libcpu.h>
 #include "arch/arm/arm_types.h"
 #include "arch/m88k/m88k_isa.h"
+#include <inttypes.h>
 
 #define RET_MAGIC 0x4D495354
 
@@ -165,8 +166,8 @@ main(int argc, char **argv)
 
   cpu_free(cpu);
 
-	printf("Time GUEST: %lld\n", t2-t1);
-	printf("Time HOST:  %lld\n", t4-t3);
+	printf("Time GUEST: %" PRIu64 "\n", t2-t1);
+	printf("Time HOST:  %" PRIu64 "\n", t4-t3);
 	printf("Result HOST:  %d\n", r2);
 	printf("Result GUEST: %d\n", r1);
 	printf("GUEST required \033[1m%.2f%%\033[22m of HOST time.\n",  (float)(t2-t1)/(float)(t4-t3)*100);

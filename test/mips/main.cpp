@@ -15,6 +15,7 @@
 
 #include <libcpu.h>
 #include "arch/mips/mips_interface.h"
+#include <inttypes.h>
 //////////////////////////////////////////////////////////////////////
 // command line parsing helpers
 //////////////////////////////////////////////////////////////////////
@@ -131,7 +132,7 @@ main(int argc, char **argv)
 	cpu_t *cpu;
 	uint8_t *RAM;
 	FILE *f;
-	int ramsize;
+	unsigned long ramsize;
 	char *stack;
 	int i;
 #ifdef BENCHMARK_FIB
@@ -309,7 +310,7 @@ double_break:
 	printf("done!\n");
 
 	printf("%d -- %d\n", r1, r2);
-	printf("%lld -- %lld\n", t2-t1, t4-t3);
+	printf("%" PRIu64 " -- %" PRIu64 "\n", t2-t1, t4-t3);
 	printf("%f%%\n",  (float)(t2-t1)/(float)(t4-t3));
 #endif
 #endif
