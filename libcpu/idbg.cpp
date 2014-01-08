@@ -537,15 +537,15 @@ idbg_print_register(idbg_t *ctx, unsigned type, void const *value,
 	unsigned mode)
 {
 	if (type == R_GPR) {
-		idbg_print_int_value(*(uint64_t *)value, ctx->cpu->info.word_size,
+		idbg_print_int_value(*(const uint64_t *)value, ctx->cpu->info.word_size,
 			0, mode);
 	} else if (type == R_FPR) {
 		switch (ctx->fpr_format) {
 		  	case F_FLOAT32:
-				idbg_print_float32(*(uint32_t *)value, true);
+				idbg_print_float32(*(const uint32_t *)value, true);
 				break;
 		  	case F_FLOAT64:
-				idbg_print_float64(*(uint64_t *)value, true);
+				idbg_print_float64(*(const uint64_t *)value, true);
 				break;
 		  	case F_FLOAT80:
 				idbg_print_float80((uint64_t const *)value, true);
