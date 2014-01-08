@@ -176,7 +176,7 @@ emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 		cpu->ptr_fpr, bb);
 
 	// PC pointer.
-	Type const *intptr_type = cpu->exec_engine->getDataLayout()->getIntPtrType(_CTX());
+	IntegerType *intptr_type = cpu->exec_engine->getDataLayout()->getIntPtrType(_CTX());
 	Constant *v_pc = ConstantInt::get(intptr_type, (uintptr_t)cpu->rf.pc);
 	cpu->ptr_PC = ConstantExpr::getIntToPtr(v_pc, PointerType::getUnqual(getIntegerType(cpu->info.address_size)));
 	cpu->ptr_PC->setName("pc");
@@ -301,7 +301,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	// - intptr *
 	PointerType *type_intptr = PointerType::get(cpu->exec_engine->getDataLayout()->getIntPtrType(_CTX()), 0);
 	// - (*f)(cpu_t *) [debug_function() function pointer]
-	std::vector<const Type*>type_func_callout_args;
+	std::vector<Type*>type_func_callout_args;
 	type_func_callout_args.push_back(type_intptr);	/* intptr *cpu */
 	FunctionType *type_func_callout = FunctionType::get(
 		XgetType(VoidTy),	/* Result */
@@ -310,7 +310,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	cpu->type_pfunc_callout = PointerType::get(type_func_callout, 0);
 
 	// - (*f)(uint8_t *, reg_t *, fp_reg_t *, (*)(...)) [jitmain() function pointer)
-	std::vector<const Type*>type_func_args;
+	std::vector<Type*>type_func_args;
 	type_func_args.push_back(type_pi8);				/* uint8_t *RAM */
 	type_func_args.push_back(type_pstruct_reg_t);	/* reg_t *reg */
 	type_func_args.push_back(type_pstruct_fp_reg_t);	/* fp_reg_t *fp_reg */
