@@ -24,7 +24,7 @@
 
 static StructType *
 get_struct_reg(cpu_t *cpu) {
-	std::vector<const Type*>type_struct_reg_t_fields;
+	std::vector<Type*>type_struct_reg_t_fields;
 
 	uint32_t count, size;
 	
@@ -47,7 +47,7 @@ get_struct_reg(cpu_t *cpu) {
 
 static StructType *
 get_struct_fp_reg(cpu_t *cpu) {
-	std::vector<const Type*>type_struct_fp_reg_t_fields;
+	std::vector<Type*>type_struct_fp_reg_t_fields;
 
 	uint32_t count, size;
 
