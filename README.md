@@ -31,3 +31,9 @@ To run the x86 front-end tests:
 ```
 ./test/scripts/8086.sh
 ```
+
+## License
+
+Copyright (c) 2009-2010, the libcpu developers
+
+Libcpu is distributed under the 2-clause BSD license.
