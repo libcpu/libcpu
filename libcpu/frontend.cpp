@@ -273,20 +273,23 @@ arch_store(Value *v, Value *a, BasicBlock *bb)
 
 Value *
 arch_bswap(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
-	Type const *ty = getIntegerType(width);
-	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::bswap, &ty, 1), v, "", bb);
+	std::vector<Type *> arg_type;
+	arg_type.push_back(getIntegerType(width));
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::bswap, arg_type), v, "", bb);
 }
 
 Value *
 arch_ctlz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
-	Type const *ty = getIntegerType(width);
-	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::ctlz, &ty, 1), v, "", bb);
+	std::vector<Type *> arg_type;
+	arg_type.push_back(getIntegerType(width));
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::ctlz, arg_type), v, "", bb);
 }
 
 Value *
 arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
-	Type const *ty = getIntegerType(width);
-	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::cttz, &ty, 1), v, "", bb);
+	std::vector<Type *> arg_type;
+	arg_type.push_back(getIntegerType(width));
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::cttz, arg_type), v, "", bb);
 }
 
 // complex operations
@@ -425,8 +428,9 @@ arch_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
 
 Value *
 arch_sqrt(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
-	Type const *ty = getFloatType(width);
-	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::sqrt, &ty, 1), v, "", bb);
+	std::vector<Type *> arg_type;
+	arg_type.push_back(getFloatType(width));
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::sqrt, arg_type), v, "", bb);
 }
 
 // Invoke debug_function
