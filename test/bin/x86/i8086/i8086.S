@@ -297,6 +297,25 @@ _start:
 	popw %ss
 	popw %ds
 
+	# 0x70
+	jo  L1
+	jno L1
+	jb  L1
+	jnb L1
+	jz  L1
+	jnz L1
+	jbe L1
+	ja  L1
+	js  L1
+	jns L1
+	jpe L1
+	jpo L1
+	jl  L1
+	jge L1
+	jle L1
+	jg  L1
+L1:
+
 	# 0xb80+rw ("mov")
 	movw $1, %ax
 	movw $1, %cx

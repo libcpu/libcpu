@@ -15,6 +15,8 @@
 
 #define INSTR_UNDEFINED		0
 
+#define Jb ADDMODE_REL | WIDTH_BYTE
+
 static const uint32_t decode_table[256] = {
 	/*[0x0]*/	INSTR_ADD | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0x1]*/	INSTR_ADD | ADDMODE_REG_RM | WIDTH_FULL,
@@ -128,22 +130,22 @@ static const uint32_t decode_table[256] = {
 	/*[0x6D]*/	INSTR_UNDEFINED,
 	/*[0x6E]*/	INSTR_UNDEFINED,
 	/*[0x6F]*/	INSTR_UNDEFINED,
-	/*[0x70]*/	0,
-	/*[0x71]*/	0,
-	/*[0x72]*/	0,
-	/*[0x73]*/	0,
-	/*[0x74]*/	0,
-	/*[0x75]*/	0,
-	/*[0x76]*/	0,
-	/*[0x77]*/	0,
-	/*[0x78]*/	0,
-	/*[0x79]*/	0,
-	/*[0x7A]*/	0,
-	/*[0x7B]*/	0,
-	/*[0x7C]*/	0,
-	/*[0x7D]*/	0,
-	/*[0x7E]*/	0,
-	/*[0x7F]*/	0,
+	/*[0x70]*/	INSTR_JO  | Jb,
+	/*[0x71]*/	INSTR_JNO | Jb,
+	/*[0x72]*/	INSTR_JB  | Jb,
+	/*[0x73]*/	INSTR_JNB | Jb,
+	/*[0x74]*/	INSTR_JZ  | Jb,
+	/*[0x75]*/	INSTR_JNZ | Jb,
+	/*[0x76]*/	INSTR_JBE | Jb,
+	/*[0x77]*/	INSTR_JA  | Jb,
+	/*[0x78]*/	INSTR_JS  | Jb,
+	/*[0x79]*/	INSTR_JNS | Jb,
+	/*[0x7A]*/	INSTR_JPE | Jb,
+	/*[0x7B]*/	INSTR_JPO | Jb,
+	/*[0x7C]*/	INSTR_JL  | Jb,
+	/*[0x7D]*/	INSTR_JGE | Jb,
+	/*[0x7E]*/	INSTR_JLE | Jb,
+	/*[0x7F]*/	INSTR_JG  | Jb,
 	/*[0x80]*/	0,
 	/*[0x81]*/	0,
 	/*[0x82]*/	0,
@@ -421,7 +423,7 @@ decode_imm_byte(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 }
 
 static void
-decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+decode_imm_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
 	if (instr->flags & SRC_IMM8) {
 		decode_imm_byte(instr, RAM, pc);
@@ -436,15 +438,6 @@ decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 		decode_imm_byte(instr, RAM, pc);
 		break;
 	}
-}
-
-static void
-decode_imm_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
-{
-	if (instr->flags & IMM_MASK)
-		decode_imm(instr, RAM, pc);
-	else
-		decode_rel(instr, RAM, pc);
 }
 
 static void
