@@ -122,7 +122,7 @@ print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, s
 		ret = snprintf(operands, size, "%s", to_seg_reg_name(instr, operand->reg));
 		break;
 	case OP_MEM:
-		ret = snprintf(operands, size, "%s(%s)", seg_override_names[instr->seg_override], mem_byte_reg_names[operand->reg]);
+		ret = snprintf(operands, size, "%x", operand->disp);
 		break;
 	case OP_MEM_DISP:
 		ret = snprintf(operands, size, "%s%s0x%x(%s)", seg_override_names[instr->seg_override], sign_to_str(operand->disp), abs(operand->disp), mem_byte_reg_names[operand->reg]);

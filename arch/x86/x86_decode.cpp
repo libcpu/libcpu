@@ -320,7 +320,7 @@ decode_dst_operand(struct x86_instr *instr)
 		break;
 	case DST_MEM:
 		operand->type	= OP_MEM;
-		operand->reg	= instr->rm;
+		operand->disp	= instr->disp;
 		break;
 	case DST_MEM_DISP_BYTE:
 	case DST_MEM_DISP_FULL:
@@ -374,7 +374,7 @@ decode_src_operand(struct x86_instr *instr)
 		break;
 	case SRC_MEM:
 		operand->type	= OP_MEM;
-		operand->reg	= instr->rm;
+		operand->disp	= instr->disp;
 		break;
 	case SRC_MEM_DISP_BYTE:
 	case SRC_MEM_DISP_FULL:
@@ -448,17 +448,19 @@ decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 
 	switch (instr->flags & MEM_DISP_MASK) {
 	case SRC_MEM_DISP_FULL:
-	case DST_MEM_DISP_FULL: {
+	case DST_MEM_DISP_FULL:
+	case SRC_MEM:
+	case DST_MEM: {
 		uint8_t disp_lo = RAM[new_pc++];
 		uint8_t disp_hi = RAM[new_pc++];
 
-		instr->disp	= (int16_t)((disp_hi << 8) | disp_lo);
+		instr->disp	= ((disp_hi << 8) | disp_lo);
 		instr->nr_bytes	+= 2;
 		break;
 	}
 	case SRC_MEM_DISP_BYTE:
 	case DST_MEM_DISP_BYTE:
-		instr->disp	= (int8_t)RAM[new_pc++];
+		instr->disp	= RAM[new_pc++];
 		instr->nr_bytes	+= 1;
 		break;
 	}
