@@ -160,7 +160,7 @@ static const uint32_t decode_table[256] = {
 	/*[0x8A]*/	INSTR_MOV | ADDMODE_RM_REG | WIDTH_BYTE,
 	/*[0x8B]*/	INSTR_MOV | ADDMODE_RM_REG | WIDTH_FULL,
 	/*[0x8C]*/	0,
-	/*[0x8D]*/	0,
+	/*[0x8D]*/	INSTR_LEA | ADDMODE_RM_REG | WIDTH_FULL,
 	/*[0x8E]*/	0,
 	/*[0x8F]*/	0,
 	/*[0x90]*/	INSTR_NOP | ADDMODE_IMPLIED,	/* xchg ax, ax */
