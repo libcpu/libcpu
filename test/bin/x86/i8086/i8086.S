@@ -444,6 +444,9 @@ L1:
 	shrw $0x00, %ax
 	shrw $0xff, %bx
 
+	# 0xc6
+	movb $1, %ds:0x01(%si)
+
 	# 0xd7
 	xlat
 

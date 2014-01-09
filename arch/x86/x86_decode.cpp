@@ -217,7 +217,7 @@ static const uint32_t decode_table[256] = {
 	/*[0xC3]*/	INSTR_RET | ADDMODE_IMPLIED,
 	/*[0xC4]*/	0,
 	/*[0xC5]*/	0,
-	/*[0xC6]*/	0,
+	/*[0xC6]*/	INSTR_MOV | ADDMODE_IMM8_RM | WIDTH_BYTE,
 	/*[0xC7]*/	0,
 	/*[0xC8]*/	INSTR_UNDEFINED,
 	/*[0xC9]*/	INSTR_UNDEFINED,
