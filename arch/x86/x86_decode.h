@@ -124,6 +124,7 @@ struct x86_instr {
 	unsigned long		flags;		/* See enum x86_instr_flags */
 	enum x86_seg_override	seg_override;
 	enum x86_rep_prefix	rep_prefix;
+	unsigned char		lock_prefix;
 	struct x86_operand	src;
 	struct x86_operand	dst;
 };

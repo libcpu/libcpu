@@ -70,6 +70,11 @@ static const char *seg_override_names[] = {
 	"%ds:",
 };
 
+static const char *lock_names[] = {
+	"",
+	"lock ",
+};
+
 static const char *prefix_names[] = {
 	"",
 	"repnz ",
@@ -150,7 +155,7 @@ arch_8086_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 	if (!(instr.flags & DST_NONE))
 		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.dst);
 
-        snprintf(line, max_line, "%s%s\t%s", prefix_names[instr.rep_prefix], to_mnemonic(&instr), operands);
+        snprintf(line, max_line, "%s%s%s\t%s", lock_names[instr.lock_prefix], prefix_names[instr.rep_prefix], to_mnemonic(&instr), operands);
 
         return arch_8086_instr_length(&instr);
 }

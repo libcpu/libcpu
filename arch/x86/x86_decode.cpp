@@ -259,7 +259,7 @@ static const uint32_t decode_table[256] = {
 	/*[0xED]*/	0,
 	/*[0xEE]*/	0,
 	/*[0xEF]*/	0,
-	/*[0xF0]*/	0,
+	/*[0xF0]*/	0 /* LOCK */,
 	/*[0xF1]*/	INSTR_UNDEFINED,
 	/*[0xF2]*/	0 /* REPNZ_PREFIX */,
 	/*[0xF3]*/	0 /* REPZ_PREFIX */,
@@ -505,6 +505,8 @@ arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 	/* Prefixes */
 	instr->seg_override	= NO_OVERRIDE;
 	instr->rep_prefix	= NO_PREFIX;
+	instr->lock_prefix	= 0;
+
 	for (;;) {
 		switch (opcode = RAM[pc++]) {
 		case 0x26:
@@ -518,6 +520,9 @@ arch_8086_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 			break;
 		case 0x3e:
 			instr->seg_override	= DS_OVERRIDE;
+			break;
+		case 0xf0:	/* LOCK */
+			instr->lock_prefix	= 1;
 			break;
 		case 0xf2:	/* REPNE/REPNZ */
 			instr->rep_prefix	= REPNZ_PREFIX;

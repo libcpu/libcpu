@@ -455,6 +455,8 @@ L1:
 	jmp L2
 L2:
 
+	lock addb %dl, %ds:0x01(%si)
+
 	nop
 	nop
 
