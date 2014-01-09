@@ -451,6 +451,10 @@ L1:
 	callw function_0
 	callw function_1
 
+	jmp L1
+	jmp L2
+L2:
+
 	nop
 	nop
 

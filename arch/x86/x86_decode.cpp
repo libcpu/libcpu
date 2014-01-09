@@ -15,7 +15,8 @@
 
 #define INSTR_UNDEFINED		0
 
-#define Jb ADDMODE_REL | WIDTH_BYTE
+#define Jb (ADDMODE_REL | WIDTH_BYTE)
+#define Jv (ADDMODE_REL | WIDTH_FULL)
 
 static const uint32_t decode_table[256] = {
 	/*[0x0]*/	INSTR_ADD | ADDMODE_REG_RM | WIDTH_BYTE,
@@ -250,10 +251,10 @@ static const uint32_t decode_table[256] = {
 	/*[0xE5]*/	0,
 	/*[0xE6]*/	0,
 	/*[0xE7]*/	0,
-	/*[0xE8]*/	INSTR_CALL | ADDMODE_REL | WIDTH_FULL,
-	/*[0xE9]*/	0,
+	/*[0xE8]*/	INSTR_CALL | Jv,
+	/*[0xE9]*/	INSTR_JMP  | Jv,
 	/*[0xEA]*/	0,
-	/*[0xEB]*/	0,
+	/*[0xEB]*/	INSTR_JMP  | Jb,
 	/*[0xEC]*/	0,
 	/*[0xED]*/	0,
 	/*[0xEE]*/	0,
