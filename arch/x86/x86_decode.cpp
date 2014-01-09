@@ -179,10 +179,10 @@ static const uint32_t decode_table[256] = {
 	/*[0x9D]*/	INSTR_POPF | ADDMODE_IMPLIED,
 	/*[0x9E]*/	INSTR_SAHF | ADDMODE_IMPLIED,
 	/*[0x9F]*/	INSTR_LAHF | ADDMODE_IMPLIED,
-	/*[0xA0]*/	INSTR_MOV | ADDMODE_MEM_ACC | WIDTH_BYTE, /* load */
-	/*[0xA1]*/	INSTR_MOV | ADDMODE_MEM_ACC | WIDTH_FULL, /* load */
-	/*[0xA2]*/	INSTR_MOV | ADDMODE_ACC_MEM | WIDTH_BYTE, /* store */
-	/*[0xA3]*/	INSTR_MOV | ADDMODE_ACC_MEM | WIDTH_FULL, /* store */
+	/*[0xA0]*/	INSTR_MOV | ADDMODE_MOFFSET_ACC | WIDTH_BYTE, /* load */
+	/*[0xA1]*/	INSTR_MOV | ADDMODE_MOFFSET_ACC | WIDTH_FULL, /* load */
+	/*[0xA2]*/	INSTR_MOV | ADDMODE_ACC_MOFFSET | WIDTH_BYTE, /* store */
+	/*[0xA3]*/	INSTR_MOV | ADDMODE_ACC_MOFFSET | WIDTH_FULL, /* store */
 	/*[0xA4]*/	INSTR_MOVSB | ADDMODE_IMPLIED | WIDTH_BYTE,
 	/*[0xA5]*/	INSTR_MOVSW | ADDMODE_IMPLIED | WIDTH_FULL,
 	/*[0xA6]*/	INSTR_CMPSB | ADDMODE_IMPLIED | WIDTH_BYTE,
@@ -318,6 +318,7 @@ decode_dst_operand(struct x86_instr *instr)
 		operand->type	= OP_REG;
 		operand->reg	= 0; /* AL/AX */
 		break;
+	case DST_MOFFSET:
 	case DST_MEM:
 		operand->type	= OP_MEM;
 		operand->disp	= instr->disp;
@@ -372,6 +373,7 @@ decode_src_operand(struct x86_instr *instr)
 		operand->type	= OP_REG;
 		operand->reg	= 0; /* AL/AX */
 		break;
+	case SRC_MOFFSET:
 	case SRC_MEM:
 		operand->type	= OP_MEM;
 		operand->disp	= instr->disp;
@@ -465,6 +467,21 @@ decode_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 		break;
 	case WIDTH_BYTE:
 		instr->imm_data = read_s8(RAM, pc);
+		instr->nr_bytes += 1;
+		break;
+	}
+}
+
+static void
+decode_moffset(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+{
+	switch (instr->flags & WIDTH_MASK) {
+	case WIDTH_FULL:
+		instr->disp = read_u16(RAM, pc);
+		instr->nr_bytes += 2;
+		break;
+	case WIDTH_BYTE:
+		instr->disp = read_u8(RAM, pc);
 		instr->nr_bytes += 1;
 		break;
 	}
@@ -587,6 +604,9 @@ done_prefixes:
 
 	if (instr->flags & MEM_DISP_MASK)
 		decode_disp(instr, RAM, &pc);
+
+	if (instr->flags & MOFFSET_MASK)
+		decode_moffset(instr, RAM, &pc);
 
 	if (instr->flags & IMM_MASK)
 		decode_imm(instr, RAM, &pc);

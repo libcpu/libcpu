@@ -67,22 +67,26 @@ enum x86_instr_flags {
 	SRC_SEG_REG		= (1U << 17),
 	SRC_ACC			= (1U << 18),
 	SRC_MEM			= (1U << 19),
-	SRC_MEM_DISP_BYTE	= (1U << 20),
-	SRC_MEM_DISP_FULL	= (1U << 21),
-	SRC_MASK		= SRC_NONE|IMM_MASK|REL_MASK|SRC_REG|SRC_SEG_REG|SRC_ACC|SRC_MEM|SRC_MEM_DISP_BYTE|SRC_MEM_DISP_FULL,
+	SRC_MOFFSET		= (1U << 20),
+	SRC_MEM_DISP_BYTE	= (1U << 21),
+	SRC_MEM_DISP_FULL	= (1U << 22),
+	SRC_MASK		= SRC_NONE|IMM_MASK|REL_MASK|SRC_REG|SRC_SEG_REG|SRC_ACC|SRC_MEM|SRC_MOFFSET|SRC_MEM_DISP_BYTE|SRC_MEM_DISP_FULL,
 
 	/* Destination operand */
-	DST_NONE		= (1U << 22),
-	DST_REG			= (1U << 23),
-	DST_ACC			= (1U << 24),	/* AL/AX */
-	DST_MEM			= (1U << 25),
-	DST_MEM_DISP_BYTE	= (1U << 26),	/* 8 bits */
-	DST_MEM_DISP_FULL	= (1U << 27),	/* 16 bits or 32 bits */
-	DST_MASK		= DST_NONE|DST_REG|DST_ACC|DST_MEM|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
+	DST_NONE		= (1U << 23),
+	DST_REG			= (1U << 24),
+	DST_ACC			= (1U << 25),	/* AL/AX */
+	DST_MEM			= (1U << 26),
+	DST_MOFFSET		= (1U << 27),
+	DST_MEM_DISP_BYTE	= (1U << 28),	/* 8 bits */
+	DST_MEM_DISP_FULL	= (1U << 29),	/* 16 bits or 32 bits */
+	DST_MASK		= DST_NONE|DST_REG|DST_ACC|DST_MOFFSET|DST_MEM|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
 
 	MEM_DISP_MASK		= SRC_MEM|SRC_MEM_DISP_BYTE|SRC_MEM_DISP_FULL|DST_MEM|DST_MEM_DISP_BYTE|DST_MEM_DISP_FULL,
 
-	GROUP_2			= (1U << 28),
+	MOFFSET_MASK		= SRC_MOFFSET|DST_MOFFSET,
+
+	GROUP_2			= (1U << 30),
 
 	GROUP_MASK		= GROUP_2,
 };
@@ -91,14 +95,14 @@ enum x86_instr_flags {
  *	Addressing modes.
  */
 enum x86_addmode {
-	ADDMODE_ACC_MEM		= SRC_ACC|DST_MEM|DIR_REVERSED,	/* AL/AX -> memory */
+	ADDMODE_ACC_MOFFSET	= SRC_ACC|DST_MOFFSET,		/* AL/AX -> moffset */
 	ADDMODE_ACC_REG		= SRC_ACC|DST_REG,		/* AL/AX -> reg */
 	ADDMODE_IMM		= SRC_IMM|DST_NONE,		/* immediate operand */
 	ADDMODE_IMM8_RM		= SRC_IMM8|MOD_RM|DIR_REVERSED,	/* immediate -> register/memory */
 	ADDMODE_IMM_ACC		= SRC_IMM|DST_ACC,		/* immediate -> AL/AX */
 	ADDMODE_IMM_REG		= SRC_IMM|DST_REG,		/* immediate -> register */
 	ADDMODE_IMPLIED		= SRC_NONE|DST_NONE,		/* no operands */
-	ADDMODE_MEM_ACC		= SRC_ACC|DST_MEM,		/* memory -> AL/AX */
+	ADDMODE_MOFFSET_ACC	= SRC_MOFFSET|DST_ACC,		/* moffset -> AL/AX */
 	ADDMODE_REG		= SRC_REG|DST_NONE,		/* register */
 	ADDMODE_SEG_REG		= SRC_SEG_REG|DST_NONE,		/* segment register */
 	ADDMODE_REG_RM		= SRC_REG|MOD_RM|DIR_REVERSED,	/* register -> register/memory */
