@@ -136,7 +136,7 @@ static const uint32_t decode_table[256] = {
 	/*[0x72]*/	INSTR_JB  | Jb,
 	/*[0x73]*/	INSTR_JNB | Jb,
 	/*[0x74]*/	INSTR_JZ  | Jb,
-	/*[0x75]*/	INSTR_JNZ | Jb,
+	/*[0x75]*/	INSTR_JNE | Jb,
 	/*[0x76]*/	INSTR_JBE | Jb,
 	/*[0x77]*/	INSTR_JA  | Jb,
 	/*[0x78]*/	INSTR_JS  | Jb,
