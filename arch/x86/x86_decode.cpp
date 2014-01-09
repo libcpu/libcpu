@@ -384,59 +384,88 @@ decode_src_operand(struct x86_instr *instr)
 	}
 }
 
-static void
-decode_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+static uint8_t read_u8(uint8_t* RAM, addr_t *pc)
 {
 	addr_t new_pc = *pc;
 
-	uint8_t imm_lo = RAM[new_pc++];
-	uint8_t imm_hi = RAM[new_pc++];
-
-	instr->imm_data	= (int16_t)((imm_hi << 8) | imm_lo);
-	instr->nr_bytes	+= 2;
+	uint8_t ret = (uint8_t)RAM[new_pc++];
 
 	*pc = new_pc;
+
+	return ret;
 }
 
-static void
-decode_imm_full(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+static uint8_t read_s8(uint8_t* RAM, addr_t *pc)
 {
 	addr_t new_pc = *pc;
 
-	uint8_t imm_lo = RAM[new_pc++];
-	uint8_t imm_hi = RAM[new_pc++];
-
-	instr->imm_data	= (uint16_t)((imm_hi << 8) | imm_lo);
-	instr->nr_bytes	+= 2;
+	uint8_t ret = (uint8_t)RAM[new_pc++];
 
 	*pc = new_pc;
+
+	return ret;
 }
 
-static void
-decode_imm_byte(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+static uint16_t read_u16(uint8_t* RAM, addr_t *pc)
 {
 	addr_t new_pc = *pc;
 
-	instr->imm_data	= (uint8_t)RAM[new_pc++];
-	instr->nr_bytes	+= 1;
+	uint8_t lo = RAM[new_pc++];
+	uint8_t hi = RAM[new_pc++];
+
+	uint16_t ret = (uint16_t)((hi << 8) | lo);
 
 	*pc = new_pc;
+
+	return ret;
+}
+
+static int16_t read_s16(uint8_t* RAM, addr_t *pc)
+{
+	addr_t new_pc = *pc;
+
+	uint8_t lo = RAM[new_pc++];
+	uint8_t hi = RAM[new_pc++];
+
+	int16_t ret = (int16_t)((hi << 8) | lo);
+
+	*pc = new_pc;
+
+	return ret;
 }
 
 static void
-decode_imm_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
 	if (instr->flags & SRC_IMM8) {
-		decode_imm_byte(instr, RAM, pc);
+		instr->imm_data = read_u8(RAM, pc);
+		instr->nr_bytes += 1;
 		return;
 	}
 
 	switch (instr->flags & WIDTH_MASK) {
 	case WIDTH_FULL:
-		decode_imm_full(instr, RAM, pc);
+		instr->imm_data = read_u16(RAM, pc);
+		instr->nr_bytes += 2;
 		break;
 	case WIDTH_BYTE:
-		decode_imm_byte(instr, RAM, pc);
+		instr->imm_data = read_u8(RAM, pc);
+		instr->nr_bytes += 1;
+		break;
+	}
+}
+
+static void
+decode_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+{
+	switch (instr->flags & WIDTH_MASK) {
+	case WIDTH_FULL:
+		instr->imm_data = read_s16(RAM, pc);
+		instr->nr_bytes += 2;
+		break;
+	case WIDTH_BYTE:
+		instr->imm_data = read_s8(RAM, pc);
+		instr->nr_bytes += 1;
 		break;
 	}
 }
@@ -565,8 +594,11 @@ done_prefixes:
 	if (instr->flags & MEM_DISP_MASK)
 		decode_disp(instr, RAM, &pc);
 
-	if (instr->flags & (IMM_MASK|REL_MASK))
-		decode_imm_rel(instr, RAM, &pc);
+	if (instr->flags & IMM_MASK)
+		decode_imm(instr, RAM, &pc);
+
+	if (instr->flags & REL_MASK)
+		decode_rel(instr, RAM, &pc);
 
 	decode_src_operand(instr);
 
