@@ -473,27 +473,21 @@ decode_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 static void
 decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
-	addr_t new_pc = *pc;
-
 	switch (instr->flags & MEM_DISP_MASK) {
 	case SRC_MEM_DISP_FULL:
 	case DST_MEM_DISP_FULL:
 	case SRC_MEM:
 	case DST_MEM: {
-		uint8_t disp_lo = RAM[new_pc++];
-		uint8_t disp_hi = RAM[new_pc++];
-
-		instr->disp	= ((disp_hi << 8) | disp_lo);
+		instr->disp	= read_s16(RAM, pc);
 		instr->nr_bytes	+= 2;
 		break;
 	}
 	case SRC_MEM_DISP_BYTE:
 	case DST_MEM_DISP_BYTE:
-		instr->disp	= RAM[new_pc++];
+		instr->disp	= read_s8(RAM, pc);
 		instr->nr_bytes	+= 1;
 		break;
 	}
-	*pc = new_pc;
 }
 
 static const uint32_t mod_dst_decode[] = {
