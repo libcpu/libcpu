@@ -293,6 +293,9 @@ _start:
 	popw %bp
 	popw %si
 	popw %di
+	popw %es
+	popw %ss
+	popw %ds
 
 	# 0xb80+rw ("mov")
 	movw $1, %ax
