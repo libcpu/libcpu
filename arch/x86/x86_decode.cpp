@@ -475,16 +475,8 @@ decode_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 static void
 decode_moffset(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
-	switch (instr->flags & WIDTH_MASK) {
-	case WIDTH_FULL:
-		instr->disp = read_u16(RAM, pc);
-		instr->nr_bytes += 2;
-		break;
-	case WIDTH_BYTE:
-		instr->disp = read_u8(RAM, pc);
-		instr->nr_bytes += 1;
-		break;
-	}
+	instr->disp = read_u16(RAM, pc);
+	instr->nr_bytes += 2;
 }
 
 static void
