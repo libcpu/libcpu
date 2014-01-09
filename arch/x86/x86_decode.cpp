@@ -462,11 +462,11 @@ decode_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
 	switch (instr->flags & WIDTH_MASK) {
 	case WIDTH_FULL:
-		instr->imm_data = read_s16(RAM, pc);
+		instr->rel_data = read_s16(RAM, pc);
 		instr->nr_bytes += 2;
 		break;
 	case WIDTH_BYTE:
-		instr->imm_data = read_s8(RAM, pc);
+		instr->rel_data = read_s8(RAM, pc);
 		instr->nr_bytes += 1;
 		break;
 	}
