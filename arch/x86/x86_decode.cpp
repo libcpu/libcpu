@@ -397,11 +397,11 @@ static uint8_t read_u8(uint8_t* RAM, addr_t *pc)
 	return ret;
 }
 
-static uint8_t read_s8(uint8_t* RAM, addr_t *pc)
+static int8_t read_s8(uint8_t* RAM, addr_t *pc)
 {
 	addr_t new_pc = *pc;
 
-	uint8_t ret = (uint8_t)RAM[new_pc++];
+	int8_t ret = (int8_t)RAM[new_pc++];
 
 	*pc = new_pc;
 
