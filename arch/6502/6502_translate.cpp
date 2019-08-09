@@ -51,7 +51,7 @@ arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 			return NULL;
 		case ADDMODE_IMM:
 			{
-			Value *ptr_temp = new AllocaInst(getIntegerType(8), "temp", bb);
+			Value *ptr_temp = new AllocaInst(getIntegerType(8), 0, "temp", bb);
 			new StoreInst(CONST8(OPERAND_8), ptr_temp, bb);
 			return ptr_temp;
 			}

@@ -109,7 +109,7 @@ static void
 arch_m88k_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	// declare flags
-	ptr_C = new AllocaInst(getIntegerType(1), "C", bb);
+	ptr_C = new AllocaInst(getIntegerType(1), 0, "C", bb);
 
 	// decode PSR
 	Value *flags = new LoadInst(cpu->ptr_PSR, "", false, bb);

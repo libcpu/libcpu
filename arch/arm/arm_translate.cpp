@@ -330,11 +330,11 @@ void
 arch_arm_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	// declare flags
-	ptr_N = new AllocaInst(getIntegerType(1), "N", bb);
-	ptr_Z = new AllocaInst(getIntegerType(1), "Z", bb);
-	ptr_C = new AllocaInst(getIntegerType(1), "C", bb);
-	ptr_V = new AllocaInst(getIntegerType(1), "V", bb);
-	ptr_I = new AllocaInst(getIntegerType(1), "I", bb);
+	ptr_N = new AllocaInst(getIntegerType(1), 0, "N", bb);
+	ptr_Z = new AllocaInst(getIntegerType(1), 0, "Z", bb);
+	ptr_C = new AllocaInst(getIntegerType(1), 0, "C", bb);
+	ptr_V = new AllocaInst(getIntegerType(1), 0, "V", bb);
+	ptr_I = new AllocaInst(getIntegerType(1), 0, "I", bb);
 
 	// decode CPSR
 	Value *flags = new LoadInst(ptr_CPSR, "", false, bb);
