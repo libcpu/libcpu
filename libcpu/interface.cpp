@@ -8,10 +8,10 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include "llvm/Analysis/Verifier.h"
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/LinkAllPasses.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/TargetSelect.h"
 
 /* project global headers */
