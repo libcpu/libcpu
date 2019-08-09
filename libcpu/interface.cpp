@@ -320,6 +320,7 @@ cpu_translate_function(cpu_t *cpu)
 	LOG("*** Translating...");
 	update_timing(cpu, TIMER_BE, true);
 	cpu->fp[cpu->functions] = cpu->exec_engine->getPointerToFunction(cpu->cur_func);
+	assert(cpu->fp[cpu->functions] != NULL);
 	update_timing(cpu, TIMER_BE, false);
 	LOG("done.\n");
 
