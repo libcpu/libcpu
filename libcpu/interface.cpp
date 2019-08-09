@@ -224,7 +224,6 @@ cpu_free(cpu_t *cpu)
 		cpu->f.done(cpu);
 	if (cpu->exec_engine != NULL) {
 		if (cpu->cur_func != NULL) {
-			cpu->exec_engine->freeMachineCodeForFunction(cpu->cur_func);
 			cpu->cur_func->eraseFromParent();
 		}
 		delete cpu->exec_engine;
@@ -307,19 +306,15 @@ cpu_translate_function(cpu_t *cpu)
 	/* make sure everything is OK */
 	verifyFunction(*cpu->cur_func, PrintMessageAction);
 
-#if 0
 	if (cpu->flags_debug & CPU_DEBUG_PRINT_IR)
-		cpu->mod->dump();
-#endif
+		cpu->mod->print(llvm::errs(), nullptr);
 
 	if (cpu->flags_codegen & CPU_CODEGEN_OPTIMIZE) {
 		LOG("*** Optimizing...");
 		optimize(cpu);
 		LOG("done.\n");
-#if 0
 		if (cpu->flags_debug & CPU_DEBUG_PRINT_IR_OPTIMIZED)
-			cpu->mod->dump();
-#endif
+			cpu->mod->print(llvm::errs(), nullptr);
 	}
 
 	LOG("*** Translating...");
@@ -399,7 +394,6 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 void
 cpu_flush(cpu_t *cpu)
 {
-	cpu->exec_engine->freeMachineCodeForFunction(cpu->cur_func);
 	cpu->cur_func->eraseFromParent();
 
 	cpu->functions = 0;
