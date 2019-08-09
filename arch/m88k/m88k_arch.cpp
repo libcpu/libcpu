@@ -94,7 +94,7 @@ arch_m88k_flags_encode(cpu_t *cpu, BasicBlock *bb)
 {
 	Value *flags = ConstantInt::get(getIntegerType(32), 0);
 
-	flags = arch_encode_bit(flags, (Value *)ptr_C, C_SHIFT, 32, bb);
+	flags = arch_encode_bit(cpu, flags, (Value *)ptr_C, C_SHIFT, 32, bb);
 
 	return flags;
 }

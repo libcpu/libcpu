@@ -381,7 +381,7 @@ arch_jump(BasicBlock *bb, BasicBlock *bb_target) {
 // decoding and encoding of bits in a bitfield (e.g. flags)
 
 Value *
-arch_encode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
+arch_encode_bit(cpu_t *cpu, Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
 {
 	Value *n = new LoadInst(bit, "", false, bb);
 	bit = new ZExtInst(n, getIntegerType(width), "", bb);
@@ -407,7 +407,7 @@ arch_flags_encode(cpu_t *cpu, BasicBlock *bb)
 	Value *flags = CONSTs(flags_size, 0);
 
 	for (size_t i = 0; i < cpu->info.flags_count; i++)
-		flags = arch_encode_bit(flags, cpu->ptr_FLAG[flags_layout[i].shift],
+		flags = arch_encode_bit(cpu, flags, cpu->ptr_FLAG[flags_layout[i].shift],
 				flags_layout[i].shift, flags_size, bb);
 
 	return flags;
