@@ -83,7 +83,7 @@ OpcodeID identify_opcode(uint16_t word) {
 
 
 def main(args):
-    print args
+    print(args)
     with open(args[1]) as f:
         d = [gen_opcode(l) for l in f if not l.startswith('#')]
         d = sorted(d, key=lambda x: precision_from_opcode(x), reverse=True)
