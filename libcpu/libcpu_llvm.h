@@ -15,17 +15,6 @@
 #define getNamedStructType(x, ...) (StructType::create(_CTX(), x, name,    \
 					       #__VA_ARGS__))
 
-static inline fltSemantics const *getFltSemantics(unsigned bits)
-{
-	switch(bits) {
-		case 32: return &APFloat::IEEEsingle;
-		case 64: return &APFloat::IEEEdouble;
-		case 80: return &APFloat::x87DoubleExtended;
-		case 128: return &APFloat::IEEEquad;
-		default: return 0;
-	}
-}
-
 static inline Type *getFloatType(unsigned bits)
 {
 	switch(bits) {
