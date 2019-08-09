@@ -72,7 +72,7 @@ ENDMACRO(TARGET_LINK_LLVM)
 # Add extra warnings for gcc/g++.
 #
 IF(CMAKE_COMPILER_IS_GNUCXX)
-  ADD_DEFINITIONS(-W -Wall -Wextra -Wno-unused -Wno-unused-parameter -Werror -D__STDC_FORMAT_MACROS=1)
+  ADD_DEFINITIONS(-W -Wall -Wextra -Wno-unused -Wno-unused-parameter -D__STDC_FORMAT_MACROS=1)
 ENDIF()
 
 FOREACH(ARCHITECTURE ${GUEST_ARCHITECTURES})
