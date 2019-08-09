@@ -80,7 +80,7 @@ get_struct_fp_reg(cpu_t *cpu, const char* name) {
 }
 
 static Value *
-get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
+get_struct_member_pointer(cpu_t *cpu, Value *s, int index, BasicBlock *bb) {
 	ConstantInt* const_0 = ConstantInt::get(XgetType(Int32Ty), 0);
 	ConstantInt* const_index = ConstantInt::get(XgetType(Int32Ty), index);
 
@@ -101,7 +101,7 @@ emit_decode_reg_helper(cpu_t *cpu, uint32_t count, uint32_t width,
 		char reg_name[16];
 		snprintf(reg_name, sizeof(reg_name), "%s_%u", rcname, i);
 
-		in_ptr_r[i] = get_struct_member_pointer(rf, i + offset, bb);
+		in_ptr_r[i] = get_struct_member_pointer(cpu, rf, i + offset, bb);
 		ptr_r[i] = new AllocaInst(getIntegerType(width), 0, reg_name, bb);
 		LoadInst* v = new LoadInst(in_ptr_r[i], "", false, bb);
 		new StoreInst(v, ptr_r[i], false, bb);
@@ -109,7 +109,7 @@ emit_decode_reg_helper(cpu_t *cpu, uint32_t count, uint32_t width,
 #else
 	// just decode struct reg
 	for (uint32_t i = 0; i < count; i++) 
-		ptr_r[i] = get_struct_member_pointer(rf, i + offset, bb);
+		ptr_r[i] = get_struct_member_pointer(cpu, rf, i + offset, bb);
 #endif
 }
 
@@ -130,20 +130,20 @@ emit_decode_fp_reg_helper(cpu_t *cpu, uint32_t count, uint32_t width,
 			(width == 128 && (cpu->flags & CPU_FLAG_FP128) == 0)) {
 			snprintf(reg_name, sizeof(reg_name), "fpr_%u_0", i);
 
-			in_ptr_r[i*2+0] = get_struct_member_pointer(cpu->ptr_frf, i*2+0, bb);
+			in_ptr_r[i*2+0] = get_struct_member_pointer(cpu, cpu->ptr_frf, i*2+0, bb);
 			ptr_r[i*2+0] = new AllocaInst(getIntegerType(64), 0, 0, 0, reg_name, bb);
 			LoadInst* v = new LoadInst(in_ptr_r[i*2+0], "", false, 0, bb);
 			new StoreInst(v, ptr_r[i*2+0], false, 0, bb);
 
 			snprintf(reg_name, sizeof(reg_name), "fpr_%u_1", i);
 
-			in_ptr_r[i*2+1] = get_struct_member_pointer(cpu->ptr_frf, i*2+1, bb);
+			in_ptr_r[i*2+1] = get_struct_member_pointer(cpu, cpu->ptr_frf, i*2+1, bb);
 			ptr_r[i*2+1] = new AllocaInst(getIntegerType(64), 0, 0, 0, reg_name, bb);
 			v = new LoadInst(in_ptr_r[i*2+1], "", false, 0, bb);
 			new StoreInst(v, ptr_r[i*2+1], false, 0, bb);
 		} else {
 			snprintf(reg_name, sizeof(reg_name), "fpr_%u", i);
-			in_ptr_r[i] = get_struct_member_pointer(cpu->ptr_frf, i, bb);
+			in_ptr_r[i] = get_struct_member_pointer(cpu, cpu->ptr_frf, i, bb);
 			ptr_r[i] = new AllocaInst(getFloatType(width), 0, 0, fp_alignment(width), reg_name, bb);
 			LoadInst* v = new LoadInst(in_ptr_r[i], "", false, fp_alignment(width), bb);
 			new StoreInst(v, ptr_r[i], false, fp_alignment(width), bb);
@@ -152,7 +152,7 @@ emit_decode_fp_reg_helper(cpu_t *cpu, uint32_t count, uint32_t width,
 #else
 	// just decode struct reg
 	for (uint32_t i = 0; i < count; i++) 
-		ptr_r[i] = get_struct_member_pointer(cpu->ptr_frf, i, bb);
+		ptr_r[i] = get_struct_member_pointer(cpu, cpu->ptr_frf, i, bb);
 #endif
 }
 
