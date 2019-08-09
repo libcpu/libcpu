@@ -85,6 +85,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	memset(&cpu->info, 0, sizeof(cpu->info));
 	memset(&cpu->rf, 0, sizeof(cpu->rf));
 
+	cpu->ctx = new LLVMContext();
 	cpu->info.type = arch;
 	cpu->info.name = "noname";
 	cpu->info.common_flags = flags;
@@ -222,6 +223,8 @@ cpu_free(cpu_t *cpu)
 		}
 		delete cpu->exec_engine;
 	}
+	if (cpu->ctx != NULL)
+		delete cpu->ctx;
 	if (cpu->ptr_FLAG != NULL)
 		free(cpu->ptr_FLAG);
 	if (cpu->in_ptr_fpr != NULL)
