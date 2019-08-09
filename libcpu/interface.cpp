@@ -304,7 +304,7 @@ cpu_translate_function(cpu_t *cpu)
 	BranchInst::Create(bb_start, label_entry);
 
 	/* make sure everything is OK */
-	verifyFunction(*cpu->cur_func, PrintMessageAction);
+	verifyFunction(*cpu->cur_func, &llvm::errs());
 
 	if (cpu->flags_debug & CPU_DEBUG_PRINT_IR)
 		cpu->mod->print(llvm::errs(), nullptr);
