@@ -390,7 +390,7 @@ arch_encode_bit(cpu_t *cpu, Value *flags, Value *bit, int shift, int width, Basi
 }
 
 void
-arch_decode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
+arch_decode_bit(cpu_t *cpu, Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
 {
 	Value *n = BinaryOperator::Create(Instruction::LShr, flags, ConstantInt::get(getIntegerType(width), shift), "", bb);
 	n = new TruncInst(n, getIntegerType(1), "", bb);
@@ -420,7 +420,7 @@ arch_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
 	cpu_flags_layout_t const *flags_layout = cpu->info.flags_layout;
 
 	for (size_t i = 0; i < cpu->info.flags_count; i++)
-		arch_decode_bit(flags, cpu->ptr_FLAG[flags_layout[i].shift],
+		arch_decode_bit(cpu, flags, cpu->ptr_FLAG[flags_layout[i].shift],
 				flags_layout[i].shift, flags_size, bb);
 }
 

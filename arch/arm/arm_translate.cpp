@@ -319,11 +319,11 @@ arch_arm_flags_encode(cpu_t *cpu, BasicBlock *bb)
 static void
 arch_arm_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
 {
-	arch_decode_bit(flags, ptr_N, N_SHIFT, 32, bb);
-	arch_decode_bit(flags, ptr_Z, Z_SHIFT, 32, bb);
-	arch_decode_bit(flags, ptr_C, C_SHIFT, 32, bb);
-	arch_decode_bit(flags, ptr_V, V_SHIFT, 32, bb);
-	arch_decode_bit(flags, ptr_I, I_SHIFT, 32, bb);
+	arch_decode_bit(cpu, flags, ptr_N, N_SHIFT, 32, bb);
+	arch_decode_bit(cpu, flags, ptr_Z, Z_SHIFT, 32, bb);
+	arch_decode_bit(cpu, flags, ptr_C, C_SHIFT, 32, bb);
+	arch_decode_bit(cpu, flags, ptr_V, V_SHIFT, 32, bb);
+	arch_decode_bit(cpu, flags, ptr_I, I_SHIFT, 32, bb);
 }
 
 void

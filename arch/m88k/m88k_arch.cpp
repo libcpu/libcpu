@@ -102,7 +102,7 @@ arch_m88k_flags_encode(cpu_t *cpu, BasicBlock *bb)
 static void
 arch_m88k_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
 {
-	arch_decode_bit(flags, (Value *)ptr_C, C_SHIFT, 32, bb);
+	arch_decode_bit(cpu, flags, (Value *)ptr_C, C_SHIFT, 32, bb);
 }
 
 static void
