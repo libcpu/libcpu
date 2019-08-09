@@ -1,6 +1,6 @@
 # Libcpu
 
-[![Build Status](https://secure.travis-ci.org/libcpu/libcpu.png?branch=master)](http://travis-ci.org/libcpu/libcpu)
+[![CircleCI](https://circleci.com/gh/libcpu/libcpu.svg?style=svg)](https://circleci.com/gh/libcpu/libcpu)
 
 <img src="https://raw.github.com/libcpu/libcpu/master/images/libcpu.png" alt="Libcpu logo" align="right" />
 
