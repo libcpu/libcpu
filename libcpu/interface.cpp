@@ -298,15 +298,19 @@ cpu_translate_function(cpu_t *cpu)
 	/* make sure everything is OK */
 	verifyFunction(*cpu->cur_func, PrintMessageAction);
 
+#if 0
 	if (cpu->flags_debug & CPU_DEBUG_PRINT_IR)
 		cpu->mod->dump();
+#endif
 
 	if (cpu->flags_codegen & CPU_CODEGEN_OPTIMIZE) {
 		LOG("*** Optimizing...");
 		optimize(cpu);
 		LOG("done.\n");
+#if 0
 		if (cpu->flags_debug & CPU_DEBUG_PRINT_IR_OPTIMIZED)
 			cpu->mod->dump();
+#endif
 	}
 
 	LOG("*** Translating...");
