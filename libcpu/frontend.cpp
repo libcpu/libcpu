@@ -183,7 +183,7 @@ RAM32LE(uint8_t *RAM, addr_t a) {
 /* get a RAM pointer to a 32 bit value */
 static Value *
 arch_gep32(cpu_t *cpu, Value *a, BasicBlock *bb) {
-	a = GetElementPtrInst::Create(cpu->ptr_RAM, a, "", bb);
+	a = GetElementPtrInst::CreateInBounds(cpu->ptr_RAM, a, "", bb);
 	return new BitCastInst(a, PointerType::get(XgetType(Int32Ty), 0), "", bb);
 }
 

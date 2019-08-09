@@ -26,7 +26,7 @@
 #define ptr_D cpu->ptr_FLAG[D_SHIFT]
 #define ptr_I cpu->ptr_FLAG[I_SHIFT]
 
-#define GEP(a) GetElementPtrInst::Create(cpu->ptr_RAM, a, "", bb)
+#define GEP(a) GetElementPtrInst::CreateInBounds(cpu->ptr_RAM, a, "", bb)
 
 #define LOAD_RAM8(a) LOAD(GEP(a))
 /* explicit little endian load of 16 bits */

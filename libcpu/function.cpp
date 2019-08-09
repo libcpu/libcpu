@@ -87,7 +87,7 @@ get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
 	std::vector<Value*> ptr_11_indices;
 	ptr_11_indices.push_back(const_0);
 	ptr_11_indices.push_back(const_index);
-	return (Value*) GetElementPtrInst::Create(s, ptr_11_indices, "", bb);
+	return (Value*) GetElementPtrInst::CreateInBounds(s, ptr_11_indices, "", bb);
 }
 
 static void
