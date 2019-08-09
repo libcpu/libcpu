@@ -8,11 +8,14 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include "llvm/ExecutionEngine/JIT.h"
+#include <memory>
+
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/LinkAllPasses.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 
 /* project global headers */
 #include "libcpu.h"
@@ -183,7 +186,10 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	// init LLVM
 	cpu->mod = new Module(cpu->info.name, _CTX());
 	assert(cpu->mod != NULL);
-	cpu->exec_engine = ExecutionEngine::create(cpu->mod);
+	std::unique_ptr<llvm::Module> module_ptr(llvm::CloneModule(*cpu->mod));
+	EngineBuilder builder{std::move(module_ptr)};
+	builder.setEngineKind(EngineKind::Kind::JIT);
+	cpu->exec_engine = builder.create();
 	assert(cpu->exec_engine != NULL);
 
 	// check if FP80 and FP128 are supported by this architecture.
