@@ -1,0 +1,9 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: "fedora:30"
+    steps:
+      - checkout
+      - run: ./install-deps.sh
+      - run: make
