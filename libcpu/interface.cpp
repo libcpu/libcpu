@@ -8,11 +8,14 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include "llvm/Analysis/Verifier.h"
-#include "llvm/ExecutionEngine/JIT.h"
+#include <memory>
+
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/LinkAllPasses.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 
 /* project global headers */
 #include "libcpu.h"
@@ -85,6 +88,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	memset(&cpu->info, 0, sizeof(cpu->info));
 	memset(&cpu->rf, 0, sizeof(cpu->rf));
 
+	cpu->ctx = new LLVMContext();
 	cpu->info.type = arch;
 	cpu->info.name = "noname";
 	cpu->info.common_flags = flags;
@@ -182,12 +186,15 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	// init LLVM
 	cpu->mod = new Module(cpu->info.name, _CTX());
 	assert(cpu->mod != NULL);
-	cpu->exec_engine = ExecutionEngine::create(cpu->mod);
+	std::unique_ptr<llvm::Module> module_ptr(llvm::CloneModule(*cpu->mod));
+	EngineBuilder builder{std::move(module_ptr)};
+	builder.setEngineKind(EngineKind::Kind::JIT);
+	cpu->exec_engine = builder.create();
 	assert(cpu->exec_engine != NULL);
 
 	// check if FP80 and FP128 are supported by this architecture.
 	// XXX there is a better way to do this?
-	std::string data_layout = cpu->exec_engine->getDataLayout()->getStringRepresentation();
+	std::string data_layout = cpu->exec_engine->getDataLayout().getStringRepresentation();
 	if (data_layout.find("f80") != std::string::npos) {
 		LOG("INFO: FP80 supported.\n");
 		cpu->flags |= CPU_FLAG_FP80;
@@ -198,7 +205,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	}
 
 	// check if we need to swap guest memory.
-	if (cpu->exec_engine->getDataLayout()->isLittleEndian()
+	if (cpu->exec_engine->getDataLayout().isLittleEndian()
 			^ IS_LITTLE_ENDIAN(cpu))
 		cpu->flags |= CPU_FLAG_SWAPMEM;
 
@@ -217,11 +224,12 @@ cpu_free(cpu_t *cpu)
 		cpu->f.done(cpu);
 	if (cpu->exec_engine != NULL) {
 		if (cpu->cur_func != NULL) {
-			cpu->exec_engine->freeMachineCodeForFunction(cpu->cur_func);
 			cpu->cur_func->eraseFromParent();
 		}
 		delete cpu->exec_engine;
 	}
+	if (cpu->ctx != NULL)
+		delete cpu->ctx;
 	if (cpu->ptr_FLAG != NULL)
 		free(cpu->ptr_FLAG);
 	if (cpu->in_ptr_fpr != NULL)
@@ -296,22 +304,23 @@ cpu_translate_function(cpu_t *cpu)
 	BranchInst::Create(bb_start, label_entry);
 
 	/* make sure everything is OK */
-	verifyFunction(*cpu->cur_func, PrintMessageAction);
+	verifyFunction(*cpu->cur_func, &llvm::errs());
 
 	if (cpu->flags_debug & CPU_DEBUG_PRINT_IR)
-		cpu->mod->dump();
+		cpu->mod->print(llvm::errs(), nullptr);
 
 	if (cpu->flags_codegen & CPU_CODEGEN_OPTIMIZE) {
 		LOG("*** Optimizing...");
 		optimize(cpu);
 		LOG("done.\n");
 		if (cpu->flags_debug & CPU_DEBUG_PRINT_IR_OPTIMIZED)
-			cpu->mod->dump();
+			cpu->mod->print(llvm::errs(), nullptr);
 	}
 
 	LOG("*** Translating...");
 	update_timing(cpu, TIMER_BE, true);
 	cpu->fp[cpu->functions] = cpu->exec_engine->getPointerToFunction(cpu->cur_func);
+	assert(cpu->fp[cpu->functions] != NULL);
 	update_timing(cpu, TIMER_BE, false);
 	LOG("done.\n");
 
@@ -386,7 +395,6 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 void
 cpu_flush(cpu_t *cpu)
 {
-	cpu->exec_engine->freeMachineCodeForFunction(cpu->cur_func);
 	cpu->cur_func->eraseFromParent();
 
 	cpu->functions = 0;

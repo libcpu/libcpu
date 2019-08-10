@@ -183,7 +183,7 @@ RAM32LE(uint8_t *RAM, addr_t a) {
 /* get a RAM pointer to a 32 bit value */
 static Value *
 arch_gep32(cpu_t *cpu, Value *a, BasicBlock *bb) {
-	a = GetElementPtrInst::Create(cpu->ptr_RAM, a, "", bb);
+	a = GetElementPtrInst::CreateInBounds(cpu->ptr_RAM, a, "", bb);
 	return new BitCastInst(a, PointerType::get(XgetType(Int32Ty), 0), "", bb);
 }
 
@@ -381,7 +381,7 @@ arch_jump(BasicBlock *bb, BasicBlock *bb_target) {
 // decoding and encoding of bits in a bitfield (e.g. flags)
 
 Value *
-arch_encode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
+arch_encode_bit(cpu_t *cpu, Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
 {
 	Value *n = new LoadInst(bit, "", false, bb);
 	bit = new ZExtInst(n, getIntegerType(width), "", bb);
@@ -390,7 +390,7 @@ arch_encode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
 }
 
 void
-arch_decode_bit(Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
+arch_decode_bit(cpu_t *cpu, Value *flags, Value *bit, int shift, int width, BasicBlock *bb)
 {
 	Value *n = BinaryOperator::Create(Instruction::LShr, flags, ConstantInt::get(getIntegerType(width), shift), "", bb);
 	n = new TruncInst(n, getIntegerType(1), "", bb);
@@ -407,7 +407,7 @@ arch_flags_encode(cpu_t *cpu, BasicBlock *bb)
 	Value *flags = CONSTs(flags_size, 0);
 
 	for (size_t i = 0; i < cpu->info.flags_count; i++)
-		flags = arch_encode_bit(flags, cpu->ptr_FLAG[flags_layout[i].shift],
+		flags = arch_encode_bit(cpu, flags, cpu->ptr_FLAG[flags_layout[i].shift],
 				flags_layout[i].shift, flags_size, bb);
 
 	return flags;
@@ -420,7 +420,7 @@ arch_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
 	cpu_flags_layout_t const *flags_layout = cpu->info.flags_layout;
 
 	for (size_t i = 0; i < cpu->info.flags_count; i++)
-		arch_decode_bit(flags, cpu->ptr_FLAG[flags_layout[i].shift],
+		arch_decode_bit(cpu, flags, cpu->ptr_FLAG[flags_layout[i].shift],
 				flags_layout[i].shift, flags_size, bb);
 }
 
@@ -441,7 +441,7 @@ arch_debug_me(cpu_t *cpu, BasicBlock *bb)
 	if (cpu->ptr_func_debug == NULL)
 		return;
 
-	IntegerType *intptr_type = cpu->exec_engine->getDataLayout()->getIntPtrType(_CTX());
+	IntegerType *intptr_type = cpu->exec_engine->getDataLayout().getIntPtrType(_CTX());
 	Constant *v_cpu = ConstantInt::get(intptr_type, (uintptr_t)cpu);
 	Value *v_cpu_ptr = ConstantExpr::getIntToPtr(v_cpu, PointerType::getUnqual(intptr_type));
 

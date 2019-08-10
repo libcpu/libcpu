@@ -26,7 +26,7 @@
 #define ptr_D cpu->ptr_FLAG[D_SHIFT]
 #define ptr_I cpu->ptr_FLAG[I_SHIFT]
 
-#define GEP(a) GetElementPtrInst::Create(cpu->ptr_RAM, a, "", bb)
+#define GEP(a) GetElementPtrInst::CreateInBounds(cpu->ptr_RAM, a, "", bb)
 
 #define LOAD_RAM8(a) LOAD(GEP(a))
 /* explicit little endian load of 16 bits */
@@ -51,7 +51,7 @@ arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 			return NULL;
 		case ADDMODE_IMM:
 			{
-			Value *ptr_temp = new AllocaInst(getIntegerType(8), "temp", bb);
+			Value *ptr_temp = new AllocaInst(getIntegerType(8), 0, "temp", bb);
 			new StoreInst(CONST8(OPERAND_8), ptr_temp, bb);
 			return ptr_temp;
 			}

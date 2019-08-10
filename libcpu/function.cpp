@@ -80,14 +80,14 @@ get_struct_fp_reg(cpu_t *cpu, const char* name) {
 }
 
 static Value *
-get_struct_member_pointer(Value *s, int index, BasicBlock *bb) {
+get_struct_member_pointer(cpu_t *cpu, Value *s, int index, BasicBlock *bb) {
 	ConstantInt* const_0 = ConstantInt::get(XgetType(Int32Ty), 0);
 	ConstantInt* const_index = ConstantInt::get(XgetType(Int32Ty), index);
 
 	std::vector<Value*> ptr_11_indices;
 	ptr_11_indices.push_back(const_0);
 	ptr_11_indices.push_back(const_index);
-	return (Value*) GetElementPtrInst::Create(s, ptr_11_indices, "", bb);
+	return (Value*) GetElementPtrInst::CreateInBounds(s, ptr_11_indices, "", bb);
 }
 
 static void
@@ -101,15 +101,15 @@ emit_decode_reg_helper(cpu_t *cpu, uint32_t count, uint32_t width,
 		char reg_name[16];
 		snprintf(reg_name, sizeof(reg_name), "%s_%u", rcname, i);
 
-		in_ptr_r[i] = get_struct_member_pointer(rf, i + offset, bb);
-		ptr_r[i] = new AllocaInst(getIntegerType(width), reg_name, bb);
+		in_ptr_r[i] = get_struct_member_pointer(cpu, rf, i + offset, bb);
+		ptr_r[i] = new AllocaInst(getIntegerType(width), 0, reg_name, bb);
 		LoadInst* v = new LoadInst(in_ptr_r[i], "", false, bb);
 		new StoreInst(v, ptr_r[i], false, bb);
 	}
 #else
 	// just decode struct reg
 	for (uint32_t i = 0; i < count; i++) 
-		ptr_r[i] = get_struct_member_pointer(rf, i + offset, bb);
+		ptr_r[i] = get_struct_member_pointer(cpu, rf, i + offset, bb);
 #endif
 }
 
@@ -130,21 +130,21 @@ emit_decode_fp_reg_helper(cpu_t *cpu, uint32_t count, uint32_t width,
 			(width == 128 && (cpu->flags & CPU_FLAG_FP128) == 0)) {
 			snprintf(reg_name, sizeof(reg_name), "fpr_%u_0", i);
 
-			in_ptr_r[i*2+0] = get_struct_member_pointer(cpu->ptr_frf, i*2+0, bb);
-			ptr_r[i*2+0] = new AllocaInst(getIntegerType(64), 0, 0, reg_name, bb);
+			in_ptr_r[i*2+0] = get_struct_member_pointer(cpu, cpu->ptr_frf, i*2+0, bb);
+			ptr_r[i*2+0] = new AllocaInst(getIntegerType(64), 0, 0, 0, reg_name, bb);
 			LoadInst* v = new LoadInst(in_ptr_r[i*2+0], "", false, 0, bb);
 			new StoreInst(v, ptr_r[i*2+0], false, 0, bb);
 
 			snprintf(reg_name, sizeof(reg_name), "fpr_%u_1", i);
 
-			in_ptr_r[i*2+1] = get_struct_member_pointer(cpu->ptr_frf, i*2+1, bb);
-			ptr_r[i*2+1] = new AllocaInst(getIntegerType(64), 0, 0, reg_name, bb);
+			in_ptr_r[i*2+1] = get_struct_member_pointer(cpu, cpu->ptr_frf, i*2+1, bb);
+			ptr_r[i*2+1] = new AllocaInst(getIntegerType(64), 0, 0, 0, reg_name, bb);
 			v = new LoadInst(in_ptr_r[i*2+1], "", false, 0, bb);
 			new StoreInst(v, ptr_r[i*2+1], false, 0, bb);
 		} else {
 			snprintf(reg_name, sizeof(reg_name), "fpr_%u", i);
-			in_ptr_r[i] = get_struct_member_pointer(cpu->ptr_frf, i, bb);
-			ptr_r[i] = new AllocaInst(getFloatType(width), 0, fp_alignment(width), reg_name, bb);
+			in_ptr_r[i] = get_struct_member_pointer(cpu, cpu->ptr_frf, i, bb);
+			ptr_r[i] = new AllocaInst(getFloatType(width), 0, 0, fp_alignment(width), reg_name, bb);
 			LoadInst* v = new LoadInst(in_ptr_r[i], "", false, fp_alignment(width), bb);
 			new StoreInst(v, ptr_r[i], false, fp_alignment(width), bb);
 		}
@@ -152,7 +152,7 @@ emit_decode_fp_reg_helper(cpu_t *cpu, uint32_t count, uint32_t width,
 #else
 	// just decode struct reg
 	for (uint32_t i = 0; i < count; i++) 
-		ptr_r[i] = get_struct_member_pointer(cpu->ptr_frf, i, bb);
+		ptr_r[i] = get_struct_member_pointer(cpu, cpu->ptr_frf, i, bb);
 #endif
 }
 
@@ -176,7 +176,7 @@ emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 		cpu->ptr_fpr, bb);
 
 	// PC pointer.
-	IntegerType *intptr_type = cpu->exec_engine->getDataLayout()->getIntPtrType(_CTX());
+	IntegerType *intptr_type = cpu->exec_engine->getDataLayout().getIntPtrType(_CTX());
 	Constant *v_pc = ConstantInt::get(intptr_type, (uintptr_t)cpu->rf.pc);
 	cpu->ptr_PC = ConstantExpr::getIntToPtr(v_pc, PointerType::getUnqual(getIntegerType(cpu->info.address_size)));
 	cpu->ptr_PC->setName("pc");
@@ -186,7 +186,7 @@ emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 		// declare flags
 		cpu_flags_layout_t const *flags_layout = cpu->info.flags_layout;
 		for (size_t i = 0; i < cpu->info.flags_count; i++) {
-			Value *f = new AllocaInst(getIntegerType(1), flags_layout[i].name,
+			Value *f = new AllocaInst(getIntegerType(1), 0, flags_layout[i].name,
 					bb);
 			cpu->ptr_FLAG[flags_layout[i].shift] = f;
 			/* set pointers to standard NVZC flags */
@@ -297,7 +297,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	// - uint8_t *
 	PointerType *type_pi8 = PointerType::get(getIntegerType(8), 0);
 	// - intptr *
-	PointerType *type_intptr = PointerType::get(cpu->exec_engine->getDataLayout()->getIntPtrType(_CTX()), 0);
+	PointerType *type_intptr = PointerType::get(cpu->exec_engine->getDataLayout().getIntPtrType(_CTX()), 0);
 	// - (*f)(cpu_t *) [debug_function() function pointer]
 	std::vector<Type*>type_func_callout_args;
 	type_func_callout_args.push_back(type_intptr);	/* intptr *cpu */
@@ -343,7 +343,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	emit_decode_reg(cpu, label_entry);
 
 	// create exit code
-	Value *exit_code = new AllocaInst(getIntegerType(32), "exit_code", label_entry);
+	Value *exit_code = new AllocaInst(getIntegerType(32), 0, "exit_code", label_entry);
 	// assume JIT_RETURN_FUNCNOTFOUND or JIT_RETURN_SINGLESTEP if in in single step.
 	new StoreInst(ConstantInt::get(XgetType(Int32Ty),
 					(cpu->flags_debug & (CPU_DEBUG_SINGLESTEP | CPU_DEBUG_SINGLESTEP_BB)) ? JIT_RETURN_SINGLESTEP :

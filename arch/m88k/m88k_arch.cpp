@@ -94,7 +94,7 @@ arch_m88k_flags_encode(cpu_t *cpu, BasicBlock *bb)
 {
 	Value *flags = ConstantInt::get(getIntegerType(32), 0);
 
-	flags = arch_encode_bit(flags, (Value *)ptr_C, C_SHIFT, 32, bb);
+	flags = arch_encode_bit(cpu, flags, (Value *)ptr_C, C_SHIFT, 32, bb);
 
 	return flags;
 }
@@ -102,14 +102,14 @@ arch_m88k_flags_encode(cpu_t *cpu, BasicBlock *bb)
 static void
 arch_m88k_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
 {
-	arch_decode_bit(flags, (Value *)ptr_C, C_SHIFT, 32, bb);
+	arch_decode_bit(cpu, flags, (Value *)ptr_C, C_SHIFT, 32, bb);
 }
 
 static void
 arch_m88k_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	// declare flags
-	ptr_C = new AllocaInst(getIntegerType(1), "C", bb);
+	ptr_C = new AllocaInst(getIntegerType(1), 0, "C", bb);
 
 	// decode PSR
 	Value *flags = new LoadInst(cpu->ptr_PSR, "", false, bb);

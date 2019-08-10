@@ -10,6 +10,7 @@
 #include <map>
 
 namespace llvm {
+class LLVMContext;
 class BasicBlock;
 class ExecutionEngine;
 class Function;
@@ -229,6 +230,7 @@ typedef struct cpu {
 	Function *func[1024];
 	Function *cur_func;
 	uint32_t functions;
+	LLVMContext *ctx;
 	ExecutionEngine *exec_engine;
 	uint8_t *RAM;
 	Value *ptr_PC;

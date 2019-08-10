@@ -307,11 +307,11 @@ arch_arm_flags_encode(cpu_t *cpu, BasicBlock *bb)
 {
 	Value *flags = ConstantInt::get(getIntegerType(32), 0);
 
-	flags = arch_encode_bit(flags, ptr_N, N_SHIFT, 32, bb);
-	flags = arch_encode_bit(flags, ptr_Z, Z_SHIFT, 32, bb);
-	flags = arch_encode_bit(flags, ptr_C, C_SHIFT, 32, bb);
-	flags = arch_encode_bit(flags, ptr_V, V_SHIFT, 32, bb);
-	flags = arch_encode_bit(flags, ptr_I, I_SHIFT, 32, bb);
+	flags = arch_encode_bit(cpu, flags, ptr_N, N_SHIFT, 32, bb);
+	flags = arch_encode_bit(cpu, flags, ptr_Z, Z_SHIFT, 32, bb);
+	flags = arch_encode_bit(cpu, flags, ptr_C, C_SHIFT, 32, bb);
+	flags = arch_encode_bit(cpu, flags, ptr_V, V_SHIFT, 32, bb);
+	flags = arch_encode_bit(cpu, flags, ptr_I, I_SHIFT, 32, bb);
 
 	return flags;
 }
@@ -319,22 +319,22 @@ arch_arm_flags_encode(cpu_t *cpu, BasicBlock *bb)
 static void
 arch_arm_flags_decode(cpu_t *cpu, Value *flags, BasicBlock *bb)
 {
-	arch_decode_bit(flags, ptr_N, N_SHIFT, 32, bb);
-	arch_decode_bit(flags, ptr_Z, Z_SHIFT, 32, bb);
-	arch_decode_bit(flags, ptr_C, C_SHIFT, 32, bb);
-	arch_decode_bit(flags, ptr_V, V_SHIFT, 32, bb);
-	arch_decode_bit(flags, ptr_I, I_SHIFT, 32, bb);
+	arch_decode_bit(cpu, flags, ptr_N, N_SHIFT, 32, bb);
+	arch_decode_bit(cpu, flags, ptr_Z, Z_SHIFT, 32, bb);
+	arch_decode_bit(cpu, flags, ptr_C, C_SHIFT, 32, bb);
+	arch_decode_bit(cpu, flags, ptr_V, V_SHIFT, 32, bb);
+	arch_decode_bit(cpu, flags, ptr_I, I_SHIFT, 32, bb);
 }
 
 void
 arch_arm_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	// declare flags
-	ptr_N = new AllocaInst(getIntegerType(1), "N", bb);
-	ptr_Z = new AllocaInst(getIntegerType(1), "Z", bb);
-	ptr_C = new AllocaInst(getIntegerType(1), "C", bb);
-	ptr_V = new AllocaInst(getIntegerType(1), "V", bb);
-	ptr_I = new AllocaInst(getIntegerType(1), "I", bb);
+	ptr_N = new AllocaInst(getIntegerType(1), 0, "N", bb);
+	ptr_Z = new AllocaInst(getIntegerType(1), 0, "Z", bb);
+	ptr_C = new AllocaInst(getIntegerType(1), 0, "C", bb);
+	ptr_V = new AllocaInst(getIntegerType(1), 0, "V", bb);
+	ptr_I = new AllocaInst(getIntegerType(1), 0, "I", bb);
 
 	// decode CPSR
 	Value *flags = new LoadInst(ptr_CPSR, "", false, bb);

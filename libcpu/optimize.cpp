@@ -5,9 +5,11 @@
  */
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 #include "llvm/IR/Module.h"
-#include "llvm/PassManager.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/DataLayout.h"
 
 #include "libcpu.h"
@@ -15,7 +17,7 @@
 void
 optimize(cpu_t *cpu)
 {
-	FunctionPassManager pm = FunctionPassManager(cpu->mod);
+	llvm::legacy::FunctionPassManager pm = llvm::legacy::FunctionPassManager(cpu->mod);
 
 	pm.add(createPromoteMemoryToRegisterPass());
 	pm.add(createInstructionCombiningPass());
