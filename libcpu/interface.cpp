@@ -82,6 +82,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	cpu_t *cpu;
 
 	llvm::InitializeNativeTarget();
+	llvm::InitializeNativeTargetAsmPrinter();
 
 	cpu = new cpu_t;
 	assert(cpu != NULL);
