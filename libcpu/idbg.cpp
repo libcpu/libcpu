@@ -929,7 +929,7 @@ idbg_register_operand(idbg_t *ctx, char const *token, unsigned *type, int *index
 			*index = -1;
 			*(uint64_t *)value = cpu->f.get_pc((cpu_t *)cpu, cpu->rf.grf);
 			*type = R_GPR;
-		} else if (strncmp(token, "psr", 2) == 0) {
+		} else if (strncmp(token, "psr", 3) == 0) {
 			*index = -2;
 			*(uint64_t *)value = cpu->f.get_psr((cpu_t *)cpu, cpu->rf.grf);
 			*type = R_GPR;
